@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Terminal</title>
+<style>
+body {
+  background:black;
+  color:#00ff00;
+  font-family:'Courier New', monospace;
+  font-size:18px;
+  letter-spacing:1px;
+  line-height:1.4em;
+  margin:0;
+  padding:10px;
+  overflow-x:hidden;
+}
+#terminal { white-space:pre-wrap; }
+#terminal div {
+  text-shadow:0 0 3px #00ff00;
+  opacity:0.95;
+  transition:opacity 0.1s;
+  position:relative;
+}
+#terminal div.flicker { animation: flicker 0.15s infinite; }
+@keyframes flicker {
+  0%,100% {opacity:0.9;}
+  50% {opacity:1;}
+}
+input {
+  background:black;
+  color:#00ff00;
+  border:none;
+  outline:none;
+  font-family:'Courier New', monospace;
+  font-size:18px;
+  text-shadow:0 0 3px #00ff00;
+  letter-spacing:1px;
+}
+.matrix { position:fixed; top:0; left:0; z-index:-1; }
+</style>
+</head>
+<body>
+<div id="terminal"></div>
+<script>
+const terminal=document.getElementById("terminal");
+let userName="";
+let currentInput=null;
+let commandCount=0;
+let corruptionLevel=0; // default glitch
+let knownUsers=JSON.parse(localStorage.getItem("terminal_knownUsers"))||{};
+let aiData=JSON.parse(localStorage.getItem("terminal_aiData"))||{
+    name:["Bob","Frank","John","Mike","Steve","Dave","Tom","Mark","Gary","Paul"][Math.floor(Math.random()*10)],
+    knowledge:{}
+};
+const memoryPhrases=[
+    "You come here often.",
+    "I notice you like using Google.",
+    "You've played Snake a lot.",
+    "Good to see you back.",
+    "I recall our previous chats."
+];
+let aiActive=false;
+
+// ---------------- GLITCH ----------------
+function glitchText(text,level=1){
+    const map1={a:'4',e:'3',i:'1',o:'0',s:'5',t:'7'};
+    const map2={r:'®',c:'ç',l:'1',z:'2',g:'9',b:'8'};
+    const symbols=['~','*','#','^','%','!'];
+    let result='';
+    for(let i=0;i<text.length;i++){
+        let c=text[i]; let lower=c.toLowerCase();
+        if(level>=1 && map1[lower] && Math.random()<0.4) c=map1[lower];
+        if(level>=2 && map2[lower] && Math.random()<0.3) c=map2[lower];
+        if(level>=3 && Math.random()<0.1) c+=symbols[Math.floor(Math.random()*symbols.length)];
+        if(level>=4 && Math.random()<0.05) c+=c;
+        if(level>=5 && Math.random()<0.05) c=' ';
+        result+=c;
+    }
+    if(level>=3 && Math.random()<0.1) result=" "+result;
+    return result;
+}
+function scrambleLine(lineDiv){
+    if(!lineDiv) return;
+    const original=lineDiv.textContent;
+    let interval=setInterval(()=>{
+        let scrambled = original.split('').map(c=>{
+            if(Math.random()<0.5) return String.fromCharCode(33 + Math.floor(Math.random()*94));
+            return c;
+        }).join('');
+        lineDiv.textContent=scrambled;
+    },50);
+    setTimeout(()=>{clearInterval(interval);lineDiv.textContent=original;},500);
+}
+
+// ---------------- PRINT ----------------
+function print(text=""){
+    let level=Math.floor(commandCount/10);
+    if(corruptionLevel>0) text=glitchText(text,level);
+    const div=document.createElement("div");
+    div.textContent=text;
+    if(Math.random()<0.1) div.classList.add("flicker");
+    terminal.appendChild(div);
+    window.scrollTo(0,document.body.scrollHeight);
+    if(corruptionLevel>=5 && Math.random()<0.3) scrambleLine(div);
+    localStorage.setItem("terminal_aiData",JSON.stringify(aiData));
+}
+
+// ---------------- INPUT ----------------
+function createInputLine(){
+    if(aiActive) return;
+    const line=document.createElement("div");
+    const span=document.createElement("span");
+    span.textContent="C:\\>";
+    const input=document.createElement("input");
+    input.autofocus=true;
+    input.addEventListener("keydown",function(e){
+        if(e.key==="Enter"){
+            const value=input.value;
+            print(span.textContent+" "+value);
+            line.remove();
+            handleCommand(value.trim());
+        }
+    });
+    line.appendChild(span);
+    line.appendChild(input);
+    terminal.appendChild(line);
+    input.focus();
+    currentInput=input;
+}
+
+// ---------------- BOOT ----------------
+function bootSequence(){
+    const lines=[
+        "Terminal BIOS v1.0",
+        "Checking memory...",
+        "Memory OK",
+        "Loading kernel...",
+        "Initializing AI core...",
+        "Mounting filesystem...",
+        "Starting services...",
+        "Boot successful."
+    ];
+    let i=0;
+    function nextLine(){
+        if(i<lines.length){
+            print(glitchText(lines[i],1));
+            i++;
+            setTimeout(nextLine,400);
+        } else bootLoadingBar();
+    }
+    nextLine();
+}
+function bootLoadingBar(){
+    terminal.innerHTML="";
+    const totalLines=20;
+    let lineIndex=0;
+    const bootInterval=setInterval(()=>{
+        if(lineIndex<totalLines){
+            let level=Math.floor(commandCount/10);
+            print(glitchText("Loading line "+(lineIndex+1),level));
+            lineIndex++;
+        } else {clearInterval(bootInterval); terminal.innerHTML=""; startTerminal();}
+    },120);
+}
+
+// ---------------- AI ----------------
+const builtInAI={"hello":"Hello.","hi":"Hi.","hey":"Hey.","how are you":"I'm fine, thank you.","who are you":"I am Terminal AI.","what are you":"I am a small local AI.","thanks":"You're welcome.","thank you":"No problem.","bye":"Goodbye."};
+function aiLearn(full){
+    const content=full.replace(/^learn\s+/i,"");
+    const parts=content.split("=");
+    if(parts.length<2){print("Usage: learn <phrase> = <answer>");return;}
+    const phrase=parts[0].trim().toLowerCase();
+    const answer=parts.slice(1).join("=").trim();
+    if(!phrase||!answer){print("Invalid format.");return;}
+    aiData.knowledge[phrase]=answer;
+    localStorage.setItem("terminal_aiData",JSON.stringify(aiData));
+    print("Learned: \""+phrase+"\"");
+}
+function aiRespond(full){
+    let msg=full.trim().toLowerCase();
+    if(!msg){print("Talk to me.");return;}
+    if(Math.random()<0.2 && Object.keys(knownUsers).length>0) print(memoryPhrases[Math.floor(Math.random()*memoryPhrases.length)]);
+    if(msg.includes("your name")){print("My name is "+aiData.name+".");return;}
+    if(aiData.knowledge[msg]){print(aiData.knowledge[msg]);return;}
+    if(builtInAI[msg]){print(builtInAI[msg]);return;}
+    for(const key in aiData.knowledge){if(msg.includes(key)){print(aiData.knowledge[key]);return;}}
+    for(const key in builtInAI){if(msg.includes(key)){print(builtInAI[key]);return;}}
+    const defaults=["Interesting.","Tell me more.","Why?","I see.","Explain further."];
+    print(defaults[Math.floor(Math.random()*defaults.length)]);
+}
+async function respondAI(msg){
+    if(corruptionLevel >= 4){ print("AI: ..."); await new Promise(r=>setTimeout(r,500+Math.random()*500)); }
+    aiRespond(msg);
+}
+function openAI(){
+    if(aiActive) return;
+    aiActive=true;
+    print("AI session started. Type 'exit' to close.");
+    const input=document.createElement("input");
+    input.autofocus=true;
+    input.addEventListener("keydown", async function(e){
+        if(e.key==="Enter"){
+            const msg=input.value.trim();
+            if(msg.toLowerCase()==="exit"){aiActive=false; input.remove(); createInputLine(); return;}
+            print("You: "+msg);
+            input.value="";
+            await respondAI(msg);
+        }
+    });
+    terminal.appendChild(input);
+    input.focus();
+}
+
+// ---------------- COMMAND HANDLER ----------------
+function handleCommand(cmd){
+    commandCount++;
+    if(commandCount%15===0){corruptionLevel=8; print("System instability detected...");}
+    if(!userName){
+        userName=cmd||"User";
+        print(knownUsers[userName]?"Welcome back, "+userName+".":"Welcome, "+userName+".");
+        knownUsers[userName]=true;
+        localStorage.setItem("terminal_knownUsers",JSON.stringify(knownUsers));
+        createInputLine();
+        return;
+    }
+    const base=cmd.split(" ")[0].toLowerCase();
+    switch(base){
+        case "help":
+            print("Commands:");
+            print("help, clear, whoami, whoareyou, echo <text>");
+            print("ai, snake, google, matrix, shutdown, reboot");
+            break;
+        case "clear": terminal.innerHTML=""; break;
+        case "whoami": print(userName); break;
+        case "whoareyou": print("This is Terminal."); break;
+        case "ai": openAI(); return;
+        case "learn": aiLearn(cmd); break;
+        case "snake": startSnake(); return;
+        case "google": startGoogle(); return;
+        case "matrix": startMatrix(); break;
+        case "shutdown": terminal.innerHTML=""; print("SYSTEM OFFLINE"); return;
+        case "reboot": terminal.innerHTML=""; bootSequence(); return;
+        case "glitch":
+            let val=parseInt(cmd.split(" ")[1]);
+            if(isNaN(val)||val<0||val>5){print("Usage: glitch 0-5");} 
+            else {corruptionLevel=val; print("Glitch level set to "+val);}
+            break;
+        case "echo":
+            const echoText=cmd.substring(5);
+            print(echoText);
+            break;
+        default: print("Unknown command.");
+    }
+    createInputLine();
+}
+
+// ---------------- SNAKE ----------------
+function startSnake(){
+    terminal.innerHTML="";
+    print("Snake - Arrow keys. Press q to quit.");
+    const width=20,height=15;
+    let snake=[{x:5,y:5}], dir={x:1,y:0}, food={x:10,y:10}, score=0, running=true;
+
+    function render(){
+        terminal.innerHTML="";
+        for(let y=0;y<height;y++){
+            let line="";
+            for(let x=0;x<width;x++){
+                if(x===0||x===width-1||y===0||y===height-1){
+                    line+="*"; 
+                    continue;
+                }
+                let isHead=snake[0].x===x && snake[0].y===y;
+                let isBody=snake.slice(1).some(s=>s.x===x && s.y===y);
+                if(isHead) line+="@";
+                else if(isBody) line+="o";
+                else if(food.x===x && food.y===y) line+="$";
+                else line+=" ";
+            }
+            print(line);
+        }
+        print("Score: "+score);
+    }
+
+    function update(){
+        if(!running) return;
+        let head={x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+        if(head.x<=0||head.x>=width-1||head.y<=0||head.y>=height-1||
+           snake.some(s=>s.x===head.x && s.y===head.y)){
+            print("Game Over. Press q.");
+            running=false;
+            return;
+        }
+        snake.unshift(head);
+        if(head.x===food.x && head.y===food.y){
+            score++;
+            food={x:Math.floor(Math.random()*(width-2)+1), y:Math.floor(Math.random()*(height-2)+1)};
+        } else snake.pop();
+        render();
+    }
+
+    function key(e){
+        if(e.key==="ArrowLeft") dir={x:-1,y:0};
+        if(e.key==="ArrowRight") dir={x:1,y:0};
+        if(e.key==="ArrowUp") dir={x:0,y:-1};
+        if(e.key==="ArrowDown") dir={x:0,y:1};
+        if(e.key==="q"){document.removeEventListener("keydown",key); terminal.innerHTML=""; createInputLine();}
+    }
+
+    document.addEventListener("keydown",key);
+    setInterval(update,200);
+    render();
+}
+
+// ---------------- GOOGLE ASCII ----------------
+const googleAscii=`
+   ____                   _      
+  / ___| ___   ___   __ _| | ___ 
+ | |  _ / _ \\ / _ \\ / _\` | |/ _ \\
+ | |_| | (_) | (_) | (_| | |  __/
+  \\____|\\___/ \\___/ \\__, |_|\\___|
+                     |___/       
+`;
+function startGoogle(){
+    terminal.innerHTML="";
+    print("GOOGLE");
+    print("Loading...");
+    let lines=googleAscii.split("\n");
+    let i=0;
+    const load=setInterval(()=>{
+        if(i<lines.length){print(glitchText(lines[i],Math.floor(commandCount/10)));i++;} 
+        else {clearInterval(load); showSearch();}
+    },150);
+}
+function showSearch(){
+    print("");print("Search:");
+    const input=document.createElement("input");
+    input.addEventListener("keydown",function(e){
+        if(e.key==="Enter"){
+            const query=input.value;
+            print("> "+query);
+            print("Result 1: "+query+" official site");
+            print("Result 2: Learn about "+query);
+            print("Result 3: "+query+" wiki page");
+            print("Press q to exit.");
+            document.addEventListener("keydown",exitGoogle);
+        }
+    });
+    terminal.appendChild(input);
+    input.focus();
+}
+function exitGoogle(e){if(e.key==="q"){document.removeEventListener("keydown",exitGoogle);terminal.innerHTML="";createInputLine();}}
+
+// ---------------- MATRIX ----------------
+function startMatrix(){
+    const canvas=document.createElement("canvas");
+    canvas.className="matrix";document.body.appendChild(canvas);
+    const ctx=canvas.getContext("2d");
+    canvas.width=window.innerWidth; canvas.height=window.innerHeight;
+    const letters="01"; const fontSize=14; const columns=Math.floor(canvas.width/fontSize);
+    const drops=Array(columns).fill(1);
+    let running=true;
+    function loop(){
+        if(!running) return;
+        ctx.fillStyle="rgba(0,0,0,0.05)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle="#0f0"; ctx.font=fontSize+"px monospace";
+        for(let i=0;i<drops.length;i++){
+            const text=letters[Math.floor(Math.random()*letters.length)];
+            ctx.fillText(text,i*fontSize,drops[i]*fontSize);
+            if(drops[i]*fontSize>canvas.height && Math.random()>0.975) drops[i]=0;
+            drops[i]++;
+        }
+        requestAnimationFrame(loop);
+    }
+    loop();
+    function exitMatrix(e){
+        if(e.key==="q"){running=false;document.removeEventListener("keydown",exitMatrix);canvas.remove();createInputLine();}
+    }
+    document.addEventListener("keydown",exitMatrix);
+}
+
+// ---------------- START ----------------
+function startTerminal(){print("Welcome to Terminal.");print("Enter your name:");createInputLine();}
+bootSequence();
+</script>
+</body>
+</html>
