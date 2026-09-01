@@ -193,7 +193,6 @@
     { title: "Music Player",      file: "games/MusicPlayer.html" },
     { title: "          Credits", file: "games/Credits.html" },
   ];
-
   // ---- always populate the plain-HTML fallback list, no matter what ----
   const fallbackList = document.getElementById('fallback-list');
   GAMES.forEach(g => {
@@ -695,8 +694,8 @@
         requestAnimationFrame(step);
       } else {
         cameraAnimating = false;
-        if (!gameOpen) controls.enabled = true;
         if (onComplete) onComplete();
+        if (!gameOpen) controls.enabled = true;
       }
     }
     requestAnimationFrame(step);
