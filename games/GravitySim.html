@@ -4,22 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bouncing Balls</title>
+<link rel="icon" type="image/x-icon" href="../assets/GravitySim/favicon.ico">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: white; overflow: hidden; width: 100vw; height: 100vh; cursor: pointer; }
-  canvas { display: block; }
-  #hint {
-    position : absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-family: Georgia, serif;
-    font-size: 18px;
-    color: #999;
-    pointer-events: none;
-    transition: opacity 0.4s;
-    user-select: none;
-  }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: white; overflow: hidden; width: 100vw; height: 100vh; cursor: pointer; }
+canvas { display: block; }
+#hint {
+position : absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-family: Georgia, serif;
+font-size: 18px;
+color: #999;
+pointer-events: none;
+transition: opacity 0.4s;
+user-select: none;
+}
 </style>
 </head>
 <body>
@@ -55,276 +56,276 @@ let lastMouseY = 0;
 let lastTime = 0;
 
 window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  GROUND = canvas.height - 40;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+GROUND = canvas.height - 40;
 });
 
 function createBall(x, y) {
-  return {
-    x,
-    y,
-    vx: 0,
-    vy: 0,
-    fading: false,
-    opacity: 1,
-    gone: false
-  };
+return {
+x,
+y,
+vx: 0,
+vy: 0,
+fading: false,
+opacity: 1,
+gone: false
+};
 }
 
 // mouse down: grab ball if hit, otherwise create new ball AND immediately start dragging it
 canvas.addEventListener('mousedown', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+const rect = canvas.getBoundingClientRect();
+const mx = e.clientX - rect.left;
+const my = e.clientY - rect.top;
 
-  // see if we clicked a ball
-  let selected = null;
-  for (let i = balls.length - 1; i >= 0; i--) {
-    const b = balls[i];
-    const dx = mx - b.x;
-    const dy = my - b.y;
-    if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
-      selected = b;
-      break;
-    }
-  }
+// see if we clicked a ball
+let selected = null;
+for (let i = balls.length - 1; i >= 0; i--) {
+const b = balls[i];
+const dx = mx - b.x;
+const dy = my - b.y;
+if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
+selected = b;
+break;
+}
+}
 
-  if (hintVisible) {
-    hint.style.opacity = '0';
-    setTimeout(() => hint.style.display = 'none', 400);
-    hintVisible = false;
-  }
+if (hintVisible) {
+hint.style.opacity = '0';
+setTimeout(() => hint.style.display = 'none', 400);
+hintVisible = false;
+}
 
-  if (!selected) {
-    // spawn a new ball, then treat it as selected
-    const newBall = createBall(mx, my);
-    balls.push(newBall);
-    selected = newBall;
-  }
+if (!selected) {
+// spawn a new ball, then treat it as selected
+const newBall = createBall(mx, my);
+balls.push(newBall);
+selected = newBall;
+}
 
-  // start dragging the selected (existing or new) ball
-  isDragging = true;
-  dragBall = selected;
-  dragBall.fading = false;
-  dragBall.vx = 0;
-  dragBall.vy = 0;
-  dragOffsetX = mx - dragBall.x;
-  dragOffsetY = my - dragBall.y;
-  lastMouseX = mx;
-  lastMouseY = my;
-  lastTime = performance.now();
+// start dragging the selected (existing or new) ball
+isDragging = true;
+dragBall = selected;
+dragBall.fading = false;
+dragBall.vx = 0;
+dragBall.vy = 0;
+dragOffsetX = mx - dragBall.x;
+dragOffsetY = my - dragBall.y;
+lastMouseX = mx;
+lastMouseY = my;
+lastTime = performance.now();
 });
 
 canvas.addEventListener('mousemove', (e) => {
-  if (!isDragging || !dragBall) return;
+if (!isDragging || !dragBall) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+const rect = canvas.getBoundingClientRect();
+const mx = e.clientX - rect.left;
+const my = e.clientY - rect.top;
 
-  const now = performance.now();
-  const dt = (now - lastTime) / 1000; // seconds
+const now = performance.now();
+const dt = (now - lastTime) / 1000; // seconds
 
-  // update ball position to follow mouse
-  dragBall.x = mx - dragOffsetX;
-  dragBall.y = my - dragOffsetY;
+// update ball position to follow mouse
+dragBall.x = mx - dragOffsetX;
+dragBall.y = my - dragOffsetY;
 
-  // estimate velocity from mouse movement
-  if (dt > 0) {
-    dragBall.vx = (mx - lastMouseX) / dt * 0.05;
-    dragBall.vy = (my - lastMouseY) / dt * 0.05;
-  }
+// estimate velocity from mouse movement
+if (dt > 0) {
+dragBall.vx = (mx - lastMouseX) / dt * 0.05;
+dragBall.vy = (my - lastMouseY) / dt * 0.05;
+}
 
-  lastMouseX = mx;
-  lastMouseY = my;
-  lastTime = now;
+lastMouseX = mx;
+lastMouseY = my;
+lastTime = now;
 });
 
 canvas.addEventListener('mouseup', () => {
-  isDragging = false;
-  dragBall = null;
+isDragging = false;
+dragBall = null;
 });
 
 canvas.addEventListener('mouseleave', () => {
-  isDragging = false;
-  dragBall = null;
+isDragging = false;
+dragBall = null;
 });
 
 // touch: same behavior — tap creates and immediately drags, or grabs existing
 canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const mx = touch.clientX - rect.left;
-  const my = touch.clientY - rect.top;
+e.preventDefault();
+const rect = canvas.getBoundingClientRect();
+const touch = e.touches[0];
+const mx = touch.clientX - rect.left;
+const my = touch.clientY - rect.top;
 
-  let selected = null;
-  for (let i = balls.length - 1; i >= 0; i--) {
-    const b = balls[i];
-    const dx = mx - b.x;
-    const dy = my - b.y;
-    if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
-      selected = b;
-      break;
-    }
-  }
+let selected = null;
+for (let i = balls.length - 1; i >= 0; i--) {
+const b = balls[i];
+const dx = mx - b.x;
+const dy = my - b.y;
+if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
+selected = b;
+break;
+}
+}
 
-  if (hintVisible) {
-    hint.style.opacity = '0';
-    setTimeout(() => hint.style.display = 'none', 400);
-    hintVisible = false;
-  }
+if (hintVisible) {
+hint.style.opacity = '0';
+setTimeout(() => hint.style.display = 'none', 400);
+hintVisible = false;
+}
 
-  if (!selected) {
-    const newBall = createBall(mx, my);
-    balls.push(newBall);
-    selected = newBall;
-  }
+if (!selected) {
+const newBall = createBall(mx, my);
+balls.push(newBall);
+selected = newBall;
+}
 
-  isDragging = true;
-  dragBall = selected;
-  dragBall.fading = false;
-  dragBall.vx = 0;
-  dragBall.vy = 0;
-  dragOffsetX = mx - dragBall.x;
-  dragOffsetY = my - dragBall.y;
-  lastMouseX = mx;
-  lastMouseY = my;
-  lastTime = performance.now();
+isDragging = true;
+dragBall = selected;
+dragBall.fading = false;
+dragBall.vx = 0;
+dragBall.vy = 0;
+dragOffsetX = mx - dragBall.x;
+dragOffsetY = my - dragBall.y;
+lastMouseX = mx;
+lastMouseY = my;
+lastTime = performance.now();
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (!isDragging || !dragBall) return;
+e.preventDefault();
+if (!isDragging || !dragBall) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const touch = e.touches[0];
-  const mx = touch.clientX - rect.left;
-  const my = touch.clientY - rect.top;
+const rect = canvas.getBoundingClientRect();
+const touch = e.touches[0];
+const mx = touch.clientX - rect.left;
+const my = touch.clientY - rect.top;
 
-  const now = performance.now();
-  const dt = (now - lastTime) / 1000;
+const now = performance.now();
+const dt = (now - lastTime) / 1000;
 
-  dragBall.x = mx - dragOffsetX;
-  dragBall.y = my - dragOffsetY;
+dragBall.x = mx - dragOffsetX;
+dragBall.y = my - dragOffsetY;
 
-  if (dt > 0) {
-    dragBall.vx = (mx - lastMouseX) / dt * 0.05;
-    dragBall.vy = (my - lastMouseY) / dt * 0.05;
-  }
+if (dt > 0) {
+dragBall.vx = (mx - lastMouseX) / dt * 0.05;
+dragBall.vy = (my - lastMouseY) / dt * 0.05;
+}
 
-  lastMouseX = mx;
-  lastMouseY = my;
-  lastTime = now;
+lastMouseX = mx;
+lastMouseY = my;
+lastTime = now;
 }, { passive: false });
 
 canvas.addEventListener('touchend', () => {
-  isDragging = false;
-  dragBall = null;
+isDragging = false;
+dragBall = null;
 });
 
 function update() {
-  balls.forEach(b => {
-    if (b.gone) return;
+balls.forEach(b => {
+if (b.gone) return;
 
-    if (b.fading) {
-      b.opacity -= 0.02;
-      if (b.opacity <= 0) b.gone = true;
-      return;
-    }
+if (b.fading) {
+b.opacity -= 0.02;
+if (b.opacity <= 0) b.gone = true;
+return;
+}
 
-    // while dragging, physics is handled by pointer movement
-    if (!isDragging || b !== dragBall) {
-      b.vy += GRAVITY;
-      b.x += b.vx;
-      b.y += b.vy;
-    }
+// while dragging, physics is handled by pointer movement
+if (!isDragging || b !== dragBall) {
+b.vy += GRAVITY;
+b.x += b.vx;
+b.y += b.vy;
+}
 
-    // Ceiling collision
-    if (b.y - RADIUS <= 0) {
-      b.y = RADIUS;
-      b.vy *= -BOUNCE;
-      b.vx *= FRICTION;
-    }
+// Ceiling collision
+if (b.y - RADIUS <= 0) {
+b.y = RADIUS;
+b.vy *= -BOUNCE;
+b.vx *= FRICTION;
+}
 
-    // Ground collision
-    if (b.y + RADIUS >= GROUND) {
-      b.y = GROUND - RADIUS;
-      b.vy *= -BOUNCE;
-      b.vx *= FRICTION;
+// Ground collision
+if (b.y + RADIUS >= GROUND) {
+b.y = GROUND - RADIUS;
+b.vy *= -BOUNCE;
+b.vx *= FRICTION;
 
-      if (Math.abs(b.vy) < 1.5 && !isDragging) {
-        b.vy = 0;
-        b.vx = 0;
-        b.fading = true;
-      }
-    }
+if (Math.abs(b.vy) < 1.5 && !isDragging) {
+b.vy = 0;
+b.vx = 0;
+b.fading = true;
+}
+}
 
-    // Left wall
-    if (b.x - RADIUS <= 0) {
-      b.x = RADIUS;
-      b.vx *= -BOUNCE;
-      b.vy *= FRICTION;
-    }
+// Left wall
+if (b.x - RADIUS <= 0) {
+b.x = RADIUS;
+b.vx *= -BOUNCE;
+b.vy *= FRICTION;
+}
 
-    // Right wall
-    if (b.x + RADIUS >= canvas.width) {
-      b.x = canvas.width - RADIUS;
-      b.vx *= -BOUNCE;
-      b.vy *= FRICTION;
-    }
-  });
+// Right wall
+if (b.x + RADIUS >= canvas.width) {
+b.x = canvas.width - RADIUS;
+b.vx *= -BOUNCE;
+b.vy *= FRICTION;
+}
+});
 
-  balls = balls.filter(b => !b.gone);
+balls = balls.filter(b => !b.gone);
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Ground line
-  ctx.beginPath();
-  ctx.moveTo(0, GROUND);
-  ctx.lineTo(canvas.width, GROUND);
-  ctx.strokeStyle = '#ddd';
-  ctx.lineWidth = 1;
-  ctx.stroke();
+// Ground line
+ctx.beginPath();
+ctx.moveTo(0, GROUND);
+ctx.lineTo(canvas.width, GROUND);
+ctx.strokeStyle = '#ddd';
+ctx.lineWidth = 1;
+ctx.stroke();
 
-  balls.forEach(b => {
-    if (b.gone) return;
+balls.forEach(b => {
+if (b.gone) return;
 
-    // Shadow
-    const shadowY = GROUND;
-    const dist = shadowY - (b.y + RADIUS);
-    const shadowScale = Math.max(0.1, 1 - dist / (canvas.height * 0.7));
-    const shadowAlpha = shadowScale * 0.15;
-    ctx.save();
-    ctx.translate(b.x, shadowY);
-    ctx.scale(shadowScale, 0.3);
-    ctx.beginPath();
-    ctx.arc(0, 0, RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
-    ctx.fill();
-    ctx.restore();
+// Shadow
+const shadowY = GROUND;
+const dist = shadowY - (b.y + RADIUS);
+const shadowScale = Math.max(0.1, 1 - dist / (canvas.height * 0.7));
+const shadowAlpha = shadowScale * 0.15;
+ctx.save();
+ctx.translate(b.x, shadowY);
+ctx.scale(shadowScale, 0.3);
+ctx.beginPath();
+ctx.arc(0, 0, RADIUS, 0, Math.PI * 2);
+ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
+ctx.fill();
+ctx.restore();
 
-    // Ball (green)
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, RADIUS, 0, Math.PI * 2);
-    ctx.fillStyle = BALL_COLOR;
-    ctx.fill();
+// Ball (green)
+ctx.beginPath();
+ctx.arc(b.x, b.y, RADIUS, 0, Math.PI * 2);
+ctx.fillStyle = BALL_COLOR;
+ctx.fill();
 
-    // Shine
-    ctx.beginPath();
-    ctx.arc(b.x - 6, b.y - 6, 5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,255,255,${0.18 * b.opacity})`;
-    ctx.fill();
-  });
+// Shine
+ctx.beginPath();
+ctx.arc(b.x - 6, b.y - 6, 5, 0, Math.PI * 2);
+ctx.fillStyle = `rgba(255,255,255,${0.18 * b.opacity})`;
+ctx.fill();
+});
 }
 
 function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
+update();
+draw();
+requestAnimationFrame(loop);
 }
 
 loop();
