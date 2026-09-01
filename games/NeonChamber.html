@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Chamber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  /* palette shifted to a grainy, monochrome-with-one-accent analog-horror
+     mood instead of the arcade's clean neon vaporwave look. var names kept
+     the same as the rest of the site's codebase for consistency, values
+     changed: --magenta is now the "danger/live" red, --cyan the cold
+     "safe/blank" steel-blue, --phosphor a bone-white for text. */
+  :root{
+    --magenta:#e8203f;
+    --cyan:#7fa6bd;
+    --phosphor:#d8d4c8;
+    --bg:#050505;
+    --panel:#101010;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:#050505;
+    color:#d8d4c8;
+    font-family:'Press Start 2P', monospace;
+    overflow-x:hidden;
+  }
+  #scanlines{
+    position:fixed; inset:0; pointer-events:none; z-index:40;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 1px, transparent 2px, transparent 4px);
+    mix-blend-mode:multiply;
+  }
+  #grain{
+    position:fixed; inset:0; pointer-events:none; z-index:41;
+    opacity:.16; mix-blend-mode:overlay; image-rendering:pixelated;
+    background-repeat:repeat; background-size:96px 96px;
+  }
+  #vignette{
+    position:fixed; inset:0; pointer-events:none; z-index:39;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.75) 100%);
+  }
+  #flash{
+    position:fixed; inset:0; pointer-events:none; z-index:35;
+    opacity:0; transition:opacity .08s;
+  }
+  #flash.live{ background:rgba(232,32,63,.55); opacity:1; transition:opacity .04s; }
+  #flash.blank{ background:rgba(127,166,189,.16); opacity:1; transition:opacity .04s; }
+
+  @keyframes jitter{
+    0%{ transform:translate(0,0); }
+    20%{ transform:translate(-3px,2px); }
+    40%{ transform:translate(3px,-1px); }
+    60%{ transform:translate(-2px,-2px); }
+    80%{ transform:translate(2px,1px); }
+    100%{ transform:translate(0,0); }
+  }
+  #wrap.jitter{ animation:jitter .22s linear; }
+</style>
+<style>
+  #wrap{ max-width:640px; margin:0 auto; padding:18px 14px 40px; }
+
+  h1{
+    text-align:center;
+    font-size:1.1rem;
+    color:var(--phosphor);
+    letter-spacing:2px;
+    margin:10px 0 4px;
+    text-shadow:2px 2px 0 #000;
+  }
+  .subtitle{ text-align:center; font-size:.5rem; color:#6b6b6b; margin-bottom:18px; line-height:1.7;}
+
+  .combatant{
+    background:var(--panel);
+    border:3px solid #000;
+    border-radius:0;
+    padding:12px 14px;
+    margin-bottom:10px;
+    box-shadow:4px 4px 0 #000;
+  }
+  .combatant.opp{ border-color:var(--cyan); }
+  .combatant.you{ border-color:var(--magenta); }
+  .combatant .name{ font-size:.6rem; margin-bottom:8px; letter-spacing:1px; }
+  .combatant.opp .name{ color:var(--cyan); }
+  .combatant.you .name{ color:var(--magenta); }
+  .hp{ display:flex; gap:6px; }
+  .pip{
+    width:16px; height:16px; border-radius:0;
+    background:#1c1c1c; border:2px solid #000;
+  }
+  .pip.filled.opp{ background:var(--cyan); border-color:#000; }
+  .pip.filled.you{ background:var(--magenta); border-color:#000; }
+
+  #chamber-box{
+    text-align:center;
+    background:var(--panel);
+    border:3px solid #000;
+    border-radius:0;
+    padding:14px;
+    margin:14px 0;
+    box-shadow:4px 4px 0 #000;
+  }
+  #round-info{ font-size:.5rem; color:var(--phosphor); margin-bottom:10px; line-height:1.8; }
+  #shells{ display:flex; justify-content:center; gap:5px; flex-wrap:wrap; }
+  .shell-pip{ width:12px; height:20px; border-radius:0; background:#2a2a2a; border:2px solid #000; }
+
+  #log{
+    background:#020202;
+    border:3px solid #000;
+    border-radius:0;
+    padding:10px 12px;
+    height:120px;
+    overflow-y:auto;
+    font-size:.5rem;
+    line-height:1.9;
+    color:var(--phosphor);
+    margin-bottom:14px;
+    box-shadow:4px 4px 0 #000;
+  }
+  #log div{ opacity:.9; }
+
+  #items-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; justify-content:center; }
+  .item-btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:.45rem;
+    color:var(--phosphor);
+    background:#101010;
+    border:2px solid #000;
+    border-radius:0;
+    padding:9px 8px;
+    cursor:pointer;
+    line-height:1.6;
+    min-width:76px;
+    box-shadow:3px 3px 0 #000;
+    transition:transform .1s;
+  }
+  .item-btn:hover:not(:disabled){ background:#2a2a2a; transform:translate(-1px,-1px); box-shadow:4px 4px 0 #000; }
+  .item-btn:disabled{ opacity:.3; cursor:default; }
+
+  #opp-items{ text-align:center; font-size:.5rem; color:#6b6b6b; margin:-2px 0 14px; }
+
+  #actions{ display:flex; gap:12px; }
+  .shoot-btn{
+    flex:1;
+    font-family:'Press Start 2P', monospace;
+    font-size:.6rem;
+    padding:16px 8px;
+    border-radius:0;
+    cursor:pointer;
+    line-height:1.6;
+    box-shadow:4px 4px 0 #000;
+    transition:transform .1s;
+  }
+  #shoot-opp-btn{ background:#101010; border:3px solid var(--cyan); color:var(--cyan); }
+  #shoot-opp-btn:hover:not(:disabled){ background:var(--cyan); color:#050505; transform:translate(-1px,-1px); }
+  #shoot-self-btn{ background:#101010; border:3px solid var(--magenta); color:var(--magenta); }
+  #shoot-self-btn:hover:not(:disabled){ background:var(--magenta); color:#050505; transform:translate(-1px,-1px); }
+  .shoot-btn:disabled{ opacity:.3; cursor:default; }
+
+  .turn-flag{ text-align:center; font-size:.55rem; margin-bottom:14px; letter-spacing:1px; }
+  .turn-flag.you{ color:var(--magenta); }
+  .turn-flag.opp{ color:var(--cyan); }
+
+  .overlay{
+    position:fixed; inset:0; z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(2,2,2,.92);
+    padding:20px;
+  }
+  .overlay .card{
+    max-width:440px;
+    text-align:center;
+    background:var(--panel);
+    border:3px solid var(--magenta);
+    border-radius:0;
+    padding:32px 26px;
+    box-shadow:6px 6px 0 #000;
+  }
+  .overlay h2{ color:var(--phosphor); font-size:1rem; margin:0 0 16px; text-shadow:2px 2px 0 #000; }
+  .overlay p{ font-size:.55rem; line-height:2; color:#a8a49a; margin:0 0 10px; text-align:left; }
+  .overlay .rule{ color:var(--magenta); }
+  .overlay button{
+    margin-top:14px;
+    font-family:'Press Start 2P', monospace;
+    font-size:.6rem;
+    padding:14px 22px;
+    background:var(--magenta);
+    color:#050505;
+    border:none;
+    border-radius:0;
+    cursor:pointer;
+    box-shadow:4px 4px 0 #000;
+  }
+  .overlay button:hover{ background:var(--cyan); }
+  #hidden-until-start{ display:none; }
+
+  @media (max-width:420px){
+    h1{ font-size:.85rem; }
+    .item-btn{ min-width:64px; font-size:.4rem; }
+  }
+</style>
+</head>
+<body>
+<div id="scanlines"></div>
+<div id="grain"></div>
+<div id="vignette"></div>
+<div id="flash"></div>
+
+<div id="wrap">
+  <h1>NEON CHAMBER</h1>
+  <div class="subtitle">a duel of nerve, one shell at a time</div>
+
+  <div id="hidden-until-start">
+    <div class="combatant opp">
+      <div class="name">RIVAL UNIT</div>
+      <div class="hp" id="opp-hp"></div>
+    </div>
+
+    <div id="chamber-box">
+      <div id="round-info">loading chamber...</div>
+      <div id="shells"></div>
+    </div>
+
+    <div class="combatant you">
+      <div class="name">YOU</div>
+      <div class="hp" id="player-hp"></div>
+    </div>
+
+    <div class="turn-flag" id="turn-flag">&nbsp;</div>
+
+    <div id="log"></div>
+
+    <div id="items-row"></div>
+    <div id="opp-items">rival is holding items too...</div>
+
+    <div id="actions">
+      <button class="shoot-btn" id="shoot-self-btn">SHOOT SELF</button>
+      <button class="shoot-btn" id="shoot-opp-btn">SHOOT RIVAL</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="intro-overlay">
+  <div class="card">
+    <h2>NEON CHAMBER</h2>
+    <p>A shotgun is loaded with a random mix of <span class="rule">LIVE</span> and <span class="rule">BLANK</span> shells. You and the Rival Unit take turns choosing who to fire at &mdash; yourself, or them.</p>
+    <p><span class="rule">Blank on yourself</span> &mdash; no damage, and you go again.<br>
+       <span class="rule">Live on yourself</span> &mdash; you take damage, turn passes.<br>
+       <span class="rule">Firing at the rival</span> &mdash; turn always passes after, live or not.</p>
+    <p>Items help you cheat the odds. First to zero HP loses.</p>
+    <button id="start-btn">START DUEL</button>
+  </div>
+</div>
+
+<div class="overlay" id="end-overlay" style="display:none;">
+  <div class="card">
+    <h2 id="end-title">&nbsp;</h2>
+    <p id="end-msg" style="text-align:center;">&nbsp;</p>
+    <button id="again-btn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  const MAX_HP = 4;
+  const ITEM_TYPES = ['scanner', 'medkit', 'stunner', 'overcharge', 'ejector', 'polarity'];
+  const ITEM_LABEL = {
+    scanner:    'SCANNER',
+    medkit:     'MEDKIT',
+    stunner:    'STUNNER',
+    overcharge: 'OVERCHRG',
+    ejector:    'EJECTOR',
+    polarity:   'POLARITY'
+  };
+  const ITEM_HINT = {
+    scanner:    'reveal next shell',
+    medkit:     'heal 1 HP',
+    stunner:    'skip rival\u2019s turn',
+    overcharge: 'next hit x2 dmg',
+    ejector:    'discard next shell',
+    polarity:   'flip next shell'
+  };
+
+  let playerHP, oppHP;
+  let chamber, roundLive, roundBlank;
+  let playerItems, oppItems;
+  let knownShell, oppKnownShell;
+  let playerOvercharge, oppOvercharge;
+  let oppStunned;
+  let turn;
+  let gameOver;
+
+  const els = {
+    wrap: document.getElementById('wrap'),
+    grain: document.getElementById('grain'),
+    playerHP: document.getElementById('player-hp'),
+    oppHP: document.getElementById('opp-hp'),
+    roundInfo: document.getElementById('round-info'),
+    shells: document.getElementById('shells'),
+    log: document.getElementById('log'),
+    itemsRow: document.getElementById('items-row'),
+    oppItems: document.getElementById('opp-items'),
+    shootSelf: document.getElementById('shoot-self-btn'),
+    shootOpp: document.getElementById('shoot-opp-btn'),
+    turnFlag: document.getElementById('turn-flag'),
+    flash: document.getElementById('flash'),
+    introOverlay: document.getElementById('intro-overlay'),
+    endOverlay: document.getElementById('end-overlay'),
+    endTitle: document.getElementById('end-title'),
+    endMsg: document.getElementById('end-msg'),
+    startBtn: document.getElementById('start-btn'),
+    againBtn: document.getElementById('again-btn'),
+  };
+
+  function rand(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function shuffle(arr){
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function nameOf(who){ return who === 'player' ? 'You' : 'The rival'; }
+
+  function log(msg){
+    const line = document.createElement('div');
+    line.textContent = msg;
+    els.log.appendChild(line);
+    while (els.log.children.length > 60) els.log.removeChild(els.log.firstChild);
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+
+  function flash(kind){
+    els.flash.className = kind;
+    setTimeout(() => { els.flash.className = ''; }, 220);
+    if (kind === 'live') {
+      els.wrap.classList.remove('jitter');
+      void els.wrap.offsetWidth; // restart the animation if it's already mid-jitter
+      els.wrap.classList.add('jitter');
+    }
+  }
+
+  // ---- animated film-grain texture, regenerated on an interval so it
+  // flickers like analog static rather than sitting there as a static image ----
+  (function grain(){
+    const size = 96;
+    const c = document.createElement('canvas');
+    c.width = c.height = size;
+    const ctx = c.getContext('2d');
+    const img = ctx.createImageData(size, size);
+    function regenerate(){
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = Math.random() * 255 | 0;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+        img.data[i + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+      els.grain.style.backgroundImage = `url(${c.toDataURL()})`;
+    }
+    regenerate();
+    setInterval(regenerate, 90);
+  })();
+
+  function initGame(){
+    playerHP = MAX_HP;
+    oppHP = MAX_HP;
+    playerItems = [];
+    oppItems = [];
+    playerOvercharge = false;
+    oppOvercharge = false;
+    oppStunned = false;
+    knownShell = null;
+    oppKnownShell = null;
+    turn = 'player';
+    gameOver = false;
+    els.log.innerHTML = '';
+    log('A new duel begins. Good luck.');
+    reloadChamber();
+    render();
+  }
+
+  function dealItems(){
+    [ [playerItems, 'You'], [oppItems, 'The rival'] ].forEach(([list, label]) => {
+      const count = rand(1, 2);
+      for (let i = 0; i < count && list.length < 6; i++) {
+        list.push(ITEM_TYPES[rand(0, ITEM_TYPES.length - 1)]);
+      }
+      if (count > 0) log(`${label} picked up ${count} item${count > 1 ? 's' : ''}.`);
+    });
+  }
+
+  function reloadChamber(){
+    const total = rand(4, 8);
+    const live = rand(1, total - 1);
+    const blank = total - live;
+    roundLive = live;
+    roundBlank = blank;
+    chamber = shuffle([
+      ...Array(live).fill(true),
+      ...Array(blank).fill(false),
+    ]);
+    knownShell = null;
+    oppKnownShell = null;
+    log(`Chamber loaded: ${live} live / ${blank} blank (order unknown).`);
+    dealItems();
+  }
+
+  function render(){
+    els.playerHP.innerHTML = '';
+    for (let i = 0; i < MAX_HP; i++) {
+      const p = document.createElement('div');
+      p.className = 'pip you' + (i < playerHP ? ' filled' : '');
+      els.playerHP.appendChild(p);
+    }
+    els.oppHP.innerHTML = '';
+    for (let i = 0; i < MAX_HP; i++) {
+      const p = document.createElement('div');
+      p.className = 'pip opp' + (i < oppHP ? ' filled' : '');
+      els.oppHP.appendChild(p);
+    }
+
+    els.roundInfo.textContent = `${roundLive} LIVE / ${roundBlank} BLANK LOADED  \u2014  ${chamber.length} SHELL${chamber.length === 1 ? '' : 'S'} LEFT`;
+    els.shells.innerHTML = '';
+    for (let i = 0; i < chamber.length; i++) {
+      const s = document.createElement('div');
+      s.className = 'shell-pip';
+      els.shells.appendChild(s);
+    }
+
+    els.itemsRow.innerHTML = '';
+    const counts = {};
+    playerItems.forEach(t => counts[t] = (counts[t] || 0) + 1);
+    Object.keys(counts).forEach(type => {
+      const btn = document.createElement('button');
+      btn.className = 'item-btn';
+      btn.innerHTML = `${ITEM_LABEL[type]} x${counts[type]}<br><span style="opacity:.6">${ITEM_HINT[type]}</span>`;
+      btn.disabled = gameOver || turn !== 'player';
+      btn.addEventListener('click', () => usePlayerItem(type));
+      els.itemsRow.appendChild(btn);
+    });
+
+    els.oppItems.textContent = oppItems.length
+      ? `rival is holding ${oppItems.length} item${oppItems.length > 1 ? 's' : ''}...`
+      : 'rival is out of items.';
+
+    const myTurn = !gameOver && turn === 'player';
+    els.shootSelf.disabled = !myTurn;
+    els.shootOpp.disabled = !myTurn;
+
+    els.turnFlag.textContent = gameOver ? '' : (turn === 'player' ? '\u25B8 YOUR TURN' : '\u25B8 RIVAL\u2019S TURN');
+    els.turnFlag.className = 'turn-flag ' + (turn === 'player' ? 'you' : 'opp');
+  }
+
+  // ---- items ----
+  function removeOneItem(list, type){
+    const idx = list.indexOf(type);
+    if (idx !== -1) list.splice(idx, 1);
+  }
+
+  function usePlayerItem(type){
+    if (gameOver || turn !== 'player') return;
+    if (playerItems.indexOf(type) === -1) return;
+    applyItem('player', type);
+    removeOneItem(playerItems, type);
+    render();
+  }
+
+  function useOppItem(type){
+    if (oppItems.indexOf(type) === -1) return;
+    applyItem('opponent', type);
+    removeOneItem(oppItems, type);
+  }
+
+  function applyItem(who, type){
+    const label = who === 'player' ? 'You' : 'The rival';
+    switch (type) {
+      case 'scanner': {
+        const next = chamber[0];
+        if (who === 'player') { knownShell = next; log('Scanner: the next shell is ' + (next ? 'LIVE.' : 'blank.')); }
+        else { oppKnownShell = next; log('The rival uses a Scanner.'); }
+        break;
+      }
+      case 'medkit': {
+        if (who === 'player') {
+          if (playerHP < MAX_HP) { playerHP++; log('You patch up with a Medkit. +1 HP.'); }
+          else log('Medkit used, but you were already at full HP.');
+        } else {
+          if (oppHP < MAX_HP) { oppHP++; log('The rival uses a Medkit and heals 1 HP.'); }
+          else log('The rival wastes a Medkit at full HP.');
+        }
+        break;
+      }
+      case 'stunner': {
+        if (who === 'player') { oppStunned = true; log('Stunner primed \u2014 the rival will lose their next turn.'); }
+        else { /* AI won't stun itself */ }
+        break;
+      }
+      case 'overcharge': {
+        if (who === 'player') { playerOvercharge = true; log('Overcharge Cell armed \u2014 your next hit deals double damage.'); }
+        else { oppOvercharge = true; log('The rival arms an Overcharge Cell.'); }
+        break;
+      }
+      case 'ejector': {
+        if (chamber.length) {
+          const ejected = chamber.shift();
+          log(`${label} eject${who === 'player' ? '' : 's'} a ${ejected ? 'LIVE' : 'blank'} shell.`);
+          knownShell = null; oppKnownShell = null;
+          if (chamber.length === 0) reloadChamber();
+        }
+        break;
+      }
+      case 'polarity': {
+        if (chamber.length) {
+          chamber[0] = !chamber[0];
+          if (who === 'player' && knownShell !== null) knownShell = !knownShell;
+          if (who === 'opponent' && oppKnownShell !== null) oppKnownShell = !oppKnownShell;
+          log(`${label} flip${who === 'player' ? '' : 's'} the polarity of the next shell.`);
+        }
+        break;
+      }
+    }
+  }
+
+  // ---- firing ----
+  function fire(shooter, target){
+    if (gameOver || chamber.length === 0) return;
+    const isLive = chamber.shift();
+    knownShell = null;
+    oppKnownShell = null;
+
+    let dmg = 1;
+    if (isLive) {
+      if (shooter === 'player' && playerOvercharge) { dmg = 2; playerOvercharge = false; }
+      if (shooter === 'opponent' && oppOvercharge) { dmg = 2; oppOvercharge = false; }
+    }
+
+    flash(isLive ? 'live' : 'blank');
+    log(`${nameOf(shooter)} fire${shooter === 'player' ? '' : 's'} at ${target === shooter ? 'self' : nameOf(target).toLowerCase()}: ${isLive ? 'LIVE ROUND \u2014 ' + dmg + ' damage!' : 'click... blank.'}`);
+
+    if (isLive) {
+      if (target === 'player') playerHP = Math.max(0, playerHP - dmg);
+      else oppHP = Math.max(0, oppHP - dmg);
+    }
+
+    render();
+
+    if (playerHP <= 0 || oppHP <= 0) { endGame(); return; }
+
+    if (chamber.length === 0) reloadChamber();
+
+    const keepsTurn = (target === shooter) && !isLive;
+    if (keepsTurn) {
+      log(`${nameOf(shooter)} keep${shooter === 'player' ? '' : 's'} the turn.`);
+      render();
+      if (shooter === 'opponent') setTimeout(aiTurn, 900);
+    } else {
+      passTurn();
+    }
+  }
+
+  function passTurn(){
+    turn = (turn === 'player') ? 'opponent' : 'player';
+    if (turn === 'opponent' && oppStunned) {
+      oppStunned = false;
+      log('The rival is stunned and loses their turn!');
+      turn = 'player';
+    }
+    render();
+    if (turn === 'opponent' && !gameOver) setTimeout(aiTurn, 900);
+  }
+
+  function aiTurn(){
+    if (gameOver || turn !== 'opponent') return;
+
+    if (oppKnownShell === null && oppItems.includes('scanner') && Math.random() < 0.7) {
+      useOppItem('scanner'); render();
+    }
+    if (oppHP <= 2 && oppItems.includes('medkit') && Math.random() < 0.85) {
+      useOppItem('medkit'); render();
+    }
+    if (oppKnownShell === true && oppItems.includes('overcharge') && !oppOvercharge && Math.random() < 0.6) {
+      useOppItem('overcharge'); render();
+    }
+    if (oppKnownShell === false && chamber.length === 1 && oppItems.includes('ejector') && Math.random() < 0.3) {
+      useOppItem('ejector'); render();
+    }
+
+    let target;
+    if (oppKnownShell === true) target = 'player';
+    else if (oppKnownShell === false) target = 'opponent';
+    else target = Math.random() < 0.65 ? 'player' : 'opponent';
+
+    setTimeout(() => fire('opponent', target), 500);
+  }
+
+  function endGame(){
+    gameOver = true;
+    render();
+    const won = oppHP <= 0;
+    els.endTitle.textContent = won ? 'YOU WIN' : 'YOU LOSE';
+    els.endTitle.style.color = won ? '#39ff14' : '#ff2bd6';
+    els.endMsg.textContent = won
+      ? 'The rival unit powers down. The chamber falls silent.'
+      : 'The lights flicker out. Better luck next duel.';
+    els.endOverlay.style.display = 'flex';
+  }
+
+  els.shootSelf.addEventListener('click', () => fire('player', 'player'));
+  els.shootOpp.addEventListener('click', () => fire('player', 'opponent'));
+
+  els.startBtn.addEventListener('click', () => {
+    els.introOverlay.style.display = 'none';
+    document.getElementById('hidden-until-start').style.display = 'block';
+    initGame();
+  });
+
+  els.againBtn.addEventListener('click', () => {
+    els.endOverlay.style.display = 'none';
+    initGame();
+  });
+
+})();
+</script>
+</body>
+</html>
