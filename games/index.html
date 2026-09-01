@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro MS Paint</title>
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #toolbar {
+    display: flex;
+    gap: 10px;
+    margin: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  canvas {
+    border: 2px solid #333;
+    background: #fff;
+    cursor: crosshair;
+  }
+  #toolbar input, #toolbar button, #toolbar select {
+    padding: 5px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <input type="color" id="colorPicker" value="#000000">
+  <input type="range" id="brushSize" min="1" max="50" value="5">
+  <select id="tool">
+    <option value="brush">Brush</option>
+    <option value="eraser">Eraser</option>
+    <option value="line">Line</option>
+    <option value="rectangle">Rectangle</option>
+    <option value="circle">Circle</option>
+    <option value="fill">Fill</option>
+  </select>
+  <button id="undo">Undo</button>
+  <button id="redo">Redo</button>
+  <button id="clear">Clear</button>
+  <button id="save">Save PNG</button>
+</div>
+
+<canvas id="paintCanvas" width="900" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('paintCanvas');
+const ctx = canvas.getContext('2d');
+const colorPicker = document.getElementById('colorPicker');
+const brushSize = document.getElementById('brushSize');
+const toolSelect = document.getElementById('tool');
+const undoBtn = document.getElementById('undo');
+const redoBtn = document.getElementById('redo');
+const clearBtn = document.getElementById('clear');
+const saveBtn = document.getElementById('save');
+
+let drawing = false;
+let startX = 0;
+let startY = 0;
+let currentColor = colorPicker.value;
+let currentSize = brushSize.value;
+let currentTool = toolSelect.value;
+
+let undoStack = [];
+let redoStack = [];
+
+// Save state for undo
+function saveState() {
+  undoStack.push(canvas.toDataURL());
+  redoStack = [];
+}
+
+// Start drawing
+function startDraw(e) {
+  drawing = true;
+  const rect = canvas.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+  if (currentTool === 'fill') {
+    saveState();
+    fillCanvas(startX, startY);
+  } else if (currentTool === 'brush' || currentTool === 'eraser') {
+    saveState();
+    draw(e);
+  }
+}
+
+// End drawing
+function endDraw(e) {
+  if (!drawing) return;
+  drawing = false;
+  if (['line','rectangle','circle'].includes(currentTool)) {
+    drawShape(e);
+    saveState();
+  }
+  ctx.beginPath();
+}
+
+// Drawing freehand
+function draw(e) {
+  if (!drawing || !['brush','eraser'].includes(currentTool)) return;
+  ctx.lineWidth = currentSize;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = currentTool === 'eraser' ? '#fff' : currentColor;
+  
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+}
+
+// Draw shapes with preview
+function drawShape(e, preview=false) {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  ctx.lineWidth = currentSize;
+  ctx.strokeStyle = currentColor;
+  
+  if (preview) ctx.setLineDash([5,5]); 
+  else ctx.setLineDash([]);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (undoStack.length) {
+    const img = new Image();
+    img.src = undoStack[undoStack.length-1];
+    img.onload = () => {
+      ctx.drawImage(img,0,0);
+      drawPreview(x, y);
+    }
+  } else drawPreview(x, y);
+}
+
+function drawPreview(x, y) {
+  if (currentTool === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  } else if (currentTool === 'rectangle') {
+    ctx.strokeRect(startX, startY, x-startX, y-startY);
+  } else if (currentTool === 'circle') {
+    const radius = Math.sqrt((x-startX)**2 + (y-startY)**2);
+    ctx.beginPath();
+    ctx.arc(startX, startY, radius, 0, Math.PI*2);
+    ctx.stroke();
+  }
+}
+
+// Fill bucket
+function fillCanvas(x, y) {
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const targetColor = getPixelColor(imageData, x, y);
+  const fillColor = hexToRgb(currentColor);
+  if (!colorsMatch(targetColor, fillColor)) {
+    floodFill(imageData, x, y, targetColor, fillColor);
+    ctx.putImageData(imageData, 0, 0);
+  }
+}
+
+// Helpers for fill
+function getPixelColor(imageData, x, y) {
+  const index = (y * imageData.width + x) * 4;
+  const d = imageData.data;
+  return [d[index], d[index+1], d[index+2], d[index+3]];
+}
+
+function colorsMatch(c1, c2) {
+  return c1[0]===c2[0] && c1[1]===c2[1] && c1[2]===c2[2] && c1[3]===255;
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.slice(1),16);
+  return [(bigint>>16)&255, (bigint>>8)&255, bigint&255, 255];
+}
+
+function floodFill(imageData, x, y, targetColor, fillColor) {
+  const stack = [[x,y]];
+  const w = imageData.width;
+  const h = imageData.height;
+  const d = imageData.data;
+  
+  while(stack.length) {
+    const [cx,cy] = stack.pop();
+    let idx = (cy*w + cx)*4;
+    if (cx<0||cx>=w||cy<0||cy>=h) continue;
+    const currentColor = [d[idx],d[idx+1],d[idx+2],d[idx+3]];
+    if (colorsMatch(currentColor,targetColor)) {
+      d[idx] = fillColor[0];
+      d[idx+1] = fillColor[1];
+      d[idx+2] = fillColor[2];
+      d[idx+3] = fillColor[3];
+      stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+    }
+  }
+}
+
+// Event listeners
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mousemove', e => {
+  if (drawing && ['brush','eraser'].includes(currentTool)) draw(e);
+  if (drawing && ['line','rectangle','circle'].includes(currentTool)) drawShape(e,true);
+});
+
+colorPicker.addEventListener('input', e => currentColor = e.target.value);
+brushSize.addEventListener('input', e => currentSize = e.target.value);
+toolSelect.addEventListener('change', e => currentTool = e.target.value);
+
+clearBtn.addEventListener('click', () => {
+  saveState();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+});
+
+undoBtn.addEventListener('click', () => {
+  if (undoStack.length) {
+    redoStack.push(canvas.toDataURL());
+    const img = new Image();
+    img.src = undoStack.pop();
+    img.onload = () => ctx.drawImage(img,0,0);
+  }
+});
+
+redoBtn.addEventListener('click', () => {
+  if (redoStack.length) {
+    undoStack.push(canvas.toDataURL());
+    const img = new Image();
+    img.src = redoStack.pop();
+    img.onload = () => ctx.drawImage(img,0,0);
+  }
+});
+
+saveBtn.addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'paint.png';
+  link.href = canvas.toDataURL();
+  link.click();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  switch(e.key.toLowerCase()) {
+    case 'b': currentTool='brush'; toolSelect.value='brush'; break;
+    case 'e': currentTool='eraser'; toolSelect.value='eraser'; break;
+    case 'l': currentTool='line'; toolSelect.value='line'; break;
+    case 'r': currentTool='rectangle'; toolSelect.value='rectangle'; break;
+    case 'c': currentTool='circle'; toolSelect.value='circle'; break;
+    case 'f': currentTool='fill'; toolSelect.value='fill'; break;
+    case 'z': undoBtn.click(); break;
+    case 'y': redoBtn.click(); break;
+  }
+});
+</script>
+
+</body>
+</html>
