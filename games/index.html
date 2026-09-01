@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Hello, world.</title>
+<style>
+body{
+  margin:0;
+  background:white;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  overflow:hidden;
+  font-family:monospace;
+}
+
+/* CAMERA */
+.scene{
+  margin-top:80px;
+  transform-origin:center top;
+  transform:scale(3.5);
+  transition:transform 3.5s ease;
+  position:relative;
+}
+
+/* ROBOT */
+.robot{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+/* HEAD */
+.head{
+  width:200px;
+  height:150px;
+  background:#e6e6e6;
+  border:6px solid black;
+  border-radius:20px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position:relative;
+}
+
+/* SCREEN */
+.screen{
+  width:160px;
+  height:100px;
+  background:black;
+  border:6px solid black;
+  border-radius:12px;
+  position:relative;
+  overflow:hidden;
+  color:#00ff88;
+  font-size:10px;
+  padding:6px;
+}
+
+.bootText{
+  opacity:0;
+  white-space:pre-line;
+}
+
+/* EYES */
+.eye{
+  position:absolute;
+  width:38px;
+  height:24px;
+  background:#00c2d1;
+  border-radius:12px;
+  top:30px;
+  opacity:0;
+}
+
+.eye.left{ left:30px; }
+.eye.right{ right:30px; }
+
+/* MOUTH */
+.mouth{
+  position:absolute;
+  bottom:22px;
+  left:50%;
+  transform:translateX(-50%);
+  width:60px;
+  height:8px;
+  background:#00c2d1;
+  border-radius:20px;
+  opacity:0;
+  transition:height 0.05s linear;
+}
+
+/* BODY */
+.body{
+  width:170px;
+  height:180px;
+  background:#f0f0f0;
+  border:6px solid black;
+  border-radius:25px;
+  margin-top:15px;
+}
+
+/* ARMS */
+.arm{
+  position:absolute;
+  width:40px;
+  height:140px;
+  background:#f0f0f0;
+  border:6px solid black;
+  border-radius:20px;
+  top:170px;
+  transform-origin: top center; /* shoulder pivot */
+}
+
+.arm.left{ left:-60px; }
+.arm.right{ right:-60px; transform:rotate(0deg); }
+
+/* TEXTBOX: positioned next to head */
+.textbox{
+  position:absolute;
+  left:220px; /* right next to head */
+  top:15px;    /* slightly above top of head */
+  padding:18px 28px;
+  background:white;
+  border:6px solid black;
+  border-radius:20px;
+  font-size:22px;
+  opacity:0;
+  transform:translateY(0);
+  transition:0.8s;
+}
+
+/* ANIMATIONS */
+@keyframes flicker{
+  0%{background:black;}
+  25%{background:#022;}
+  50%{background:black;}
+  75%{background:#033;}
+  100%{background:black;}
+}
+
+@keyframes blinkOnce{
+  0%{height:24px;}
+  40%{height:4px;}
+  60%{height:4px;}
+  100%{height:24px;}
+}
+</style>
+</head>
+<body>
+
+<div class="scene" id="scene">
+  <div class="robot">
+    <div class="head">
+      <div class="screen" id="screen">
+        <div class="bootText" id="bootText"></div>
+        <div class="eye left" id="eyeL"></div>
+        <div class="eye right" id="eyeR"></div>
+        <div class="mouth" id="mouth"></div>
+      </div>
+    </div>
+
+    <div class="body"></div>
+    <div class="arm left"></div>
+    <div class="arm right"></div>
+  </div>
+
+  <!-- Textbox next to head -->
+  <div class="textbox" id="textbox">
+    <span id="text"></span>
+  </div>
+</div>
+
+<script>
+const screen = document.getElementById("screen");
+const bootText = document.getElementById("bootText");
+const eyeL = document.getElementById("eyeL");
+const eyeR = document.getElementById("eyeR");
+const mouth = document.getElementById("mouth");
+const scene = document.getElementById("scene");
+const textbox = document.getElementById("textbox");
+const text = document.getElementById("text");
+
+/* LIP SYNC SPEECH */
+function speak(str,i=0){
+  if(i===0) mouth.style.opacity=1;
+
+  if(i>=str.length){
+    mouth.style.height="8px";
+    return;
+  }
+
+  const c=str[i];
+  text.textContent+=c;
+
+  let delay=90;
+  let height=14;
+
+  if("aeo".includes(c)) height=28;
+  else if("iu".includes(c)) height=22;
+  else if("mw".includes(c)) height=8;
+  else if(c===" ") { height=6; delay=120; }
+  else if(c===",") { height=6; delay=300; }
+
+  mouth.style.height=height+"px";
+  setTimeout(()=>speak(str,i+1),delay);
+}
+
+/* BOOT SEQUENCE */
+function bootSequence(lines,i=0){
+  if(i<lines.length){
+    bootText.style.opacity=1;
+    bootText.textContent+=lines[i]+"\n";
+    setTimeout(()=>bootSequence(lines,i+1),300);
+  }else{
+    setTimeout(startEyes,500);
+  }
+}
+
+function startEyes(){
+  bootText.style.opacity=0;
+  eyeL.style.opacity=1;
+  eyeR.style.opacity=1;
+
+  eyeL.style.animation="blinkOnce 0.5s ease";
+  eyeR.style.animation="blinkOnce 0.5s ease";
+
+  setTimeout(()=>{
+    scene.style.transform="scale(1)";
+  },900);
+
+  setTimeout(()=>{
+    textbox.style.opacity=1;
+    speak("hello, world!");
+  },2400);
+}
+
+/* START SEQUENCE */
+setTimeout(()=>{
+  screen.style.animation="flicker 1.3s forwards";
+},700);
+
+setTimeout(()=>{
+  bootSequence([
+    "NTCC BIOS v2.4",
+    "Memory Check...OK",
+    "Loading AI Core...",
+    "Boot Complete."
+  ]);
+},2000);
+</script>
+
+</body>
+</html>
