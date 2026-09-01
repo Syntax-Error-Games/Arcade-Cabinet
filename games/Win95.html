@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Windows 98 Web OS</title>
+
+<style>
+:root{
+  --bg:#008080;
+  --window:#c0c0c0;
+  --title1:#000080;
+  --title2:#1084d0;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:"MS Sans Serif",Tahoma;
+  background:var(--bg);
+  overflow:hidden;
+  cursor:url('https://cur.cursors-4u.net/windows/win-4/win394.cur'),auto;
+}
+
+/* CRT */
+body::after{
+content:"";
+position:fixed;
+inset:0;
+pointer-events:none;
+background:repeating-linear-gradient(
+to bottom,
+rgba(0,0,0,0.05),
+rgba(0,0,0,0.05) 1px,
+transparent 1px,
+transparent 2px);
+}
+
+/* DESKTOP */
+.desktop{
+position:absolute;
+inset:0 0 28px 0;
+padding:10px;
+}
+
+/* ICON */
+.icon{
+width:70px;
+text-align:center;
+color:white;
+font-size:12px;
+margin:10px;
+display:inline-block;
+cursor:pointer;
+}
+
+/* TASKBAR */
+.taskbar{
+position:fixed;
+bottom:0;
+left:0;
+height:28px;
+width:100%;
+background:var(--window);
+border-top:2px solid #fff;
+display:flex;
+align-items:center;
+padding:2px;
+}
+
+.btn{
+background:var(--window);
+border-top:2px solid #fff;
+border-left:2px solid #fff;
+border-right:2px solid #808080;
+border-bottom:2px solid #808080;
+padding:2px 8px;
+font-size:12px;
+cursor:pointer;
+}
+
+.btn:active{
+border-top:2px solid #808080;
+border-left:2px solid #808080;
+border-right:2px solid #fff;
+border-bottom:2px solid #fff;
+}
+
+#taskbarTabs{
+flex:1;
+display:flex;
+gap:2px;
+margin-left:4px;
+}
+
+.clock{
+width:60px;
+text-align:center;
+font-size:12px;
+border:2px inset #c0c0c0;
+}
+
+/* START MENU */
+#startMenu{
+position:fixed;
+bottom:28px;
+left:0;
+width:220px;
+background:var(--window);
+border:2px solid;
+border-top-color:#fff;
+border-left-color:#fff;
+border-right-color:#000;
+border-bottom-color:#000;
+display:none;
+flex-direction:column;
+font-size:12px;
+}
+
+.start-item{
+padding:6px;
+}
+.start-item:hover{
+background:#000080;
+color:white;
+}
+
+/* WINDOW */
+.window{
+position:absolute;
+width:420px;
+height:300px;
+background:var(--window);
+border:2px solid;
+border-top-color:#fff;
+border-left-color:#fff;
+border-right-color:#000;
+border-bottom-color:#000;
+display:none;
+flex-direction:column;
+resize:both;
+overflow:hidden;
+}
+
+.titlebar{
+background:linear-gradient(to right,var(--title1),var(--title2));
+color:white;
+padding:2px 4px;
+display:flex;
+align-items:center;
+cursor:move;
+font-size:12px;
+}
+
+.title{flex:1;}
+
+.content{
+flex:1;
+background:white;
+overflow:auto;
+padding:4px;
+font-size:12px;
+}
+
+/* SCREENSAVER */
+#screensaver{
+position:fixed;
+inset:0;
+background:black;
+display:none;
+align-items:center;
+justify-content:center;
+color:white;
+font-size:32px;
+z-index:9999;
+}
+</style>
+</head>
+<body>
+
+<div class="desktop" id="desktop"></div>
+
+<div id="screensaver">Windows 98</div>
+
+<div class="taskbar">
+<div class="btn" id="startBtn">Start</div>
+<div id="taskbarTabs"></div>
+<div class="clock" id="clock"></div>
+</div>
+
+<div id="startMenu">
+<div class="start-item" onclick="openExplorer()">My Computer</div>
+<div class="start-item" onclick="openIE()">Internet Explorer</div>
+<div class="start-item" onclick="openControlPanel()">Control Panel</div>
+<div class="start-item" onclick="openMines()">Minesweeper</div>
+<div class="start-item" onclick="activateScreensaver()">Screensaver</div>
+<div class="start-item" onclick="shutdown()">Shut Down...</div>
+</div>
+
+<script>
+
+/* CLOCK */
+setInterval(()=>{
+clock.textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+},1000);
+
+/* START */
+startBtn.onclick=()=>startMenu.style.display=
+startMenu.style.display==="flex"?"none":"flex";
+
+/* WINDOW ENGINE */
+let z=1;
+function createWindow(title,contentHTML){
+let win=document.createElement("div");
+win.className="window";
+win.style.top="100px";
+win.style.left="150px";
+win.innerHTML=`
+<div class="titlebar"><div class="title">${title}</div></div>
+<div class="content">${contentHTML}</div>`;
+document.body.appendChild(win);
+win.style.display="flex";
+win.style.zIndex=++z;
+
+let bar=win.querySelector(".titlebar");
+let offsetX,offsetY,isDrag=false;
+
+bar.onmousedown=e=>{
+isDrag=true;
+offsetX=e.offsetX;
+offsetY=e.offsetY;
+win.style.zIndex=++z;
+};
+document.onmousemove=e=>{
+if(!isDrag)return;
+win.style.left=e.pageX-offsetX+"px";
+win.style.top=e.pageY-offsetY+"px";
+};
+document.onmouseup=()=>isDrag=false;
+
+let tab=document.createElement("div");
+tab.className="btn";
+tab.textContent=title;
+tab.onclick=()=>{
+win.style.display=
+win.style.display==="none"?"flex":"none";
+};
+taskbarTabs.appendChild(tab);
+
+return win;
+}
+
+/* FILE SYSTEM */
+function openExplorer(){
+createWindow("My Computer",`
+<b>Local Disk (C:)</b><br><br>
+📁 Program Files<br>
+📁 My Documents<br>
+📄 readme.txt
+`);
+}
+
+/* INTERNET EXPLORER */
+function openIE(){
+createWindow("Internet Explorer 5",`
+<input style="width:100%" value="https://example.com"><br><br>
+<iframe src="https://example.com" style="width:100%;height:200px;"></iframe>
+`);
+}
+
+/* CONTROL PANEL */
+function openControlPanel(){
+createWindow("Control Panel",`
+<button onclick="setTheme('win98')">Windows 98</button><br><br>
+<button onclick="setTheme('win95')">Windows 95</button><br><br>
+<button onclick="setTheme('contrast')">High Contrast</button>
+`);
+}
+
+function setTheme(theme){
+if(theme==="win95"){
+document.documentElement.style.setProperty('--bg','#008080');
+document.documentElement.style.setProperty('--title1','#000080');
+}
+if(theme==="contrast"){
+document.documentElement.style.setProperty('--bg','#000');
+document.documentElement.style.setProperty('--title1','#000');
+document.documentElement.style.setProperty('--title2','#fff');
+}
+if(theme==="win98"){
+document.documentElement.style.setProperty('--bg','#008080');
+document.documentElement.style.setProperty('--title1','#000080');
+document.documentElement.style.setProperty('--title2','#1084d0');
+}
+}
+
+/* MINES */
+function openMines(){
+createWindow("Minesweeper","Minesweeper coming here...");
+}
+
+/* SCREENSAVER */
+function activateScreensaver(){
+screensaver.style.display="flex";
+document.onmousemove=()=>screensaver.style.display="none";
+}
+
+/* SHUTDOWN */
+function shutdown(){
+document.body.innerHTML=
+'<div style="background:black;color:white;height:100vh;display:flex;justify-content:center;align-items:center;font-size:24px;">It is now safe to turn off your computer.</div>';
+}
+
+</script>
+
+</body>
+</html>
