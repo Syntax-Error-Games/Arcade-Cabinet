@@ -1,70 +1,797 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcade Cabinet</title>
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #eef2f3;
-            color: #333;
-        }
-        .container {
-            text-align: center;
-            padding: 40px;
-            border-radius: 15px;
-            background: white;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 300px;
-        }
-        h1 { margin-bottom: 20px; font-size: 1.5rem; color: #2c3e50; }
-        ul { list-style: none; padding: 0; }
-        li { margin: 15px 0; }
-        .game-link {
-            text-decoration: none;
-            color: white;
-            background-color: #007bff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            display: block;
-            transition: background 0.3s;
-        }
-        .game-link:hover {
-            background-color: #0056b3;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arcade Cabinet</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --magenta:#ff2bd6;
+    --cyan:#22e0ff;
+    --phosphor:#39ff14;
+    --bg:#0a0612;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    background:var(--bg);
+    color:#eae6ff;
+    font-family:'Press Start 2P', monospace;
+    overflow:hidden;
+  }
+
+  /* ---------- fallback list (shown until / unless the 3D scene loads) ---------- */
+  #fallback{
+    position:fixed;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:radial-gradient(ellipse at center, #1a0e2e 0%, #0a0612 70%);
+  }
+  #fallback .panel{
+    text-align:center;
+    padding:40px 32px;
+    border-radius:10px;
+    background:#140a24;
+    border:2px solid var(--magenta);
+    box-shadow:0 0 25px rgba(255,43,214,.4), inset 0 0 20px rgba(34,224,255,.08);
+    width:320px;
+  }
+  #fallback h1{
+    margin:0 0 24px;
+    font-size:1rem;
+    color:var(--cyan);
+    text-shadow:0 0 8px var(--cyan);
+  }
+  #fallback ul{list-style:none;padding:0;margin:0;}
+  #fallback li{margin:12px 0;}
+  #fallback .game-link{
+    text-decoration:none;
+    color:#0a0612;
+    background:var(--magenta);
+    padding:12px 14px;
+    border-radius:4px;
+    display:block;
+    font-family:'Press Start 2P', monospace;
+    font-size:.6rem;
+    line-height:1.4;
+    transition:background .2s, transform .2s;
+  }
+  #fallback .game-link:hover{
+    background:var(--cyan);
+    transform:translateY(-2px);
+  }
+  #fallback .hint{
+    margin-top:20px;
+    font-size:.5rem;
+    color:#8a7fb0;
+    line-height:1.6;
+  }
+
+  /* ---------- 3D app ---------- */
+  #app{
+    position:fixed;
+    inset:0;
+    display:none;
+  }
+  #app canvas{display:block;}
+
+  #crosshair-hint{
+    position:fixed;
+    left:50%;
+    bottom:24px;
+    transform:translateX(-50%);
+    font-size:.55rem;
+    color:#8a7fb0;
+    background:rgba(10,6,18,.6);
+    padding:10px 16px;
+    border:1px solid rgba(255,43,214,.4);
+    border-radius:6px;
+    pointer-events:none;
+    opacity:.9;
+    text-align:center;
+    line-height:1.8;
+  }
+
+  /* ---------- game overlay ---------- */
+  #game-overlay{
+    position:fixed;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    background:#000;
+    z-index:50;
+  }
+  #game-overlay iframe{
+    flex:1;
+    width:100%;
+    border:0;
+    background:#fff;
+  }
+  #back-btn{
+    position:absolute;
+    top:14px;
+    left:14px;
+    z-index:51;
+    font-family:'Press Start 2P', monospace;
+    font-size:.6rem;
+    color:var(--cyan);
+    background:#0a0612;
+    border:2px solid var(--cyan);
+    border-radius:4px;
+    padding:10px 14px;
+    cursor:pointer;
+    box-shadow:0 0 12px rgba(34,224,255,.5);
+  }
+  #back-btn:hover{ background:var(--cyan); color:#0a0612; }
+
+  @media (max-width:600px){
+    #crosshair-hint{ font-size:.45rem; padding:8px 12px; }
+    #fallback .panel{ width:88vw; padding:28px 20px; }
+  }
+</style>
 </head>
 <body>
-<div class="container">
+
+<!--
+  =====================================================================
+  HOW TO ADD MORE GAMES
+  =====================================================================
+  Scroll down to the "GAMES" array near the top of the <script> block
+  below and add one line per game, e.g.:
+
+      { title: "My New Game", file: "games/MyNewGame.html" },
+
+  That's it — the arcade-cabinet screen AND the plain-text fallback
+  list both read from this single array, so nothing else needs to
+  change and the page can never "run out of room" (the CRT menu
+  scrolls automatically once there are more games than fit on screen).
+  =====================================================================
+-->
+
+<div id="fallback">
+  <div class="panel">
     <h1>My Games</h1>
-    <ul>
-        <li><a class="game-link" href="games/Terminal.html">Terminal</a></li>
-    </ul>
-    <ul>
-        <li><a class="game-link" href="games/GravitySim.html">Gravity Simulator</a></li>
-    </ul>
-    <ul>
-        <li><a class="game-link" href="games/ClickerGame.html">Clicker Game</a></li>
-    </ul>
-     <ul>
-        <li><a class="game-link" href="games/NameGenerator.html">Name Generator</a></li>
-    </ul>
-     <ul>
-        <li><a class="game-link" href="games/DiceRoller.html">Die Roller</a></li>
-    </ul>
-     <ul>
-        <li><a class="game-link" href="games/ShooterGame.html">Shooter Game</a></li>
-    </ul>
-    <ul>
-        <li><a class="game-link" href="games/MusicPlayer.html">Music Player</a></li>
-    </ul>
+    <ul id="fallback-list"></ul>
+    <div class="hint">loading 3d arcade&hellip;</div>
+  </div>
 </div>
+
+<div id="app">
+  <div id="crosshair-hint">drag to look around &nbsp;&bull;&nbsp; click the screen, a button, or press ENTER to play<br>arrow keys, scroll, or drag the joystick to browse</div>
+</div>
+
+<div id="game-overlay">
+  <button id="back-btn">&larr; BACK TO ARCADE (ESC)</button>
+  <iframe id="game-frame" src="about:blank" title="game"></iframe>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+(function(){
+
+  // =====================================================================
+  // GAMES — add / remove entries here. Everything else adapts automatically.
+  // =====================================================================
+  const GAMES = [
+    { title: "Terminal",          file: "games/Terminal.html" },
+    { title: "Gravity Simulator", file: "games/GravitySim.html" },
+    { title: "Clicker Game",      file: "games/ClickerGame.html" },
+    { title: "Name Generator",    file: "games/NameGenerator.html" },
+    { title: "Die Roller",        file: "games/DiceRoller.html" },
+    { title: "Shooter Game",      file: "games/ShooterGame.html" },
+    { title: "Music Player",      file: "games/MusicPlayer.html" },
+  ];
+
+  // ---- always populate the plain-HTML fallback list, no matter what ----
+  const fallbackList = document.getElementById('fallback-list');
+  GAMES.forEach(g => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.className = 'game-link';
+    a.href = g.file;
+    a.textContent = g.title;
+    li.appendChild(a);
+    fallbackList.appendChild(li);
+  });
+
+  // ---- bail out gracefully to the fallback if three.js / WebGL is unavailable ----
+  function webglAvailable(){
+    try{
+      const c = document.createElement('canvas');
+      return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+    }catch(e){ return false; }
+  }
+  if (typeof THREE === 'undefined' || !webglAvailable()) {
+    document.querySelector('#fallback .hint').textContent = '3d view unavailable — enjoy the classic menu';
+    return;
+  }
+
+  // =====================================================================
+  // Scene / renderer / camera
+  // =====================================================================
+  const appEl = document.getElementById('app');
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  appEl.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0612);
+  scene.fog = new THREE.FogExp2(0x0a0612, 0.06);
+
+  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 1.55, 3.1);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 1.3, 0.35);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.minDistance = 1.4;
+  controls.maxDistance = 4.5;
+  controls.minPolarAngle = Math.PI / 2 - 0.5;
+  controls.maxPolarAngle = Math.PI / 2 + 0.35;
+  controls.minAzimuthAngle = -Math.PI / 2.6;
+  controls.maxAzimuthAngle = Math.PI / 2.6;
+  controls.update();
+
+  // =====================================================================
+  // Lighting
+  // =====================================================================
+  scene.add(new THREE.AmbientLight(0x2a2144, 1.1));
+
+  const keyLight = new THREE.PointLight(0xffffff, 0.5, 8);
+  keyLight.position.set(0, 3, 2);
+  scene.add(keyLight);
+
+  const magentaLight = new THREE.PointLight(0xff2bd6, 2.2, 6);
+  magentaLight.position.set(-2, 1.4, 1.5);
+  scene.add(magentaLight);
+
+  const cyanLight = new THREE.PointLight(0x22e0ff, 2.2, 6);
+  cyanLight.position.set(2, 1.4, 1.5);
+  scene.add(cyanLight);
+
+  // =====================================================================
+  // Room: floor (neon grid), walls, ceiling
+  // =====================================================================
+  const gridCanvas = document.createElement('canvas');
+  gridCanvas.width = gridCanvas.height = 512;
+  const gridCtx = gridCanvas.getContext('2d');
+  function drawGridTexture(){
+    const size = 512;
+    gridCtx.fillStyle = '#0a0612';
+    gridCtx.fillRect(0, 0, size, size);
+    gridCtx.strokeStyle = 'rgba(255,43,214,0.55)';
+    gridCtx.lineWidth = 2;
+    const step = size / 8;
+    for(let i = 0; i <= 8; i++){
+      gridCtx.beginPath(); gridCtx.moveTo(i*step, 0); gridCtx.lineTo(i*step, size); gridCtx.stroke();
+      gridCtx.beginPath(); gridCtx.moveTo(0, i*step); gridCtx.lineTo(size, i*step); gridCtx.stroke();
+    }
+  }
+  drawGridTexture();
+  const gridTexture = new THREE.CanvasTexture(gridCanvas);
+  gridTexture.wrapS = gridTexture.wrapT = THREE.RepeatWrapping;
+  gridTexture.repeat.set(6, 6);
+
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(24, 24),
+    new THREE.MeshStandardMaterial({ map: gridTexture, roughness: 0.6, metalness: 0.2 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.02; // nudge below y=0 so it isn't coplanar with the cabinet base or the room's bottom face (was causing z-fighting flicker)
+  scene.add(floor);
+
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = wallCanvas.height = 256;
+  const wallCtx = wallCanvas.getContext('2d');
+  function drawWallTexture(){
+    const grad = wallCtx.createLinearGradient(0, 0, 0, 256);
+    grad.addColorStop(0, '#1a0e2e');
+    grad.addColorStop(1, '#0a0612');
+    wallCtx.fillStyle = grad;
+    wallCtx.fillRect(0, 0, 256, 256);
+  }
+  drawWallTexture();
+  const wallTexture = new THREE.CanvasTexture(wallCanvas);
+  const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.9, side: THREE.BackSide });
+
+  const room = new THREE.Mesh(new THREE.BoxGeometry(24, 8.3, 24), wallMat);
+  room.position.y = 3.9; // bottom sits slightly below the floor, top unchanged
+  scene.add(room);
+
+  // thin neon strips along the back wall for atmosphere
+  const stripGeo = new THREE.BoxGeometry(0.06, 5, 0.06);
+  [-4, -2.6, 2.6, 4].forEach((x, i) => {
+    const strip = new THREE.Mesh(stripGeo, new THREE.MeshBasicMaterial({ color: i % 2 ? 0x22e0ff : 0xff2bd6 }));
+    strip.position.set(x, 2.5, -6);
+    scene.add(strip);
+  });
+
+  // =====================================================================
+  // Arcade cabinet
+  // =====================================================================
+  const cabinet = new THREE.Group();
+  scene.add(cabinet);
+
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x140a24, roughness: 0.5, metalness: 0.3 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xff2bd6, emissive: 0xff2bd6, emissiveIntensity: 0.5, roughness: 0.4 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 1.05), bodyMat);
+  base.position.y = 0.15;
+  cabinet.add(base);
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.5, 0.9), bodyMat);
+  body.position.y = 1.05;
+  cabinet.add(body);
+
+  // trim edges
+  [[-0.66, 1.05, 0], [0.66, 1.05, 0]].forEach(p => {
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.5, 0.92), trimMat);
+    edge.position.set(p[0], p[1], p[2]);
+    cabinet.add(edge);
+  });
+
+  // marquee
+  const marqueeCanvas = document.createElement('canvas');
+  marqueeCanvas.width = 512; marqueeCanvas.height = 128;
+  const marqueeCtx = marqueeCanvas.getContext('2d');
+  function drawMarqueeTexture(){
+    marqueeCtx.fillStyle = '#0a0612';
+    marqueeCtx.fillRect(0, 0, 512, 128);
+    marqueeCtx.textAlign = 'center';
+    marqueeCtx.textBaseline = 'middle';
+    marqueeCtx.font = "48px 'Press Start 2P', monospace";
+    marqueeCtx.fillStyle = '#22e0ff';
+    marqueeCtx.shadowColor = '#22e0ff';
+    marqueeCtx.shadowBlur = 24;
+    marqueeCtx.fillText('ARCADE', 256, 68);
+  }
+  drawMarqueeTexture();
+  const marqueeTexture = new THREE.CanvasTexture(marqueeCanvas);
+  const marquee = new THREE.Mesh(
+    new THREE.BoxGeometry(1.35, 0.34, 0.16),
+    new THREE.MeshBasicMaterial({ map: marqueeTexture })
+  );
+  marquee.position.set(0, 1.98, 0.02);
+  marquee.rotation.x = -0.12;
+  cabinet.add(marquee);
+
+  // screen bezel
+  const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.82, 0.1), new THREE.MeshStandardMaterial({ color: 0x050208, roughness: 0.6 }));
+  bezel.position.set(0, 1.48, 0.42);
+  bezel.rotation.x = -0.06;
+  cabinet.add(bezel);
+
+  // =====================================================================
+  // CRT screen — canvas texture menu
+  // =====================================================================
+  const SCREEN_W = 512, SCREEN_H = 384;
+  const ROWS_VISIBLE = 6;
+  const screenCanvas = document.createElement('canvas');
+  screenCanvas.width = SCREEN_W; screenCanvas.height = SCREEN_H;
+  const sctx = screenCanvas.getContext('2d');
+  const screenTexture = new THREE.CanvasTexture(screenCanvas);
+
+  let selected = 0;
+  let scrollOffset = 0;
+  let hoverRow = -1;
+  let blinkOn = true;
+
+  function drawMenu(){
+    sctx.fillStyle = '#020402';
+    sctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+    sctx.textAlign = 'center';
+    sctx.fillStyle = '#39ff14';
+    sctx.shadowColor = '#39ff14';
+    sctx.shadowBlur = 10;
+    sctx.font = "20px 'Press Start 2P', monospace";
+    sctx.fillText('SELECT YOUR GAME', SCREEN_W / 2, 42);
+
+    const listTop = 70;
+    const rowH = 40;
+    sctx.font = "14px 'Press Start 2P', monospace";
+    sctx.textAlign = 'left';
+
+    if (selected < scrollOffset) scrollOffset = selected;
+    if (selected >= scrollOffset + ROWS_VISIBLE) scrollOffset = selected - ROWS_VISIBLE + 1;
+
+    const visible = GAMES.slice(scrollOffset, scrollOffset + ROWS_VISIBLE);
+    visible.forEach((g, i) => {
+      const idx = scrollOffset + i;
+      const y = listTop + i * rowH;
+      const isSelected = idx === selected;
+      const isHover = idx === hoverRow;
+
+      if (isSelected) {
+        sctx.shadowBlur = 0;
+        sctx.fillStyle = 'rgba(57,255,20,0.18)';
+        sctx.fillRect(24, y - 24, SCREEN_W - 48, 32);
+      }
+      sctx.fillStyle = (isSelected || isHover) ? '#39ff14' : '#1c8a0c';
+      sctx.shadowBlur = (isSelected || isHover) ? 10 : 0;
+      const cursor = isSelected ? '> ' : '  ';
+      let label = cursor + g.title;
+      if (label.length > 28) label = label.slice(0, 27) + '\u2026';
+      sctx.fillText(label, 40, y);
+    });
+
+    if (scrollOffset > 0) {
+      sctx.textAlign = 'center';
+      sctx.fillStyle = '#39ff14';
+      sctx.fillText('^', SCREEN_W / 2, listTop - 22);
+    }
+    if (scrollOffset + ROWS_VISIBLE < GAMES.length) {
+      sctx.textAlign = 'center';
+      sctx.fillStyle = '#39ff14';
+      sctx.fillText('v', SCREEN_W / 2, listTop + ROWS_VISIBLE * rowH + 4);
+    }
+
+    sctx.textAlign = 'center';
+    sctx.shadowBlur = blinkOn ? 10 : 0;
+    sctx.fillStyle = blinkOn ? '#39ff14' : '#0d3a06';
+    sctx.font = "13px 'Press Start 2P', monospace";
+    sctx.fillText('PRESS ENTER TO PLAY', SCREEN_W / 2, SCREEN_H - 22);
+
+    // scanlines
+    sctx.shadowBlur = 0;
+    sctx.fillStyle = 'rgba(0,0,0,0.25)';
+    for (let y = 0; y < SCREEN_H; y += 4) sctx.fillRect(0, y, SCREEN_W, 1);
+
+    // vignette
+    const vg = sctx.createRadialGradient(SCREEN_W/2, SCREEN_H/2, SCREEN_H*0.25, SCREEN_W/2, SCREEN_H/2, SCREEN_H*0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    sctx.fillStyle = vg;
+    sctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
+
+    screenTexture.needsUpdate = true;
+  }
+  drawMenu();
+
+  const screenMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.88, 0.66),
+    new THREE.MeshBasicMaterial({ map: screenTexture })
+  );
+  screenMesh.position.set(0, 1.49, 0.475);
+  screenMesh.rotation.x = -0.06;
+  cabinet.add(screenMesh);
+
+  const screenGlow = new THREE.PointLight(0x39ff14, 1.4, 2.5);
+  screenGlow.position.set(0, 1.49, 0.9);
+  cabinet.add(screenGlow);
+
+  // ---- control panel: a tilted shelf whose whole surface faces the
+  // player, carrying a draggable joystick (drag up/down = browse) and
+  // buttons (click = play). Everything is a child of controlGroup so
+  // rotating that one group orients the whole panel correctly.
+  const controlGroup = new THREE.Group();
+  controlGroup.position.set(0, 0.92, 0.55);
+  controlGroup.rotation.x = 0.5; // tilt the shelf up & toward the camera
+  cabinet.add(controlGroup);
+
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.5), bodyMat);
+  controlGroup.add(panel);
+
+  const joystickGroup = new THREE.Group();
+  joystickGroup.position.set(-0.35, 0.04, 0.02);
+  controlGroup.add(joystickGroup);
+
+  const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.045, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+  stickBase.position.set(0, 0.02, 0);
+  joystickGroup.add(stickBase);
+
+  const stickTilt = new THREE.Group(); // pivots to simulate the stick being pushed
+  stickTilt.position.set(0, 0.045, 0);
+  joystickGroup.add(stickTilt);
+
+  const stickShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+  stickShaft.position.set(0, 0.1, 0);
+  stickTilt.add(stickShaft);
+  const stickBall = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff2bd6, emissive: 0xff2bd6, emissiveIntensity: 0.45 }));
+  stickBall.position.set(0, 0.2, 0);
+  stickTilt.add(stickBall);
+  // larger invisible sphere so the joystick is easy to grab with the mouse/finger
+  const stickGrabZone = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+  stickGrabZone.position.set(0, 0.15, 0);
+  joystickGroup.add(stickGrabZone);
+
+  const buttons = [];
+  const btnColors = [0x39ff14, 0xffe600, 0x22e0ff, 0xff2bd6];
+  btnColors.forEach((col, i) => {
+    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.4 }));
+    btn.position.set(0.05 + i * 0.12, 0.055, -0.02);
+    controlGroup.add(btn);
+    buttons.push(btn);
+  });
+
+  cabinet.position.set(0, 0, -1.2);
+
+  // =====================================================================
+  // Interaction: raycasting, keyboard, click
+  // =====================================================================
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const interactiveObjects = [screenMesh, stickGrabZone, ...buttons];
+
+  let overScreen = false;
+  let hoveredButton = -1;
+
+  function updateHoverFromEvent(clientX, clientY){
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(interactiveObjects)[0];
+
+    hoverRow = -1;
+    overScreen = false;
+    hoveredButton = -1;
+    let cursor = 'grab';
+
+    if (hit) {
+      if (hit.object === screenMesh) {
+        overScreen = true;
+        const u = hit.uv.x, v = hit.uv.y;
+        const canvasY = (1 - v) * SCREEN_H;
+        const canvasX = u * SCREEN_W;
+        const listTop = 70, rowH = 40;
+        const row = Math.floor((canvasY - (listTop - 24)) / rowH);
+        if (canvasX > 20 && row >= 0 && row < ROWS_VISIBLE && (scrollOffset + row) < GAMES.length) {
+          hoverRow = scrollOffset + row;
+          cursor = 'pointer';
+        }
+      } else if (hit.object === stickGrabZone) {
+        cursor = joystickDragging ? 'grabbing' : 'grab';
+      } else if (buttons.includes(hit.object)) {
+        hoveredButton = buttons.indexOf(hit.object);
+        cursor = 'pointer';
+      }
+    }
+
+    // disable camera-zoom-on-wheel while the pointer is over the CRT so the
+    // wheel scrolls the game list instead of dollying the camera
+    controls.enableZoom = !overScreen;
+    renderer.domElement.style.cursor = cursor;
+  }
+
+  renderer.domElement.addEventListener('mousemove', e => { if(!joystickDragging) updateHoverFromEvent(e.clientX, e.clientY); drawMenu(); });
+
+  // track drag distance so releasing the mouse after orbiting the camera
+  // doesn't also register as a click on whatever's under the cursor
+  let dragStartPos = null;
+  renderer.domElement.addEventListener('mousedown', e => { dragStartPos = { x: e.clientX, y: e.clientY }; });
+
+  renderer.domElement.addEventListener('click', e => {
+    if (dragStartPos) {
+      const dragDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+      dragStartPos = null;
+      if (dragDist > 6) return; // was a camera-orbit drag, not a click
+    }
+    if (gameOpen || cameraAnimating) return;
+    updateHoverFromEvent(e.clientX, e.clientY);
+    if (hoverRow >= 0) {
+      selected = hoverRow;
+      launchGame(selected);
+    } else if (hoveredButton >= 0) {
+      launchGame(selected);
+    }
+  });
+
+  renderer.domElement.addEventListener('wheel', e => {
+    if (gameOpen || cameraAnimating || !overScreen) return;
+    e.preventDefault();
+    if (e.deltaY > 0) selected = Math.min(selected + 1, GAMES.length - 1);
+    else selected = Math.max(selected - 1, 0);
+    drawMenu();
+  }, { passive: false });
+
+  // ---- joystick: press and drag up/down on the ball to browse the menu ----
+  let joystickDragging = false;
+  let joystickStartY = 0;
+  let joystickCooldownUntil = 0;
+
+  renderer.domElement.addEventListener('pointerdown', e => {
+    if (gameOpen || cameraAnimating) return;
+    updateHoverFromEvent(e.clientX, e.clientY);
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObject(stickGrabZone)[0];
+    if (hit) {
+      joystickDragging = true;
+      joystickStartY = e.clientY;
+      controls.enabled = false;
+      renderer.domElement.setPointerCapture(e.pointerId);
+    }
+  });
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (!joystickDragging) return;
+    const dy = e.clientY - joystickStartY;
+    const norm = Math.max(-1, Math.min(1, dy / 55));
+    stickTilt.rotation.x = norm * 0.5;
+    const now = performance.now();
+    if (now > joystickCooldownUntil) {
+      if (norm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); drawMenu(); joystickCooldownUntil = now + 240; }
+      else if (norm < -0.65) { selected = Math.max(selected - 1, 0); drawMenu(); joystickCooldownUntil = now + 240; }
+    }
+  });
+  function releaseJoystick(e){
+    if (!joystickDragging) return;
+    joystickDragging = false;
+    controls.enabled = true;
+    if (e && e.pointerId !== undefined) {
+      try { renderer.domElement.releasePointerCapture(e.pointerId); } catch(err){}
+    }
+  }
+  renderer.domElement.addEventListener('pointerup', releaseJoystick);
+  renderer.domElement.addEventListener('pointercancel', releaseJoystick);
+
+  window.addEventListener('keydown', e => {
+    if (gameOpen) {
+      if (e.key === 'Escape') closeGame();
+      return;
+    }
+    if (cameraAnimating) return;
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      selected = Math.min(selected + 1, GAMES.length - 1);
+      drawMenu();
+    } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      selected = Math.max(selected - 1, 0);
+      drawMenu();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      launchGame(selected);
+    }
+  });
+
+  setInterval(() => { blinkOn = !blinkOn; if(!gameOpen) drawMenu(); }, 500);
+
+  // =====================================================================
+  // Game overlay + camera zoom transition
+  // =====================================================================
+  let gameOpen = false;
+  let cameraAnimating = false;
+  const overlay = document.getElementById('game-overlay');
+  const frame = document.getElementById('game-frame');
+  const backBtn = document.getElementById('back-btn');
+
+  let savedCameraPos = null;
+  let savedTarget = null;
+  const _worldPos = new THREE.Vector3();
+  const _worldQuat = new THREE.Quaternion();
+
+  // eases the camera from where it is now to a target position/lookAt over
+  // `duration` ms, then calls onComplete. Used for the zoom-into-the-CRT
+  // effect on launch, and to zoom back out on close.
+  function animateCameraTo(targetPos, targetLookAt, duration, onComplete){
+    cameraAnimating = true;
+    controls.enabled = false;
+    const startPos = camera.position.clone();
+    const startTarget = controls.target.clone();
+    const startTime = performance.now();
+    function step(now){
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      camera.position.lerpVectors(startPos, targetPos, ease);
+      controls.target.lerpVectors(startTarget, targetLookAt, ease);
+      controls.update();
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        cameraAnimating = false;
+        if (!gameOpen) controls.enabled = true;
+        if (onComplete) onComplete();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function launchGame(index){
+    const game = GAMES[index];
+    if (!game || gameOpen || cameraAnimating) return;
+    gameOpen = true;
+
+    savedCameraPos = camera.position.clone();
+    savedTarget = controls.target.clone();
+
+    // start loading the real file from the repo (e.g. "games/Terminal.html")
+    // right away so it's ready by the time the zoom-in finishes
+    frame.src = game.file;
+
+    screenMesh.getWorldPosition(_worldPos);
+    screenMesh.getWorldQuaternion(_worldQuat);
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
+    const zoomPos = _worldPos.clone().addScaledVector(forward, 0.4);
+
+    animateCameraTo(zoomPos, _worldPos.clone(), 700, () => {
+      overlay.style.display = 'flex';
+    });
+  }
+
+  function closeGame(){
+    if (!gameOpen || cameraAnimating) return;
+    overlay.style.display = 'none';
+    frame.src = 'about:blank';
+    const backPos = savedCameraPos || camera.position.clone();
+    const backTarget = savedTarget || controls.target.clone();
+    animateCameraTo(backPos, backTarget, 700, () => {
+      gameOpen = false;
+      renderer.domElement.focus();
+    });
+  }
+  backBtn.addEventListener('click', closeGame);
+
+  // =====================================================================
+  // Texture self-healing: some browsers (notably mobile Safari) silently
+  // discard the pixel data of off-screen canvases that aren't attached to
+  // the page, and a backgrounded tab can also lose its WebGL context —
+  // both would otherwise leave the floor/wall/marquee blank. Redraw them
+  // whenever that's likely to have happened.
+  // =====================================================================
+  function refreshStaticTextures(){
+    drawGridTexture();    gridTexture.needsUpdate = true;
+    drawWallTexture();    wallTexture.needsUpdate = true;
+    drawMarqueeTexture(); marqueeTexture.needsUpdate = true;
+    screenTexture.needsUpdate = true;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshStaticTextures();
+  });
+
+  renderer.domElement.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+  }, false);
+  renderer.domElement.addEventListener('webglcontextrestored', () => {
+    refreshStaticTextures();
+  }, false);
+
+  // belt-and-braces: redraw once a moment after first paint too
+  setTimeout(refreshStaticTextures, 500);
+
+  // =====================================================================
+  // Resize + render loop
+  // =====================================================================
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    if (!joystickDragging) stickTilt.rotation.x *= 0.82; // spring back to neutral
+    screenGlow.intensity = 1.2 + Math.sin(Date.now() * 0.004) * 0.2;
+    renderer.render(scene, camera);
+  }
+
+  // wait for the pixel font so the CRT text doesn't redraw mid-flicker, then go
+  function reveal(){
+    document.getElementById('fallback').style.display = 'none';
+    appEl.style.display = 'block';
+    drawMenu();
+    animate();
+  }
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(reveal).catch(reveal);
+  } else {
+    reveal();
+  }
+
+})();
+</script>
 </body>
 </html>
