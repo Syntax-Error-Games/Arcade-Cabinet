@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-<input type="range" id="rating" name="rating" min="-100" max="100" value="-150" step="1">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dice Roller</title>
+    <title>Improved Dice Roller</title>
     <style>
+        :root {
+            --primary: #50c878;
+            --primary-hover: #764ba2;
+            --bg-start: #88e788;
+            --bg-end: #764ba2;
+            --text: #333;
+            --card-bg: #ffffff;
+        }
+
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -14,103 +21,246 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #88e788 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text);
         }
-        
+
         .container {
-            background: white;
-            padding: 40px;
+            background: var(--card-bg);
+            padding: 30px 25px;
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             text-align: center;
-            max-width: 400px;
+            max-width: 420px;
+            width: 90%;
         }
-        
+
         h1 {
             color: #333;
             margin-top: 0;
+            font-size: 1.6rem;
         }
-        
-        .dice {
-            width: 120px;
-            height: 120px;
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 0.95rem;
+        }
+
+        .dice-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .die {
+            width: 80px;
+            height: 80px;
             background: white;
             border: 3px solid #333;
             border-radius: 15px;
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            font-size: 72px;
-            margin: 20px 0;
-            transition: transform 0.3s;
+            font-size: 36px;
+            font-weight: bold;
+            transition: transform 0.2s;
+            user-select: none;
         }
-        
-        .dice.rolling {
-            animation: shake 0.5s;
+
+        .die.rolling {
+            animation: shake 0.4s ease-in-out;
         }
-        
+
         @keyframes shake {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-10deg); }
-            75% { transform: rotate(10deg); }
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-8deg) scale(1.05); }
+            75% { transform: rotate(8deg) scale(1.05); }
         }
-        
+
         button {
-            background: #50c878;
+            background: var(--primary);
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 18px;
+            padding: 12px 28px;
+            font-size: 16px;
             border-radius: 10px;
             cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        button:hover {
-            background: #764ba2;
-        }
-        
-        button:active {
-            transform: scale(0.95);
-        }
-        
-        .result {
-            margin-top: 20px;
-            font-size: 24px;
-            color: #764ba2;
+            transition: background 0.25s, transform 0.1s;
             font-weight: bold;
-            min-height: 30px;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .result {
+            margin-top: 12px;
+            font-size: 18px;
+            color: var(--primary-hover);
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .history {
+            margin-top: 15px;
+            text-align: left;
+            max-height: 140px;
+            overflow-y: auto;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .history h3 {
+            margin: 0 0 6px;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .history-list li {
+            padding: 3px 0;
+            color: #444;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Let's go gambling!</h1>
-        <div class="dice" id="dice">?</div>
+        <h1>Let’s go gambling!</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="dieType">Die type</label>
+                <select id="dieType">
+                    <option value="4">d4</option>
+                    <option value="6" selected>d6</option>
+                    <option value="8">d8</option>
+                    <option value="10">d10</option>
+                    <option value="12">d12</option>
+                    <option value="20">d20</option>
+                    <option value="100">d100</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="numDice">Number of dice</label>
+                <input type="number" id="numDice" min="1" max="10" value="1">
+            </div>
+        </div>
+
+        <div class="dice-area" id="diceArea"></div>
+
+        <button id="rollBtn">Roll Dice</button>
+
         <div class="result" id="result"></div>
-        <button onclick="rollDice()">Roll Dice</button>
+
+        <div class="history">
+            <h3>Roll history</h3>
+            <ul class="history-list" id="historyList"></ul>
+        </div>
     </div>
 
     <script>
-        function rollDice() {
-            const dice = document.getElementById('dice');
-            const result = document.getElementById('result');
-            
-            // Add rolling animation
-            dice.classList.add('rolling');
-            
-            // Generate random number between 1 and 100
-            const roll = Math.floor(Math.random() * 200) + -100;
-            
-            // Show the result after animation
-            setTimeout(() => {
-                dice.textContent = roll;
-                result.textContent = `You rolled a ${roll}!`;
-                dice.classList.remove('rolling');
-            }, 500);
+        const diceArea = document.getElementById('diceArea');
+        const resultEl = document.getElementById('result');
+        const rollBtn = document.getElementById('rollBtn');
+        const historyList = document.getElementById('historyList');
+        const dieTypeSelect = document.getElementById('dieType');
+        const numDiceInput = document.getElementById('numDice');
+
+        function createDiceElements(count) {
+            diceArea.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const die = document.createElement('div');
+                die.className = 'die';
+                die.textContent = '?';
+                diceArea.appendChild(die);
+            }
         }
+
+        function rollDice() {
+            const sides = parseInt(dieTypeSelect.value, 10);
+            const count = Math.max(1, Math.min(10, parseInt(numDiceInput.value, 10) || 1));
+
+            createDiceElements(count);
+            const diceEls = Array.from(diceArea.querySelectorAll('.die'));
+
+            diceEls.forEach(d => d.classList.add('rolling'));
+            resultEl.textContent = 'Rolling...';
+
+            const rolls = [];
+            for (let i = 0; i < count; i++) {
+                const r = Math.floor(Math.random() * sides) + 1;
+                rolls.push(r);
+            }
+
+            const total = rolls.reduce((a, b) => a + b, 0);
+
+            setTimeout(() => {
+                diceEls.forEach((d, i) => {
+                    d.textContent = rolls[i];
+                    d.classList.remove('rolling');
+                });
+
+                const rollText = count === 1
+                    ? `You rolled a ${total}!`
+                    : `You rolled: ${rolls.join(', ')} = ${total}`;
+
+                resultEl.textContent = rollText;
+
+                const li = document.createElement('li');
+                const time = new Date().toLocaleTimeString();
+                li.textContent = `[${time}] ${dieTypeSelect.options[dieTypeSelect.selectedIndex].text} × ${count} → ${rollText}`;
+                historyList.prepend(li);
+
+                while (historyList.children.length > 20) {
+                    historyList.removeChild(historyList.lastChild);
+                }
+            }, 400);
+        }
+
+        createDiceElements(1);
+        rollBtn.addEventListener('click', rollDice);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                rollDice();
+            }
+        });
     </script>
-<input type="range" id="rating" name="rating" min="-100" max="100" value="150" step="1">
 </body>
 </html>
-
