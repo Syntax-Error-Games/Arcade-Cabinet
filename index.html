@@ -115,20 +115,43 @@
   }
   #back-btn{
     position:absolute;
-    top:14px;
-    left:14px;
+    top:12px;
+    left:12px;
     z-index:51;
     font-family:'Press Start 2P', monospace;
-    font-size:.6rem;
+    font-size:.45rem;
     color:var(--cyan);
     background:#0a0612;
     border:2px solid var(--cyan);
     border-radius:4px;
-    padding:10px 14px;
+    padding:7px 10px;
     cursor:pointer;
     box-shadow:0 0 12px rgba(34,224,255,.5);
+    opacity:.4;
+    transition:opacity .25s, transform .15s;
   }
+  #back-btn:hover, #back-btn:focus, #back-btn.active{ opacity:1; }
   #back-btn:hover{ background:var(--cyan); color:#0a0612; }
+
+  #open-tab-btn{
+    position:absolute;
+    top:12px;
+    right:12px;
+    z-index:51;
+    font-family:'Press Start 2P', monospace;
+    font-size:.45rem;
+    color:var(--magenta);
+    background:#0a0612;
+    border:2px solid var(--magenta);
+    border-radius:4px;
+    padding:7px 10px;
+    text-decoration:none;
+    box-shadow:0 0 12px rgba(255,43,214,.5);
+    opacity:.4;
+    transition:opacity .25s;
+  }
+  #open-tab-btn:hover, #open-tab-btn:focus, #open-tab-btn.active{ opacity:1; }
+  #open-tab-btn:hover{ background:var(--magenta); color:#0a0612; }
 
   @media (max-width:600px){
     #crosshair-hint{ font-size:.45rem; padding:8px 12px; }
@@ -146,6 +169,9 @@
   below and add one line per game, e.g.:
 
       { title: "My New Game", file: "games/MyNewGame.html" },
+
+  Add `pinBottom: true` to an entry (like Credits) to keep it glued to
+  the end of the list no matter where you insert it above.
 
   That's it — the arcade-cabinet screen AND the plain-text fallback
   list both read from this single array, so nothing else needs to
@@ -167,7 +193,8 @@
 </div>
 
 <div id="game-overlay">
-  <button id="back-btn">&larr; BACK TO ARCADE (ESC)</button>
+  <button id="back-btn">&larr; BACK (ESC)</button>
+  <a id="open-tab-btn" href="#" target="_blank" rel="noopener">OPEN IN TAB &nearr;</a>
   <iframe id="game-frame" src="about:blank" title="game"></iframe>
 </div>
 
@@ -191,8 +218,22 @@
     { title: "Die Roller",        file: "games/DiceRoller.html" },
     { title: "Shooter Game",      file: "games/ShooterGame.html" },
     { title: "Music Player",      file: "games/MusicPlayer.html" },
-    { title: "          Credits", file: "games/Credits.html" },
+    { title: "Neon Chamber",      file: "games/NeonChamber.html" },
+    { title: "VIP Site",          file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
+    { title: "Credits",           file: "games/Credits.html", pinBottom: true },
   ];
+
+  // entries with pinBottom:true always sort to the very end, no matter
+  // where you insert them above — so "Credits" (or anything else you flag
+  // the same way) never has to be the last line in this list to stay last.
+  (function pinBottomEntries(){
+    const pinned = [];
+    for (let i = GAMES.length - 1; i >= 0; i--) {
+      if (GAMES[i].pinBottom) pinned.unshift(GAMES.splice(i, 1)[0]);
+    }
+    GAMES.push(...pinned);
+  })();
+
   // ---- always populate the plain-HTML fallback list, no matter what ----
   const fallbackList = document.getElementById('fallback-list');
   GAMES.forEach(g => {
@@ -569,28 +610,17 @@
     renderer.domElement.style.cursor = cursor;
   }
 
-  renderer.domElement.addEventListener('mousemove', e => { if(!joystickDragging) updateHoverFromEvent(e.clientX, e.clientY); drawMenu(); });
+  // Pointer Events (not mouse events) throughout: OrbitControls calls
+  // preventDefault() on touchstart for its own touch-orbit handling, and
+  // per spec that suppresses the browser's synthetic mouse events
+  // (mousedown/mousemove/click) for that touch — so mouse-event-based
+  // logic here would simply never fire on a touchscreen. Pointer Events
+  // aren't affected by that and work uniformly for mouse, touch, and pen.
+  renderer.domElement.addEventListener('pointermove', e => { if(!joystickDragging) updateHoverFromEvent(e.clientX, e.clientY); drawMenu(); });
 
-  // track drag distance so releasing the mouse after orbiting the camera
-  // doesn't also register as a click on whatever's under the cursor
+  // track drag distance so releasing after orbiting the camera doesn't
+  // also register as a tap/click on whatever's under the cursor
   let dragStartPos = null;
-  renderer.domElement.addEventListener('mousedown', e => { dragStartPos = { x: e.clientX, y: e.clientY }; });
-
-  renderer.domElement.addEventListener('click', e => {
-    if (dragStartPos) {
-      const dragDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
-      dragStartPos = null;
-      if (dragDist > 6) return; // was a camera-orbit drag, not a click
-    }
-    if (gameOpen || cameraAnimating) return;
-    updateHoverFromEvent(e.clientX, e.clientY);
-    if (hoverRow >= 0) {
-      selected = hoverRow;
-      launchGame(selected);
-    } else if (hoveredButton >= 0) {
-      launchGame(selected);
-    }
-  });
 
   renderer.domElement.addEventListener('wheel', e => {
     if (gameOpen || cameraAnimating || !overScreen) return;
@@ -600,12 +630,21 @@
     drawMenu();
   }, { passive: false });
 
-  // ---- joystick: press and drag up/down on the ball to browse the menu ----
+  // ---- joystick: press and drag up/down on the ball to browse the menu.
+  // A repeat timer (not just pointermove) drives the browsing, so holding
+  // the stick at the extreme keeps scrolling even once the mouse stops moving.
   let joystickDragging = false;
   let joystickStartY = 0;
-  let joystickCooldownUntil = 0;
+  let joystickNorm = 0;
+  let joystickRepeatTimer = null;
+
+  function joystickStep(){
+    if (joystickNorm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); drawMenu(); }
+    else if (joystickNorm < -0.65) { selected = Math.max(selected - 1, 0); drawMenu(); }
+  }
 
   renderer.domElement.addEventListener('pointerdown', e => {
+    dragStartPos = { x: e.clientX, y: e.clientY };
     if (gameOpen || cameraAnimating) return;
     updateHoverFromEvent(e.clientX, e.clientY);
     const rect = renderer.domElement.getBoundingClientRect();
@@ -616,31 +655,52 @@
     if (hit) {
       joystickDragging = true;
       joystickStartY = e.clientY;
+      joystickNorm = 0;
       controls.enabled = false;
       renderer.domElement.setPointerCapture(e.pointerId);
+      clearInterval(joystickRepeatTimer);
+      joystickStep(); // immediate feedback if already past threshold
+      joystickRepeatTimer = setInterval(joystickStep, 220);
     }
   });
   renderer.domElement.addEventListener('pointermove', e => {
     if (!joystickDragging) return;
     const dy = e.clientY - joystickStartY;
-    const norm = Math.max(-1, Math.min(1, dy / 55));
-    stickTilt.rotation.x = norm * 0.5;
-    const now = performance.now();
-    if (now > joystickCooldownUntil) {
-      if (norm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); drawMenu(); joystickCooldownUntil = now + 240; }
-      else if (norm < -0.65) { selected = Math.max(selected - 1, 0); drawMenu(); joystickCooldownUntil = now + 240; }
-    }
+    joystickNorm = Math.max(-1, Math.min(1, dy / 55));
+    stickTilt.rotation.x = joystickNorm * 0.5;
   });
   function releaseJoystick(e){
     if (!joystickDragging) return;
     joystickDragging = false;
+    joystickNorm = 0;
+    clearInterval(joystickRepeatTimer);
+    joystickRepeatTimer = null;
     controls.enabled = true;
     if (e && e.pointerId !== undefined) {
       try { renderer.domElement.releasePointerCapture(e.pointerId); } catch(err){}
     }
   }
-  renderer.domElement.addEventListener('pointerup', releaseJoystick);
-  renderer.domElement.addEventListener('pointercancel', releaseJoystick);
+
+  renderer.domElement.addEventListener('pointerup', e => {
+    const wasJoystickDrag = joystickDragging; // read before releaseJoystick clears it
+    releaseJoystick(e);
+    if (wasJoystickDrag) return; // this pointer was working the joystick, not tapping
+
+    if (gameOpen || cameraAnimating) return;
+    if (dragStartPos) {
+      const dragDist = Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y);
+      dragStartPos = null;
+      if (dragDist > 6) return; // was a camera-orbit drag/swipe, not a tap
+    }
+    updateHoverFromEvent(e.clientX, e.clientY);
+    if (hoverRow >= 0) {
+      selected = hoverRow;
+      launchGame(selected);
+    } else if (hoveredButton >= 0) {
+      launchGame(selected);
+    }
+  });
+  renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
 
   window.addEventListener('keydown', e => {
     if (gameOpen) {
@@ -669,9 +729,11 @@
   const overlay = document.getElementById('game-overlay');
   const frame = document.getElementById('game-frame');
   const backBtn = document.getElementById('back-btn');
+  const openTabBtn = document.getElementById('open-tab-btn');
 
   let savedCameraPos = null;
   let savedTarget = null;
+  let overlayFadeTimer = null;
   const _worldPos = new THREE.Vector3();
   const _worldQuat = new THREE.Quaternion();
 
@@ -719,12 +781,21 @@
     const zoomPos = _worldPos.clone().addScaledVector(forward, 0.4);
 
     animateCameraTo(zoomPos, _worldPos.clone(), 700, () => {
+      openTabBtn.href = game.file;
       overlay.style.display = 'flex';
+      backBtn.classList.add('active');
+      openTabBtn.classList.add('active');
+      clearTimeout(overlayFadeTimer);
+      overlayFadeTimer = setTimeout(() => {
+        backBtn.classList.remove('active');
+        openTabBtn.classList.remove('active');
+      }, 1800);
     });
   }
 
   function closeGame(){
     if (!gameOpen || cameraAnimating) return;
+    clearTimeout(overlayFadeTimer);
     overlay.style.display = 'none';
     frame.src = 'about:blank';
     const backPos = savedCameraPos || camera.position.clone();
