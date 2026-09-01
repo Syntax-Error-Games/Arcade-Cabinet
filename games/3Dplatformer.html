@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jetpack Platformer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: radial-gradient(circle at top, #14532d 0%, #022c22 40%, #020617 100%);
+      color: #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .game-container {
+      background: #020617;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(15, 23, 42, 0.8);
+      max-width: 900px;
+      width: 100%;
+      border: 1px solid #065f46;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+      color: #bbf7d0;
+      letter-spacing: 0.08em;
+    }
+
+    canvas {
+      border-radius: 12px;
+      background: linear-gradient(180deg, #020617 0%, #022c22 100%);
+      box-shadow:
+        0 16px 32px rgba(0, 0, 0, 0.7),
+        inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+      display: block;
+      width: 100%;
+      max-width: 800px;
+      height: auto;
+    }
+
+    .ui-panel {
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+      color: #e5e7eb;
+    }
+
+    .info {
+      font-size: 14px;
+      line-height: 1.4;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #064e3b;
+    }
+
+    .stats {
+      display: flex;
+      gap: 14px;
+      font-size: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .fuel-bar {
+      width: 160px;
+      height: 16px;
+      background: #111827;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #065f46;
+    }
+
+    .fuel-fill {
+      height: 100%;
+      transition: width 0.2s ease-out;
+      background: #16a34a;
+    }
+
+    @media (max-width: 768px) {
+      .game-container {
+        padding: 16px;
+      }
+      .title {
+        font-size: 26px;
+      }
+      .ui-panel {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1 class="title">Jetpack Platformer</h1>
+    <canvas id="game" width="800" height="450"></canvas>
+
+    <div class="ui-panel">
+      <div class="stats">
+        <div class="fuel-bar">
+          <div class="fuel-fill" id="fuelFill" style="width: 100%"></div>
+        </div>
+        <span id="fuelText">Fuel: 5.0s</span>
+        <span id="stageText">Stage: 1</span>
+        <span id="jumpsText">Jumps left: 2</span>
+      </div>
+      <div class="info">
+        A/D or ← → Move • W/↑ Jump (double) • Space Jetpack • S/↓ Drop through platforms • 0 Toggle walls
+      </div>
+    </div>
+  </div>
+
+  <script>
+    class JetpackGame {
+      constructor() {
+        this.canvas = document.getElementById("game");
+        this.ctx = this.canvas.getContext("2d");
+        this.scale = 0.7;
+
+        this.keysDown = new Set();
+        this.wallsEnabled = true;
+        this.lastTime = performance.now();
+
+        this.dropThroughTimer = 0;
+        this.dropThroughDuration = 0.2;
+
+        this.deathFade = 0;
+        this.deathFadeTimer = 0;
+        this.isDead = false;
+
+        this.player = {
+          x: 100 * this.scale, y: 300 * this.scale,
+          width: 40 * this.scale, height: 50 * this.scale,
+          vx: 0, vy: 0,
+          speed: 4 * this.scale,
+          jumpForce: 12 * this.scale,
+          onGround: false,
+          jumpCount: 0,
+          maxJumps: 2
+        };
+
+        this.constants = {
+          gravity: 0.6 * this.scale,
+          maxFallSpeed: 15 * this.scale,
+          maxJetpackFuel: 5.0,
+          jetpackForce: -0.3 * this.scale,
+          jetpackCooldown: 2.0,
+          ceilingHeight: 60 * this.scale,
+          platformLowerOffset: 80 * this.scale
+        };
+
+        this.jetpack = {
+          fuel: this.constants.maxJetpackFuel,
+          active: false,
+          onCooldown: false,
+          cooldownTimer: 0
+        };
+
+        this.game = {
+          groundSegments: [],
+          ceilingSegments: [],
+          platforms: [],
+          deathZones: [],
+          currentStage: 1
+        };
+
+        this.fuelFill = document.getElementById("fuelFill");
+        this.fuelText = document.getElementById("fuelText");
+        this.stageText = document.getElementById("stageText");
+        this.jumpsText = document.getElementById("jumpsText");
+
+        this.initEvents();
+        this.generateStage();
+        requestAnimationFrame((t) => this.gameLoop(t));
+      }
+
+      initEvents() {
+        window.addEventListener("keydown", (e) => {
+          if (!this.keysDown.has(e.code)) {
+            if ((e.code === "KeyW" || e.code === "ArrowUp") && 
+                this.player.jumpCount < this.player.maxJumps) {
+              this.player.vy = -this.player.jumpForce;
+              this.player.jumpCount++;
+              this.player.onGround = false;
+            }
+            else if ((e.code === "KeyS" || e.code === "ArrowDown") && 
+                     this.player.onGround && this.dropThroughTimer <= 0) {
+              this.dropThroughTimer = this.dropThroughDuration;
+            }
+          }
+          this.keysDown.add(e.code);
+
+          if (e.code === "Digit0") {
+            this.wallsEnabled = !this.wallsEnabled;
+          }
+
+          if (["ArrowUp", "ArrowDown", "Space", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+            e.preventDefault();
+          }
+        });
+
+        window.addEventListener("keyup", (e) => {
+          this.keysDown.delete(e.code);
+        });
+      }
+
+      randRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      generateTerrain() {
+        this.game.groundSegments = [];
+        this.game.ceilingSegments = [];
+        this.game.platforms = [];
+        this.game.deathZones = [];
+        const segmentCount = 20;
+        const segWidth = this.canvas.width / segmentCount;
+        let baseGroundY = 380 * this.scale;
+        let baseCeilingY = this.constants.ceilingHeight;
+        
+        let prevGroundY = baseGroundY;
+        let prevCeilingY = baseCeilingY;
+        let inGap = false;
+        let gapStart = 0;
+        let gapWidth = 0;
+
+        for (let i = 0; i < segmentCount; i++) {
+          const x = i * segWidth;
+          
+          if (!inGap && i === 8 && i < segmentCount - 10) {
+            inGap = true;
+            gapStart = i;
+            gapWidth = 4;
+          }
+
+          if (inGap) {
+            gapWidth--;
+            if (gapWidth <= 0) {
+              inGap = false;
+              const leftChunkHeight = prevGroundY;
+              const rightChunkHeight = Math.max(
+                leftChunkHeight - 40 * this.scale, 
+                Math.min(leftChunkHeight + 40 * this.scale, baseGroundY)
+              );
+              
+              const gapLeftX = gapStart * segWidth;
+              const fullGapWidth = 4 * segWidth;
+              const platformWidth = fullGapWidth * 0.9;
+              const platformX = gapLeftX + (fullGapWidth - platformWidth) / 2;
+              
+              const platformY = Math.max(
+                250 * this.scale, 
+                Math.min(rightChunkHeight + this.constants.platformLowerOffset, baseGroundY - 20 * this.scale)
+              );
+              
+              this.game.platforms.push({
+                x: platformX,
+                y: platformY,
+                width: platformWidth,
+                height: 12 * this.scale
+              });
+              
+              this.game.deathZones.push({
+                x: gapLeftX,
+                width: fullGapWidth,
+                y: this.canvas.height - 40 * this.scale,
+                height: 40 * this.scale
+              });
+            }
+          }
+
+          if (!inGap) {
+            const groundDelta = this.randRange(-70, 70) * this.scale;
+            const groundY = Math.max(250 * this.scale, Math.min(430 * this.scale, prevGroundY + groundDelta));
+            this.game.groundSegments.push({ 
+              x: x, 
+              width: segWidth, 
+              y: groundY 
+            });
+            prevGroundY = groundY;
+          } else {
+            prevGroundY = baseGroundY;
+          }
+
+          const ceilingDelta = this.randRange(-15, 15) * this.scale;
+          const ceilingY = Math.max(20 * this.scale, Math.min(80 * this.scale, prevCeilingY + ceilingDelta));
+          this.game.ceilingSegments.push({ 
+            x: x, 
+            width: segWidth, 
+            y: ceilingY 
+          });
+          prevCeilingY = ceilingY;
+        }
+      }
+
+      isOnPlatform(x) {
+        for (const platform of this.game.platforms) {
+          if (x >= platform.x && x < platform.x + platform.width) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      getGroundYAt(x, ignorePlatforms = false) {
+        if (!ignorePlatforms) {
+          for (const platform of this.game.platforms) {
+            if (x >= platform.x && x < platform.x + platform.width) {
+              return platform.y;
+            }
+          }
+        }
+        
+        for (const seg of this.game.groundSegments) {
+          if (x >= seg.x && x < seg.x + seg.width) return seg.y;
+        }
+        return 380 * this.scale;
+      }
+
+      isInDeathZone(x, y) {
+        const playerBottom = y + this.player.height;
+        for (const zone of this.game.deathZones) {
+          if (x + this.player.width > zone.x && 
+              x < zone.x + zone.width &&
+              playerBottom > zone.y) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      getCeilingYAt(x) {
+        for (const seg of this.game.ceilingSegments) {
+          if (x >= seg.x && x < seg.x + seg.width) return seg.y;
+        }
+        return this.constants.ceilingHeight;
+      }
+
+      generateStage() {
+        this.generateTerrain();
+        this.resetPlayer();
+        this.game.currentStage++;
+        this.updateUI();
+      }
+
+      resetPlayer() {
+        this.player.x = 40 * this.scale;
+        this.player.y = this.getGroundYAt(40 * this.scale) - this.player.height + 2 * this.scale;
+        this.player.vx = 0;
+        this.player.vy = 0;
+        this.player.jumpCount = 0;
+        this.player.onGround = false;
+        this.jetpack.fuel = this.constants.maxJetpackFuel;
+        this.jetpack.onCooldown = false;
+        this.jetpack.cooldownTimer = 0;
+        this.deathFade = 0;
+        this.isDead = false;
+        this.dropThroughTimer = 0;
+      }
+
+      updateJetpackUI() {
+        const ratio = this.jetpack.fuel / this.constants.maxJetpackFuel;
+        this.fuelFill.style.width = `${Math.max(0, ratio) * 100}%`;
+        this.fuelFill.style.background = this.jetpack.onCooldown ? "#dc2626" : "#16a34a";
+
+        this.fuelText.textContent = this.jetpack.onCooldown
+          ? `Cooldown: ${this.jetpack.cooldownTimer.toFixed(1)}s`
+          : `Fuel: ${this.jetpack.fuel.toFixed(1)}s`;
+      }
+
+      updateUI() {
+        this.stageText.textContent = `Stage: ${this.game.currentStage}`;
+        const jumpsLeft = Math.max(0, this.player.maxJumps - this.player.jumpCount);
+        this.jumpsText.textContent = `Jumps left: ${jumpsLeft}`;
+        this.updateJetpackUI();
+      }
+
+      update(dt) {
+        if (this.isDead) {
+          this.deathFadeTimer -= dt;
+          this.deathFade = Math.min(1, this.deathFade + dt * 2);
+          if (this.deathFadeTimer <= 0) {
+            this.resetPlayer();
+            this.isDead = false;
+          }
+          return;
+        }
+
+        let moveDir = 0;
+        if (this.keysDown.has("KeyA") || this.keysDown.has("ArrowLeft")) moveDir -= 1;
+        if (this.keysDown.has("KeyD") || this.keysDown.has("ArrowRight")) moveDir += 1;
+        
+        this.player.x += moveDir * this.player.speed * dt * 60;
+
+        if (this.wallsEnabled && this.player.x < 0) {
+          this.player.x = 0;
+        }
+
+        const spaceHeld = this.keysDown.has("Space");
+        this.jetpack.active = spaceHeld && !this.jetpack.onCooldown && this.jetpack.fuel > 0;
+
+        if (this.jetpack.active) {
+          this.player.vy += this.constants.jetpackForce;
+          this.jetpack.fuel = Math.max(0, this.jetpack.fuel - dt);
+          if (this.jetpack.fuel <= 0) {
+            this.jetpack.onCooldown = true;
+            this.jetpack.cooldownTimer = this.constants.jetpackCooldown;
+          }
+        } else {
+          this.player.vy += this.constants.gravity;
+        }
+
+        if (this.player.vy > this.constants.maxFallSpeed) {
+          this.player.vy = this.constants.maxFallSpeed;
+        }
+
+        this.player.y += this.player.vy * dt * 60;
+
+        if (this.wallsEnabled) {
+          const ceilingY = this.getCeilingYAt(this.player.x + this.player.width / 2);
+          if (this.player.y < ceilingY) {
+            this.player.y = ceilingY;
+            this.player.vy = 0;
+          }
+        }
+
+        // Update drop through timer
+        if (this.dropThroughTimer > 0) {
+          this.dropThroughTimer -= dt;
+        }
+
+        const playerCenterX = this.player.x + this.player.width / 2;
+        const playerBottom = this.player.y + this.player.height;
+        const isOnPlatform = this.isOnPlatform(playerCenterX);
+
+        // GROUND SEGMENTS (always solid) - check first
+        const groundOnlyY = this.getGroundYAt(playerCenterX, true);
+        if (playerBottom >= groundOnlyY && this.player.vy >= -0.5 * this.scale) {
+          this.player.y = groundOnlyY - this.player.height;
+          this.player.vy = 0;
+          this.player.onGround = true;
+          this.player.jumpCount = 0;
+        } else {
+          this.player.onGround = false;
+        }
+
+        // PLATFORMS (one-way, drop-through) - check second
+        if (isOnPlatform && this.dropThroughTimer <= 0 && this.player.vy >= -0.5 * this.scale) {
+          const platformY = this.getGroundYAt(playerCenterX);
+          if (playerBottom >= platformY) {
+            this.player.y = platformY - this.player.height;
+            this.player.vy = 0;
+            this.player.onGround = true;
+            this.player.jumpCount = 0;
+          }
+        }
+
+        if (!this.jetpack.onCooldown && this.player.onGround) {
+          this.jetpack.fuel = Math.min(
+            this.constants.maxJetpackFuel,
+            this.jetpack.fuel + dt * 2
+          );
+        }
+
+        if (this.player.x + this.player.width >= this.canvas.width) {
+          this.player.x = 40 * this.scale;
+          this.generateStage();
+          return;
+        }
+
+        if (this.isInDeathZone(this.player.x, this.player.y) || this.player.y > this.canvas.height) {
+          this.isDead = true;
+          this.deathFadeTimer = 1.0;
+        }
+
+        if (this.jetpack.onCooldown) {
+          this.jetpack.cooldownTimer = Math.max(0, this.jetpack.cooldownTimer - dt);
+          if (this.jetpack.cooldownTimer <= 0) {
+            this.jetpack.onCooldown = false;
+          }
+        }
+
+        this.updateUI();
+      }
+
+      draw() {
+        const ctx = this.ctx;
+        ctx.save();
+        
+        if (this.isDead) {
+          ctx.fillStyle = `rgba(0, 0, 0, ${this.deathFade})`;
+          ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        const bgGradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        bgGradient.addColorStop(0, "#020617");
+        bgGradient.addColorStop(1, "#022c22");
+        ctx.fillStyle = bgGradient;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#10b981";
+        ctx.shadowColor = "#10b981";
+        ctx.shadowBlur = 10;
+        this.game.ceilingSegments.forEach((seg) => {
+          const g = ctx.createLinearGradient(0, this.canvas.height, 0, seg.y);
+          g.addColorStop(0, "#064e3b");
+          g.addColorStop(1, "#022c22");
+          ctx.fillStyle = g;
+          ctx.fillRect(seg.x, seg.y - 12 * this.scale, seg.width, 12 * this.scale);
+          ctx.strokeRect(seg.x, seg.y - 12 * this.scale, seg.width, 12 * this.scale);
+        });
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1;
+
+        this.game.platforms.forEach((platform) => {
+          const g = ctx.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
+          g.addColorStop(0, "#22c55e");
+          g.addColorStop(1, "#15803d");
+          ctx.fillStyle = g;
+          ctx.shadowColor = "#22c55e";
+          ctx.shadowBlur = 8;
+          ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#16a34a";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+        });
+
+        this.game.deathZones.forEach((zone) => {
+          ctx.fillStyle = "rgba(220, 38, 38, 0.4)";
+          ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+          ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
+        });
+
+        this.game.groundSegments.forEach((seg) => {
+          const g = ctx.createLinearGradient(0, seg.y, 0, this.canvas.height);
+          g.addColorStop(0, "#15803d");
+          g.addColorStop(1, "#052e16");
+          ctx.fillStyle = g;
+          ctx.fillRect(seg.x, seg.y, seg.width, this.canvas.height - seg.y);
+        });
+
+        if (!this.isDead || this.deathFade < 1) {
+          ctx.fillStyle = "#e5e7eb";
+          ctx.shadowColor = "#bbf7d0";
+          ctx.shadowBlur = 12 * this.scale;
+          ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+          ctx.shadowBlur = 0;
+        }
+
+        if (this.jetpack.active && !this.isDead) {
+          const flameGradient = ctx.createRadialGradient(
+            this.player.x + this.player.width / 2,
+            this.player.y + this.player.height,
+            0,
+            this.player.x + this.player.width / 2,
+            this.player.y + this.player.height + 10 * this.scale,
+            18 * this.scale
+          );
+          flameGradient.addColorStop(0, "#f97316");
+          flameGradient.addColorStop(1, "rgba(248, 250, 252, 0)");
+          ctx.shadowColor = "#f97316";
+          ctx.shadowBlur = 15 * this.scale;
+          ctx.fillStyle = flameGradient;
+          ctx.fillRect(
+            this.player.x + this.player.width / 2 - 8 * this.scale,
+            this.player.y + this.player.height,
+            16 * this.scale,
+            22 * this.scale
+          );
+          ctx.shadowBlur = 0;
+        }
+
+        if (this.wallsEnabled) {
+          ctx.strokeStyle = "#16a34a";
+          ctx.lineWidth = 3;
+          ctx.shadowColor = "#16a34a";
+          ctx.shadowBlur = 8;
+          ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+      }
+
+      gameLoop(timestamp) {
+        const dt = Math.min(1 / 60, (timestamp - this.lastTime) / 1000);
+        this.lastTime = timestamp;
+
+        this.update(dt);
+        this.draw();
+
+        requestAnimationFrame((t) => this.gameLoop(t));
+      }
+    }
+
+    new JetpackGame();
+  </script>
+</body>
+</html>
