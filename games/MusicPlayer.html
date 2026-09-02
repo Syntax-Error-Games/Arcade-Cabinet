@@ -1,363 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Johann's Music Player</title>
+
 <style>
+  :root {
+    --bg: #0f1117;
+    --panel: #181b24;
+    --panel-light: #242936;
+    --text: #ffffff;
+    --muted: #aeb5c4;
+    --green: #1db954;
+    --green-dark: #159943;
+    --border: rgba(255, 255, 255, 0.1);
+  }
 
-@keyframes fall {
+  * {
+    box-sizing: border-box;
+  }
 
-  0% { transform: translateY(-10px); opacity: 1; }
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    overflow-x: hidden;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at top left, #26364c 0%, transparent 40%),
+      radial-gradient(circle at bottom right, #1e5738 0%, transparent 38%),
+      var(--bg);
+  }
 
-  100% { transform: translateY(400px); opacity: 0; }
+  .player {
+    position: relative;
+    width: min(100%, 430px);
+    padding: 22px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: rgba(24, 27, 36, 0.94);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+  }
 
-}
+  .player::before {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    content: "";
+    opacity: 0.35;
+    background: linear-gradient(135deg, rgba(29, 185, 84, 0.2), transparent 45%);
+  }
 
-.sparkle {
+  .player > * {
+    position: relative;
+    z-index: 1;
+  }
 
-  position: absolute; color: white; font-size: 15px;
+  .now-playing {
+    margin: 0 0 14px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
 
-  pointer-events: none; animation: fall 3s linear infinite;
+  .art-wrap {
+    position: relative;
+    width: min(100%, 270px);
+    aspect-ratio: 1;
+    margin: 0 auto 18px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #0a0c10;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  }
 
-}
+  #album-art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease, filter 0.35s ease;
+  }
 
+  .art-wrap.playing #album-art {
+    transform: scale(1.04);
+    filter: saturate(1.15);
+  }
+
+  #visualizer {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 42%;
+    pointer-events: none;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.45));
+  }
+
+  .track-info {
+    min-width: 0;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  #track-title {
+    overflow: hidden;
+    margin: 0;
+    font-size: 1.25rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  #track-artist {
+    overflow: hidden;
+    margin: 5px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .progress-area {
+    margin: 16px 0 6px;
+  }
+
+  #progress {
+    width: 100%;
+    height: 5px;
+    margin: 0;
+    accent-color: var(--green);
+    cursor: pointer;
+  }
+
+  .time-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 42px 42px 58px 42px 42px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 0 16px;
+  }
+
+  button {
+    font: inherit;
+  }
+
+  .icon-btn,
+  .play-btn {
+    display: grid;
+    place-items: center;
+    border: 0;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  }
+
+  .icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: var(--muted);
+    background: transparent;
+    font-size: 1.15rem;
+  }
+
+  .icon-btn:hover,
+  .icon-btn:focus-visible {
+    color: #fff;
+    background: var(--panel-light);
+  }
+
+  .icon-btn.active {
+    color: var(--green);
+  }
+
+  .play-btn {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--green);
+    box-shadow: 0 5px 16px rgba(29, 185, 84, 0.32);
+    font-size: 1.25rem;
+  }
+
+  .play-btn:hover,
+  .play-btn:focus-visible {
+    background: var(--green-dark);
+    transform: scale(1.06);
+  }
+
+  .icon-btn:active,
+  .play-btn:active {
+    transform: scale(0.94);
+  }
+
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 4px 15px;
+  }
+
+  #mute-btn {
+    width: 30px;
+    height: 30px;
+    border: 0;
+    cursor: pointer;
+    color: var(--muted);
+    background: transparent;
+    font-size: 1rem;
+  }
+
+  #volume {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--green);
+    cursor: pointer;
+  }
+
+  .playlist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 4px 8px;
+  }
+
+  .playlist-header h2 {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  #track-count {
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  #playlist-container {
+    max-height: 190px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.18);
+  }
+
+  #playlist-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .track-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .track-item:last-child {
+    border-bottom: 0;
+  }
+
+  .track-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .track-item.active {
+    background: rgba(29, 185, 84, 0.13);
+  }
+
+  .track-number {
+    width: 20px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .track-item.active .track-number {
+    color: var(--green);
+  }
+
+  .track-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .track-name,
+  .track-artist-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .track-name {
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .track-item.active .track-name {
+    color: var(--green);
+  }
+
+  .track-artist-name {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+
+  .status {
+    min-height: 18px;
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 0.74rem;
+    text-align: center;
+  }
+
+  .sparkle {
+    position: fixed;
+    z-index: 10;
+    color: #fff;
+    pointer-events: none;
+    user-select: none;
+    animation: fall 3s linear forwards;
+    filter: drop-shadow(0 0 5px rgba(29, 185, 84, 0.9));
+  }
+
+  @keyframes fall {
+    from {
+      transform: translateY(-30px) rotate(0deg);
+      opacity: 0;
+    }
+
+    10% {
+      opacity: 1;
+    }
+
+    to {
+      transform: translateY(110vh) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body {
+      padding: 12px;
+    }
+
+    .player {
+      padding: 16px;
+      border-radius: 16px;
+    }
+
+    .controls {
+      gap: 5px;
+    }
+  }
 </style>
+</head>
 
+<body>
+<div class="player" id="player-wrapper">
+  <p class="now-playing">Now Playing</p>
 
+  <div class="art-wrap" id="art-wrap">
+    <img
+      id="album-art"
+      src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=85"
+      alt="Album art"
+    >
+    <canvas id="visualizer" width="270" height="115"></canvas>
+  </div>
 
-<div id="player-wrapper" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #181818; color: white; padding: 20px; border-radius: 15px; max-width: 400px; margin: auto; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-    
-    <div style="position: relative; width: 180px; height: 180px; margin: 0 auto 10px;">
-    <img id="album-art" src="" style="width: 180px; height: 180px; border-radius: 10px; object-fit: cover; border: 2px solid #333;">
-    <canvas id="visualizer" width="180" height="90" style="position: absolute; bottom: 0; left: 0; width: 180px; height: 90px; border-radius: 0 0 10px 10px; pointer-events: none;"></canvas>
-</div>
-    
-    <div style="margin-bottom: 15px;">
-        <h3 id="track-title" style="margin: 5px 0; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Loading...</h3>
-        <p id="track-artist" style="margin: 0; color: #b3b3b3; font-size: 0.85rem;">Artist Name</p>
+  <div class="track-info">
+    <h1 id="track-title">Loading…</h1>
+    <p id="track-artist">Artist</p>
+  </div>
+
+  <audio id="main-audio" preload="metadata" crossorigin="anonymous"></audio>
+
+  <div class="progress-area">
+    <input id="progress" type="range" min="0" max="100" value="0" aria-label="Song progress">
+    <div class="time-row">
+      <span id="current-time">0:00</span>
+      <span id="duration">0:00</span>
     </div>
+  </div>
 
-    <audio id="main-audio" src="" crossorigin="anonymous"></audio>
+  <div class="controls">
+    <button class="icon-btn" id="shuffle-btn" type="button" title="Shuffle" aria-label="Toggle shuffle">🔀</button>
+    <button class="icon-btn" id="prev-btn" type="button" title="Previous track" aria-label="Previous track">⏮</button>
+    <button class="play-btn" id="play-btn" type="button" title="Play" aria-label="Play">▶</button>
+    <button class="icon-btn" id="next-btn" type="button" title="Next track" aria-label="Next track">⏭</button>
+    <button class="icon-btn" id="repeat-btn" type="button" title="Repeat off" aria-label="Toggle repeat">🔁</button>
+  </div>
 
-    <div style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px;">
-        <button onclick="toggleShuffle()" id="shuffle-btn" title="Shuffle" style="background:none; border:none; color:gray; cursor:pointer; font-size: 1rem;">🔀</button>
-        <button onclick="prevTrack()" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.4rem;">⏮</button>
-        <button onclick="togglePlay()" id="play-btn" style="background:#1DB954; border:none; color:white; width: 45px; height: 45px; border-radius: 50%; cursor:pointer; font-size: 1.1rem;">▶</button>
-        <button onclick="nextTrack()" style="background:none; border:none; color:white; cursor:pointer; font-size: 1.4rem;">⏭</button>
-        <button onclick="toggleRepeat()" id="repeat-btn" title="Repeat One" style="background:none; border:none; color:gray; cursor:pointer; font-size: 1rem;">🔁</button>
-    </div>
+  <div class="volume-row">
+    <button id="mute-btn" type="button" aria-label="Mute">🔊</button>
+    <input id="volume" type="range" min="0" max="100" value="80" aria-label="Volume">
+  </div>
 
-    <div id="playlist-container" style="text-align: left; background: #282828; border-radius: 8px; max-height: 150px; overflow-y: auto; padding: 5px;">
-        <ul id="playlist-list" style="list-style: none; padding: 0; margin: 0;"></ul>
-    </div>
+  <div class="playlist-header">
+    <h2>Playlist</h2>
+    <span id="track-count"></span>
+  </div>
+
+  <div id="playlist-container">
+    <ul id="playlist-list"></ul>
+  </div>
+
+  <div class="status" id="status">Space: play/pause · ←/→: seek · N/P: next/previous</div>
 </div>
 
 <script>
-  
-  function fixDropboxUrl(url) {
-    if (!url) return "";
-    // Replaces the domain and ensures it ends with raw=1
-    let fixedUrl = url.replace("www.dropbox.com", "dl.dropboxusercontent.com");
-    
-    if (!fixedUrl.includes("raw=1")) {
-        fixedUrl += fixedUrl.includes("?") ? "&raw=1" : "?raw=1";
-    }
-    return fixedUrl;
-}
-
-
-// --- CONFIGURATION: TRACK LIST ---
-
 const songs = [
-    {
-        title: "Swan Lake",
-        artist: "Tchaikovsky",
-        url: "https://www.dropbox.com/scl/fi/g54e3m7ofci5xup5582tu/Tchaikovsky-Swan-Lake.mp3?rlkey=7aaecf9b24kjysb4ltdirv2y0&st=n74cvk9w&raw=1",
-        cover: "https://storage.highresaudio.com/web/imgcache/bcb343193157ced480299ce868c4167c/22j9a3-tchaikovsk-master_500x500.jpg"
-    },
-    {
-        title: "Moonlight Sonata",
-        artist: "Beethoven",
-        url: "https://www.dropbox.com/scl/fi/uljluc6xwmgw7x7dj3p4a/Beethoven-Moonlight-Sonata-3rd-Movement.mp3?rlkey=8wnhgrj3twopi94ccxwp6oys5&st=hmlo5ymq&raw=1",
-        cover: "https://halleonard-images-printquality.s3.amazonaws.com/14021807.jpg"
-    },
-    {
-        title: "Rush E",
-        artist: "Piano Present",
-        url: "https://www.dropbox.com/scl/fi/l9ff30qf0zfdj4eosrtr7/Rush-E-Sheet-Music-Boss-Piano-Stage.mp3?rlkey=b2p18vl2b37xlo7bvs2x90j1k&st=vwsjnky4&raw=1",
-        cover: "https://musictech.com/wp-content/uploads/2022/04/Mark-Rober-Chopstix-Rush-E@2000x1500.jpg"
-    },
-
-{
-        title: "Monkeys Spinning Monkeys",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/v3ze9f3t0ot6abfqz28kb/MonkeysSpinningMonkeys-Johann.mp3?rlkey=noppf79lfblyfafyb33aw22gu&st=qxm4mlz8&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Mario Paint BGM",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/jl8vv04f6mtuc72pp7ooa/mario-paint-bgm-made-with-Voicemod-Johann.mp3?rlkey=yaxihezgu1c56cx5gy5ij73kd&st=mw8ncvjv&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Guardian Battle (Breath of the Wild)",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/48hi4hay5vo7hk9ufpdoy/the-legend-of-zelda-breath-of-the-wild-music-guardian-battle-made-with-Voicemod-Johann.mp3?rlkey=5ddeogkgud3w9seldect0egmi&st=efhazi5k&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Able Sisters (Animal Crossing)",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/cis6oikibie321b28bseu/able-sisters-animal-crossing-made-with-Voicemod-Johann.mp3?rlkey=4gewyezufbow69behycl9inop&st=h2a02f0z&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    
-    {
-        title: "Your Phone Linging",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/slq1ieo5f1a7fm8uux424/your-phone-linging-made-with-Voicemod-Johann.mp3?rlkey=u3l6uoy4akpxz1xz6rltffmd4&st=bzrod9p0&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Animal Crossing NH",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/a3sxa2mexoa9he977ktf3/animal-crossing-nh-made-with-Voicemod-Johann.mp3?rlkey=ooy72qy67fe1fs3uslwo74p0a&st=9iowzgb7&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Splatoon 3 Side Order Trailer",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/g0fmg4s65yn1nwj653huo/Splatoon-3-Side-Order-Trailer-Music-Johann.mp3?rlkey=jzldzmu9hi1vf77niat0m8ecr&st=avqxce75&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Wrong Burger King Ad",
-        artist: "Johann",
-        url: "https://www.dropbox.com/scl/fi/j02fhtvwc0rbckpaqsezi/they-sent-the-wrong-burger-king-ad-made-with-Voicemod-Johann.mp3?rlkey=gh5jx0ycbyeuf8osqseymgam9&st=x2g0obds&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    
-{
-        title: "It's TV Time",
-        artist: "DELTARUNE Ch. 3-4",
-        url: "https://www.dropbox.com/scl/fi/id9498iidookc1z1dvimk/27.-It-s-TV-Time-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=cqwowvq1fysjodf5bcyei3yjx&st=plm9tdfv&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-{
-        title: "Hammer of Justice",
-        artist: "DELTARUNE Ch. 3-4",
-        url: "https://www.dropbox.com/scl/fi/kz8ampdsp23ei6netichd/58.-Hammer-of-Justice-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=obzph01ljxo582jstvy56k197&st=56e39xum&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-{
-        title: "Black Knife",
-        artist: "DELTARUNE Ch. 3-4",
-        url: "https://www.dropbox.com/scl/fi/236m8i4li9ucioy08kg41/30.-Black-Knife-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=wq8r6mlysatiy3zfv4zu1jq3n&st=yt9qstdi&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-    {
-        title: "Flux Construct Battle",
-        artist: "Zelda: Tears of the Kingdom",
-        url: "https://www.dropbox.com/scl/fi/37zmyvzarepa2dsfu3ulz/Flux-Construct-Battle-All-Phases-Seamless-Theme-The-Legend-of-Zelda_-Tears-of-the-Kingdom-OST-Max.mp3?rlkey=tpv2zxh8weq6p45w49l7gt5w4&st=4wg7ah2u&dl=0",
-        cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
-    },
-
-
-
+  {
+    title: "Swan Lake",
+    artist: "Tchaikovsky",
+    url: "https://www.dropbox.com/scl/fi/g54e3m7ofci5xup5582tu/Tchaikovsky-Swan-Lake.mp3?rlkey=7aaecf9b24kjysb4ltdirv2y0&st=n74cvk9w&raw=1",
+    cover: "https://storage.highresaudio.com/web/imgcache/bcb343193157ced480299ce868c4167c/22j9a3-tchaikovsk-master_500x500.jpg"
+  },
+  {
+    title: "Moonlight Sonata",
+    artist: "Beethoven",
+    url: "https://www.dropbox.com/scl/fi/uljluc6xwmgw7x7dj3p4a/Beethoven-Moonlight-Sonata-3rd-Movement.mp3?rlkey=8wnhgrj3twopi94ccxwp6oys5&st=hmlo5ymq&raw=1",
+    cover: "https://halleonard-images-printquality.s3.amazonaws.com/14021807.jpg"
+  },
+  {
+    title: "Rush E",
+    artist: "Piano Present",
+    url: "https://www.dropbox.com/scl/fi/l9ff30qf0zfdj4eosrtr7/Rush-E-Sheet-Music-Boss-Piano-Stage.mp3?rlkey=b2p18vl2b37xlo7bvs2x90j1k&st=vwsjnky4&raw=1",
+    cover: "https://musictech.com/wp-content/uploads/2022/04/Mark-Rober-Chopstix-Rush-E@2000x1500.jpg"
+  },
+  {
+    title: "Monkeys Spinning Monkeys",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/v3ze9f3t0ot6abfqz28kb/MonkeysSpinningMonkeys-Johann.mp3?rlkey=noppf79lfblyfafyb33aw22gu&st=qxm4mlz8&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Mario Paint BGM",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/jl8vv04f6mtuc72pp7ooa/mario-paint-bgm-made-with-Voicemod-Johann.mp3?rlkey=yaxihezgu1c56cx5gy5ij73kd&st=mw8ncvjv&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Guardian Battle (Breath of the Wild)",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/48hi4hay5vo7hk9ufpdoy/the-legend-of-zelda-breath-of-the-wild-music-guardian-battle-made-with-Voicemod-Johann.mp3?rlkey=5ddeogkgud3w9seldect0egmi&st=efhazi5k&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Able Sisters (Animal Crossing)",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/cis6oikibie321b28bseu/able-sisters-animal-crossing-made-with-Voicemod-Johann.mp3?rlkey=4gewyezufbow69behycl9inop&st=h2a02f0z&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Your Phone Linging",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/slq1ieo5f1a7fm8uux424/your-phone-linging-made-with-Voicemod-Johann.mp3?rlkey=u3l6uoy4akpxz1xz6rltffmd4&st=bzrod9p0&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Animal Crossing NH",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/a3sxa2mexoa9he977ktf3/animal-crossing-nh-made-with-Voicemod-Johann.mp3?rlkey=ooy72qy67fe1fs3uslwo74p0a&st=9iowzgb7&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Splatoon 3 Side Order Trailer",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/g0fmg4s65yn1nwj653huo/Splatoon-3-Side-Order-Trailer-Music-Johann.mp3?rlkey=jzldzmu9hi1vf77niat0m8ecr&st=avqxce75&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Wrong Burger King Ad",
+    artist: "Johann",
+    url: "https://www.dropbox.com/scl/fi/j02fhtvwc0rbckpaqsezi/they-sent-the-wrong-burger-king-ad-made-with-Voicemod-Johann.mp3?rlkey=gh5jx0ycbyeuf8osqseymgam9&st=x2g0obds&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "It's TV Time",
+    artist: "DELTARUNE Ch. 3–4",
+    url: "https://www.dropbox.com/scl/fi/id9498iidookc1z1dvimk/27.-It-s-TV-Time-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=cqwowvq1fysjodf5bcyei3yjx&st=plm9tdfv&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Hammer of Justice",
+    artist: "DELTARUNE Ch. 3–4",
+    url: "https://www.dropbox.com/scl/fi/kz8ampdsp23ei6netichd/58.-Hammer-of-Justice-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=obzph01ljxo582jstvy56k197&st=56e39xum&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Black Knife",
+    artist: "DELTARUNE Ch. 3–4",
+    url: "https://www.dropbox.com/scl/fi/236m8i4li9ucioy08kg41/30.-Black-Knife-DELTARUNE-Chapter-3-4-Soundtrack-Toby-Fox-Brandon-Moore.mp3?rlkey=wq8r6mlysatiy3zfv4zu1jq3n&st=yt9qstdi&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  },
+  {
+    title: "Flux Construct Battle",
+    artist: "Zelda: Tears of the Kingdom",
+    url: "https://www.dropbox.com/scl/fi/37zmyvzarepa2dsfu3ulz/Flux-Construct-Battle-All-Phases-Seamless-Theme-The-Legend-of-Zelda_-Tears-of-the-Kingdom-OST-Max.mp3?rlkey=tpv2zxh8weq6p45w49l7gt5w4&st=4wg7ah2u&dl=0",
+    cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80"
+  }
 ];
 
+const audio = document.getElementById("main-audio");
+const player = document.getElementById("player-wrapper");
+const artWrap = document.getElementById("art-wrap");
+const albumArt = document.getElementById("album-art");
+const trackTitle = document.getElementById("track-title");
+const trackArtist = document.getElementById("track-artist");
+const playlistList = document.getElementById("playlist-list");
+const trackCount = document.getElementById("track-count");
+const playBtn = document.getElementById("play-btn");
+const prevBtn = document.getElementById("prev-btn");
+const nextBtn = document.getElementById("next-btn");
+const shuffleBtn = document.getElementById("shuffle-btn");
+const repeatBtn = document.getElementById("repeat-btn");
+const progress = document.getElementById("progress");
+const currentTimeEl = document.getElementById("current-time");
+const durationEl = document.getElementById("duration");
+const volume = document.getElementById("volume");
+const muteBtn = document.getElementById("mute-btn");
+const status = document.getElementById("status");
+
 let currentIndex = 0;
-let isPlaying = false;
 let isShuffle = false;
 let isRepeatOne = false;
+let sparkleTimer = null;
 
-const audio = document.getElementById('main-audio');
-const playBtn = document.getElementById('play-btn'); 
-const albumArt = document.getElementById('album-art');
-const trackTitle = document.getElementById('track-title');
-const trackArtist = document.getElementById('track-artist');
-const playlistList = document.getElementById('playlist-list');
+let audioContext;
+let analyser;
+let dataArray;
+let visualizerCanvas;
+let visualizerCtx;
 
+function fixDropboxUrl(url) {
+  if (!url) return "";
 
-// --- FUNCTIONS TO IMPLEMENT ---
+  const fixedUrl = new URL(url);
+  fixedUrl.hostname = "dl.dropboxusercontent.com";
+  fixedUrl.searchParams.delete("dl");
+  fixedUrl.searchParams.set("raw", "1");
+
+  return fixedUrl.toString();
+}
+
+function formatTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function setStatus(message) {
+  status.textContent = message;
+}
 
 function renderPlaylist() {
-    playlistList.innerHTML = "";
-    songs.forEach((song, index) => {
-        const li = document.createElement('li');
-        
-        // --- STYLING (DON'T CHANGE THIS) ---
-        li.innerHTML = `<div style="font-size: 0.85rem; font-weight: bold;">${song.title}</div>
-                        <div style="font-size: 0.7rem; color: #b3b3b3;">${song.artist}</div>`;
-        li.style.padding = "10px";
-        li.style.borderBottom = "1px solid #333";
-        li.style.cursor = "pointer";
-        li.setAttribute('id', `track-${index}`);
-        // ------------------------------------
+  playlistList.innerHTML = "";
+  trackCount.textContent = `${songs.length} tracks`;
 
-        // TODO: ADD CHOICE FOR ONCLICK HERE
-li.onclick = () => {
-      currentIndex = index;
+  songs.forEach((song, index) => {
+    const item = document.createElement("li");
+    item.className = "track-item";
+    item.dataset.index = index;
+
+    const number = document.createElement("span");
+    number.className = "track-number";
+    number.textContent = index + 1;
+
+    const copy = document.createElement("div");
+    copy.className = "track-copy";
+
+    const title = document.createElement("div");
+    title.className = "track-name";
+    title.textContent = song.title;
+
+    const artist = document.createElement("div");
+    artist.className = "track-artist-name";
+    artist.textContent = song.artist;
+
+    copy.append(title, artist);
+    item.append(number, copy);
+
+    item.addEventListener("click", () => {
       loadTrack(index);
       playTrack();
-    };
-
-        
-        playlistList.appendChild(li);
     });
+
+    playlistList.appendChild(item);
+  });
+
+  updatePlaylistHighlight();
+}
+
+function updatePlaylistHighlight() {
+  document.querySelectorAll(".track-item").forEach((item) => {
+    const isActive = Number(item.dataset.index) === currentIndex;
+    item.classList.toggle("active", isActive);
+
+    if (isActive) {
+      item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
 }
 
 function loadTrack(index) {
-    // TODO: ADD CHOICE FOR LOADING TRACK HERE
-    const song = songs[index];
-audio.src = fixDropboxUrl(song.url);
-albumArt.src = song.cover;
-trackTitle.innerText = song.title;
-trackArtist.innerText = song.artist;
+  currentIndex = (index + songs.length) % songs.length;
+  const song = songs[currentIndex];
 
+  audio.src = fixDropboxUrl(song.url);
+  audio.load();
 
-    // Highlight active track (Leave this code alone)
-    songs.forEach((_, i) => {
-        const item = document.getElementById(`track-${i}`);
-        if (item) {
-            item.style.background = (i === index) ? "#3e3e3e" : "transparent";
-            item.style.color = (i === index) ? "#1DB954" : "white";
-        }
-    });
+  albumArt.src = song.cover;
+  albumArt.alt = `${song.title} album art`;
+  trackTitle.textContent = song.title;
+  trackArtist.textContent = song.artist;
+
+  progress.value = 0;
+  currentTimeEl.textContent = "0:00";
+  durationEl.textContent = "0:00";
+
+  updatePlaylistHighlight();
+  setStatus(`Loaded: ${song.title}`);
 }
 
+async function playTrack() {
+  try {
+    initVisualizer();
 
-function playTrack() {
-    // TODO: ADD CHOICE FOR PLAYING TRACK HERE
-   audio.play();
-isPlaying = true;
-playBtn.innerText = "⏸";
-// Only start if the analyzer doesn't exist yet
-if (!audioContext) {
-  initVisualizer();
+    if (audioContext && audioContext.state === "suspended") {
+      await audioContext.resume();
+    }
+
+    await audio.play();
+  } catch (error) {
+    console.error("Audio playback error:", error);
+    setStatus("Playback was blocked or the audio file could not load.");
+  }
 }
-playTrack();
-// This creates a heartbeat that makes a sparkle every second
 
-setInterval(() => {
-
-  if (isPlaying) createSparkle();
-
-}, 1000);
-
-
-
+function pauseTrack() {
+  audio.pause();
 }
 
 function togglePlay() {
-    // TODO: ADD CHOICE FOR TOGGLE PLAY HERE
-   if (isPlaying) {
-  audio.pause();
-  playBtn.innerText = "▶";
-  isPlaying = false;  
-} else {
-  playTrack();
+  if (audio.paused) {
+    playTrack();
+  } else {
+    pauseTrack();
+  }
 }
 
+function getNextIndex() {
+  if (!isShuffle || songs.length < 2) {
+    return (currentIndex + 1) % songs.length;
+  }
 
+  let nextIndex = currentIndex;
+
+  while (nextIndex === currentIndex) {
+    nextIndex = Math.floor(Math.random() * songs.length);
+  }
+
+  return nextIndex;
 }
 
 function nextTrack() {
-    // TODO: ADD CHOICE FOR NEXT TRACK HERE
-    if (isShuffle) {
-  currentIndex = Math.floor(Math.random() * songs.length);
-} else {
-  currentIndex = (currentIndex + 1) % songs.length;
-}
-loadTrack(currentIndex);
-if (isPlaying) playTrack();
-
+  loadTrack(getNextIndex());
+  playTrack();
 }
 
 function prevTrack() {
-    // TODO: ADD CHOICE FOR PREV TRACK HERE
-    currentIndex = (currentIndex - 1 + songs.length) % songs.length;
-loadTrack(currentIndex);
-if (isPlaying) playTrack();
+  if (audio.currentTime > 3) {
+    audio.currentTime = 0;
+    return;
+  }
 
-
+  loadTrack((currentIndex - 1 + songs.length) % songs.length);
+  playTrack();
 }
 
 function toggleShuffle() {
-    // TODO: ADD CHOICE FOR TOGGLE SHUFFLE HERE
-    isShuffle = !isShuffle;
-const shuffleBtn = document.getElementById('shuffle-btn');
-shuffleBtn.style.color = isShuffle ? "#1DB954" : "gray";
-shuffleBtn.innerText = isShuffle ? "🔀" : "⮕";
-
-
+  isShuffle = !isShuffle;
+  shuffleBtn.classList.toggle("active", isShuffle);
+  shuffleBtn.title = isShuffle ? "Shuffle on" : "Shuffle off";
+  setStatus(isShuffle ? "Shuffle enabled" : "Shuffle disabled");
 }
 
 function toggleRepeat() {
-    // TODO: ADD CHOICE FOR TOGGLE REPEAT HERE
-    isRepeatOne = !isRepeatOne;
-const btn = document.getElementById('repeat-btn');
-btn.innerText = isRepeatOne ? "🔂" : "🔁";
-btn.style.color = isRepeatOne ? "#1DB954" : "gray";
-
+  isRepeatOne = !isRepeatOne;
+  repeatBtn.classList.toggle("active", isRepeatOne);
+  repeatBtn.textContent = isRepeatOne ? "🔂" : "🔁";
+  repeatBtn.title = isRepeatOne ? "Repeat one enabled" : "Repeat off";
+  setStatus(isRepeatOne ? "Repeat one enabled" : "Repeat disabled");
 }
 
-audio.onended = () => {
-    // TODO: ADD CHOICE FOR AUDIO ENDED HERE
-    if (isRepeatOne) {
-  playTrack();
-} else {
-  nextTrack();
+function updatePlayButton() {
+  const playing = !audio.paused;
+
+  playBtn.textContent = playing ? "⏸" : "▶";
+  playBtn.title = playing ? "Pause" : "Play";
+  playBtn.setAttribute("aria-label", playing ? "Pause" : "Play");
+  artWrap.classList.toggle("playing", playing);
+
+  if (playing) {
+    startSparkles();
+  } else {
+    stopSparkles();
+  }
 }
 
-};
+function updateProgress() {
+  if (!Number.isFinite(audio.duration)) return;
 
-// Start
-renderPlaylist();
-loadTrack(currentIndex);
-
-let audioContext, analyzer, dataArray, canvas, canvasCtx;
+  progress.value = (audio.currentTime / audio.duration) * 100;
+  currentTimeEl.textContent = formatTime(audio.currentTime);
+  durationEl.textContent = formatTime(audio.duration);
+}
 
 function initVisualizer() {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === 'suspended') { audioContext.resume(); }
-    const source = audioContext.createMediaElementSource(audio);
-    analyzer = audioContext.createAnalyser();
-    source.connect(analyzer);
-    analyzer.connect(audioContext.destination);
-    analyzer.fftSize = 64; // Number of bars
-    const bufferLength = analyzer.frequencyBinCount;
-    dataArray = new Uint8Array(bufferLength);
-    canvas = document.getElementById('visualizer');
-    canvasCtx = canvas.getContext('2d');
-    draw();
+  if (audioContext) return;
+
+  audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioContext.createMediaElementSource(audio);
+
+  analyser = audioContext.createAnalyser();
+  analyser.fftSize = 128;
+  analyser.smoothingTimeConstant = 0.82;
+
+  source.connect(analyser);
+  analyser.connect(audioContext.destination);
+
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+  visualizerCanvas = document.getElementById("visualizer");
+  visualizerCtx = visualizerCanvas.getContext("2d");
+
+  drawVisualizer();
 }
 
-function draw() {
-    requestAnimationFrame(draw);
-    analyzer.getByteFrequencyData(dataArray);
-    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    let barWidth = (canvas.width / dataArray.length) * 2.5;
-    let x = 0;
+function drawVisualizer() {
+  requestAnimationFrame(drawVisualizer);
 
-    for (let i = 0; i < dataArray.length; i++) {
-        let barHeight = dataArray[i] / 4; // Max height adjustment
-        canvasCtx.fillStyle = '#1DB954'; // Spotify Green
-        canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
-        x += barWidth + 1;
+  if (!analyser || !visualizerCtx) return;
+
+  const { width, height } = visualizerCanvas;
+  analyser.getByteFrequencyData(dataArray);
+
+  visualizerCtx.clearRect(0, 0, width, height);
+
+  const barGap = 2;
+  const barWidth = Math.max(2, (width - barGap * dataArray.length) / dataArray.length);
+
+  for (let i = 0; i < dataArray.length; i++) {
+    const strength = dataArray[i] / 255;
+    const barHeight = strength * height;
+    const x = i * (barWidth + barGap);
+    const y = height - barHeight;
+
+    const gradient = visualizerCtx.createLinearGradient(0, y, 0, height);
+    gradient.addColorStop(0, "#7dffad");
+    gradient.addColorStop(1, "#1db954");
+
+    visualizerCtx.fillStyle = gradient;
+    visualizerCtx.fillRect(x, y, barWidth, barHeight);
+  }
+}
+
+function startSparkles() {
+  if (sparkleTimer) return;
+
+  sparkleTimer = setInterval(() => {
+    if (!audio.paused && document.visibilityState === "visible") {
+      createSparkle();
     }
+  }, 900);
 }
+
+function stopSparkles() {
+  clearInterval(sparkleTimer);
+  sparkleTimer = null;
+}
+
 function createSparkle() {
-    const sparkle = document.createElement('div');
-    sparkle.className = 'sparkle';
-    sparkle.innerHTML = '✨'; 
-    sparkle.style.left = Math.random() * window.innerWidth + 'px';
-    sparkle.style.top = '-10px';
-    document.body.appendChild(sparkle);
-    
-    // This removes the sparkle after 3 seconds so the computer doesn't slow down
-    setTimeout(() => { sparkle.remove(); }, 3000);
+  const sparkle = document.createElement("span");
+  sparkle.className = "sparkle";
+  sparkle.textContent = Math.random() > 0.5 ? "✦" : "✨";
+  sparkle.style.left = `${Math.random() * 100}vw`;
+  sparkle.style.fontSize = `${12 + Math.random() * 14}px`;
+  sparkle.style.animationDuration = `${2.2 + Math.random() * 1.8}s`;
+
+  document.body.appendChild(sparkle);
+  sparkle.addEventListener("animationend", () => sparkle.remove());
 }
 
+playBtn.addEventListener("click", togglePlay);
+prevBtn.addEventListener("click", prevTrack);
+nextBtn.addEventListener("click", nextTrack);
+shuffleBtn.addEventListener("click", toggleShuffle);
+repeatBtn.addEventListener("click", toggleRepeat);
 
+progress.addEventListener("input", () => {
+  if (!Number.isFinite(audio.duration)) return;
+  audio.currentTime = (progress.value / 100) * audio.duration;
+});
+
+volume.addEventListener("input", () => {
+  audio.volume = Number(volume.value) / 100;
+  audio.muted = false;
+  muteBtn.textContent = audio.volume === 0 ? "🔇" : "🔊";
+});
+
+muteBtn.addEventListener("click", () => {
+  audio.muted = !audio.muted;
+  muteBtn.textContent = audio.muted ? "🔇" : "🔊";
+});
+
+audio.addEventListener("play", () => {
+  updatePlayButton();
+  setStatus(`Playing: ${songs[currentIndex].title}`);
+});
+
+audio.addEventListener("pause", () => {
+  updatePlayButton();
+
+  if (!audio.ended) {
+    setStatus("Paused");
+  }
+});
+
+audio.addEventListener("loadedmetadata", updateProgress);
+audio.addEventListener("timeupdate", updateProgress);
+
+audio.addEventListener("ended", () => {
+  if (isRepeatOne) {
+    audio.currentTime = 0;
+    playTrack();
+  } else {
+    nextTrack();
+  }
+});
+
+audio.addEventListener("error", () => {
+  setStatus("Could not load this audio file. Check its public sharing link.");
+});
+
+albumArt.addEventListener("error", () => {
+  albumArt.src = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=85";
+});
+
+document.addEventListener("keydown", (event) => {
+  const tag = document.activeElement.tagName.toLowerCase();
+
+  if (tag === "input" || tag === "button") return;
+
+  if (event.code === "Space") {
+    event.preventDefault();
+    togglePlay();
+  }
+
+  if (event.key === "ArrowRight") {
+    audio.currentTime = Math.min(audio.currentTime + 5, audio.duration || 0);
+  }
+
+  if (event.key === "ArrowLeft") {
+    audio.currentTime = Math.max(audio.currentTime - 5, 0);
+  }
+
+  if (event.key.toLowerCase() === "n") {
+    nextTrack();
+  }
+
+  if (event.key.toLowerCase() === "p") {
+    prevTrack();
+  }
+});
+
+audio.volume = 0.8;
+
+renderPlaylist();
+loadTrack(currentIndex);
 </script>
-
-
-
+</body>
+</html>
