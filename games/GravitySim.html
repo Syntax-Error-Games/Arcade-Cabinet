@@ -2,332 +2,704 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bouncing Balls</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bouncing Ball Sandbox</title>
+
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: white; overflow: hidden; width: 100vw; height: 100vh; cursor: pointer; }
-canvas { display: block; }
-#hint {
-position : absolute;
-top: 50%;
-left: 50%;
-transform: translate(-50%, -50%);
-font-family: Georgia, serif;
-font-size: 18px;
-color: #999;
-pointer-events: none;
-transition: opacity 0.4s;
-user-select: none;
-}
+  :root {
+    --bg-top: #18243a;
+    --bg-bottom: #07111f;
+    --panel: rgba(10, 20, 37, 0.76);
+    --text: #edf6ff;
+    --muted: #aab9cb;
+    --accent: #8df5aa;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    color: var(--text);
+    background: linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    font-family: Arial, sans-serif;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  #hud {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .panel {
+    padding: 11px 13px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 12px;
+    background: var(--panel);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(8px);
+  }
+
+  #stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.88rem;
+    font-weight: bold;
+  }
+
+  #stats span {
+    color: var(--accent);
+  }
+
+  #controls {
+    display: flex;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  button {
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.1);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: bold;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  button:hover {
+    background: rgba(141, 245, 170, 0.2);
+    transform: translateY(-1px);
+  }
+
+  button:active {
+    transform: scale(0.96);
+  }
+
+  #hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    max-width: min(90vw, 480px);
+    padding: 14px 18px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    color: var(--muted);
+    background: rgba(8, 16, 30, 0.7);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.32);
+    font-size: 1rem;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+    user-select: none;
+  }
+
+  #hint.hidden {
+    opacity: 0;
+    transform: translate(-50%, -46%);
+  }
+
+  #bottom-help {
+    position: fixed;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(237, 246, 255, 0.65);
+    font-size: 0.75rem;
+    text-align: center;
+    pointer-events: none;
+  }
+
+  @media (max-width: 600px) {
+    #hud {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    #controls {
+      justify-content: flex-start;
+    }
+
+    #bottom-help {
+      width: 90%;
+      font-size: 0.68rem;
+    }
+  }
 </style>
 </head>
+
 <body>
 <canvas id="c"></canvas>
-<div id="hint">click to drop the ball (drag to throw)</div>
+
+<div id="hud">
+  <div class="panel" id="stats">
+    <div>Balls: <span id="ballCount">0</span></div>
+    <div>Score: <span id="score">0</span></div>
+  </div>
+
+  <div class="panel" id="controls">
+    <button id="pauseBtn" type="button">Pause</button>
+    <button id="clearBtn" type="button">Clear</button>
+  </div>
+</div>
+
+<div id="hint">Click or tap to drop a ball.<br>Hold and drag to throw it.</div>
+
+<div id="bottom-help">
+  Drag balls to throw · Click empty space to create · P: pause · C: clear
+</div>
+
 <script>
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-const hint = document.getElementById('hint');
+  var canvas = document.getElementById("c");
+  var ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+  var hint = document.getElementById("hint");
+  var ballCountText = document.getElementById("ballCount");
+  var scoreText = document.getElementById("score");
+  var pauseBtn = document.getElementById("pauseBtn");
+  var clearBtn = document.getElementById("clearBtn");
 
-let GROUND = canvas.height - 40;
-const GRAVITY = 0.6;
-const BOUNCE = 1.0;
-const FRICTION = 0.985;
-const RADIUS = 20;
+  var width = 0;
+  var height = 0;
+  var ground = 0;
 
-// balls are always green
-const BALL_COLOR = 'rgba(0,255,0,1)';
+  var balls = [];
+  var score = 0;
+  var paused = false;
+  var hintVisible = true;
 
-let balls = [];
-let hintVisible = true;
+  var gravity = 1500;
+  var bounce = 0.77;
+  var wallBounce = 0.82;
+  var floorFriction = 0.87;
+  var airDrag = 0.999;
+  var maxBalls = 70;
 
-// drag state
-let isDragging = false;
-let dragBall = null;
-let dragOffsetX = 0;
-let dragOffsetY = 0;
-let lastMouseX = 0;
-let lastMouseY = 0;
-let lastTime = 0;
+  var dragging = false;
+  var dragBall = null;
+  var activePointerId = null;
+  var dragOffsetX = 0;
+  var dragOffsetY = 0;
+  var lastPointerX = 0;
+  var lastPointerY = 0;
+  var lastPointerTime = 0;
 
-window.addEventListener('resize', () => {
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-GROUND = canvas.height - 40;
-});
+  var lastFrameTime = performance.now();
 
-function createBall(x, y) {
-return {
-x,
-y,
-vx: 0,
-vy: 0,
-fading: false,
-opacity: 1,
-gone: false
-};
-}
+  var palette = [
+    "#65e87b",
+    "#60a5fa",
+    "#f472b6",
+    "#fbbf24",
+    "#a78bfa",
+    "#22d3ee",
+    "#fb7185"
+  ];
 
-// mouse down: grab ball if hit, otherwise create new ball AND immediately start dragging it
-canvas.addEventListener('mousedown', (e) => {
-const rect = canvas.getBoundingClientRect();
-const mx = e.clientX - rect.left;
-const my = e.clientY - rect.top;
+  function resizeCanvas() {
+    var ratio = Math.min(window.devicePixelRatio || 1, 2);
 
-// see if we clicked a ball
-let selected = null;
-for (let i = balls.length - 1; i >= 0; i--) {
-const b = balls[i];
-const dx = mx - b.x;
-const dy = my - b.y;
-if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
-selected = b;
-break;
-}
-}
+    width = window.innerWidth;
+    height = window.innerHeight;
+    ground = height - 45;
 
-if (hintVisible) {
-hint.style.opacity = '0';
-setTimeout(() => hint.style.display = 'none', 400);
-hintVisible = false;
-}
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+    canvas.width = Math.floor(width * ratio);
+    canvas.height = Math.floor(height * ratio);
 
-if (!selected) {
-// spawn a new ball, then treat it as selected
-const newBall = createBall(mx, my);
-balls.push(newBall);
-selected = newBall;
-}
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-// start dragging the selected (existing or new) ball
-isDragging = true;
-dragBall = selected;
-dragBall.fading = false;
-dragBall.vx = 0;
-dragBall.vy = 0;
-dragOffsetX = mx - dragBall.x;
-dragOffsetY = my - dragBall.y;
-lastMouseX = mx;
-lastMouseY = my;
-lastTime = performance.now();
-});
+    for (var i = 0; i < balls.length; i++) {
+      var ball = balls[i];
+      ball.x = clamp(ball.x, ball.radius, width - ball.radius);
+      ball.y = Math.min(ball.y, ground - ball.radius);
+    }
+  }
 
-canvas.addEventListener('mousemove', (e) => {
-if (!isDragging || !dragBall) return;
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
 
-const rect = canvas.getBoundingClientRect();
-const mx = e.clientX - rect.left;
-const my = e.clientY - rect.top;
+  function hideHint() {
+    if (!hintVisible) return;
 
-const now = performance.now();
-const dt = (now - lastTime) / 1000; // seconds
+    hintVisible = false;
+    hint.classList.add("hidden");
 
-// update ball position to follow mouse
-dragBall.x = mx - dragOffsetX;
-dragBall.y = my - dragOffsetY;
+    setTimeout(function() {
+      hint.style.display = "none";
+    }, 400);
+  }
 
-// estimate velocity from mouse movement
-if (dt > 0) {
-dragBall.vx = (mx - lastMouseX) / dt * 0.05;
-dragBall.vy = (my - lastMouseY) / dt * 0.05;
-}
+  function getPointerPosition(event) {
+    var rect = canvas.getBoundingClientRect();
 
-lastMouseX = mx;
-lastMouseY = my;
-lastTime = now;
-});
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+  }
 
-canvas.addEventListener('mouseup', () => {
-isDragging = false;
-dragBall = null;
-});
+  function createBall(x, y) {
+    if (balls.length >= maxBalls) {
+      balls.shift();
+    }
 
-canvas.addEventListener('mouseleave', () => {
-isDragging = false;
-dragBall = null;
-});
+    var radius = 15 + Math.random() * 15;
+    var color = palette[Math.floor(Math.random() * palette.length)];
 
-// touch: same behavior — tap creates and immediately drags, or grabs existing
-canvas.addEventListener('touchstart', (e) => {
-e.preventDefault();
-const rect = canvas.getBoundingClientRect();
-const touch = e.touches[0];
-const mx = touch.clientX - rect.left;
-const my = touch.clientY - rect.top;
+    var ball = {
+      x: clamp(x, radius, width - radius),
+      y: clamp(y, radius, ground - radius),
+      vx: 0,
+      vy: 0,
+      radius: radius,
+      color: color,
+      opacity: 1,
+      restingTime: 0,
+      trail: [],
+      isDragged: false
+    };
 
-let selected = null;
-for (let i = balls.length - 1; i >= 0; i--) {
-const b = balls[i];
-const dx = mx - b.x;
-const dy = my - b.y;
-if (dx * dx + dy * dy <= RADIUS * RADIUS && !b.gone) {
-selected = b;
-break;
-}
-}
+    balls.push(ball);
+    return ball;
+  }
 
-if (hintVisible) {
-hint.style.opacity = '0';
-setTimeout(() => hint.style.display = 'none', 400);
-hintVisible = false;
-}
+  function findBallAt(x, y) {
+    for (var i = balls.length - 1; i >= 0; i--) {
+      var ball = balls[i];
+      var dx = x - ball.x;
+      var dy = y - ball.y;
 
-if (!selected) {
-const newBall = createBall(mx, my);
-balls.push(newBall);
-selected = newBall;
-}
+      if (dx * dx + dy * dy <= ball.radius * ball.radius) {
+        return ball;
+      }
+    }
 
-isDragging = true;
-dragBall = selected;
-dragBall.fading = false;
-dragBall.vx = 0;
-dragBall.vy = 0;
-dragOffsetX = mx - dragBall.x;
-dragOffsetY = my - dragBall.y;
-lastMouseX = mx;
-lastMouseY = my;
-lastTime = performance.now();
-}, { passive: false });
+    return null;
+  }
 
-canvas.addEventListener('touchmove', (e) => {
-e.preventDefault();
-if (!isDragging || !dragBall) return;
+  function startDrag(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
 
-const rect = canvas.getBoundingClientRect();
-const touch = e.touches[0];
-const mx = touch.clientX - rect.left;
-const my = touch.clientY - rect.top;
+    event.preventDefault();
+    hideHint();
 
-const now = performance.now();
-const dt = (now - lastTime) / 1000;
+    var pos = getPointerPosition(event);
+    var selected = findBallAt(pos.x, pos.y);
 
-dragBall.x = mx - dragOffsetX;
-dragBall.y = my - dragOffsetY;
+    if (!selected) {
+      selected = createBall(pos.x, pos.y);
+    }
 
-if (dt > 0) {
-dragBall.vx = (mx - lastMouseX) / dt * 0.05;
-dragBall.vy = (my - lastMouseY) / dt * 0.05;
-}
+    dragging = true;
+    dragBall = selected;
+    activePointerId = event.pointerId;
 
-lastMouseX = mx;
-lastMouseY = my;
-lastTime = now;
-}, { passive: false });
+    dragBall.isDragged = true;
+    dragBall.vx = 0;
+    dragBall.vy = 0;
+    dragBall.restingTime = 0;
+    dragBall.trail = [];
 
-canvas.addEventListener('touchend', () => {
-isDragging = false;
-dragBall = null;
-});
+    dragOffsetX = pos.x - dragBall.x;
+    dragOffsetY = pos.y - dragBall.y;
+    lastPointerX = pos.x;
+    lastPointerY = pos.y;
+    lastPointerTime = performance.now();
 
-function update() {
-balls.forEach(b => {
-if (b.gone) return;
+    canvas.setPointerCapture(event.pointerId);
+  }
 
-if (b.fading) {
-b.opacity -= 0.02;
-if (b.opacity <= 0) b.gone = true;
-return;
-}
+  function moveDrag(event) {
+    if (!dragging || event.pointerId !== activePointerId || !dragBall) return;
 
-// while dragging, physics is handled by pointer movement
-if (!isDragging || b !== dragBall) {
-b.vy += GRAVITY;
-b.x += b.vx;
-b.y += b.vy;
-}
+    event.preventDefault();
 
-// Ceiling collision
-if (b.y - RADIUS <= 0) {
-b.y = RADIUS;
-b.vy *= -BOUNCE;
-b.vx *= FRICTION;
-}
+    var pos = getPointerPosition(event);
+    var now = performance.now();
+    var deltaTime = (now - lastPointerTime) / 1000;
 
-// Ground collision
-if (b.y + RADIUS >= GROUND) {
-b.y = GROUND - RADIUS;
-b.vy *= -BOUNCE;
-b.vx *= FRICTION;
+    dragBall.x = clamp(pos.x - dragOffsetX, dragBall.radius, width - dragBall.radius);
+    dragBall.y = clamp(pos.y - dragOffsetY, dragBall.radius, ground - dragBall.radius);
 
-if (Math.abs(b.vy) < 1.5 && !isDragging) {
-b.vy = 0;
-b.vx = 0;
-b.fading = true;
-}
-}
+    if (deltaTime > 0) {
+      dragBall.vx = clamp((pos.x - lastPointerX) / deltaTime, -1300, 1300);
+      dragBall.vy = clamp((pos.y - lastPointerY) / deltaTime, -1300, 1300);
+    }
 
-// Left wall
-if (b.x - RADIUS <= 0) {
-b.x = RADIUS;
-b.vx *= -BOUNCE;
-b.vy *= FRICTION;
-}
+    lastPointerX = pos.x;
+    lastPointerY = pos.y;
+    lastPointerTime = now;
+  }
 
-// Right wall
-if (b.x + RADIUS >= canvas.width) {
-b.x = canvas.width - RADIUS;
-b.vx *= -BOUNCE;
-b.vy *= FRICTION;
-}
-});
+  function endDrag(event) {
+    if (!dragging || event.pointerId !== activePointerId) return;
 
-balls = balls.filter(b => !b.gone);
-}
+    event.preventDefault();
 
-function draw() {
-ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (dragBall) {
+      dragBall.isDragged = false;
+      dragBall.vx *= 0.62;
+      dragBall.vy *= 0.62;
+    }
 
-// Ground line
-ctx.beginPath();
-ctx.moveTo(0, GROUND);
-ctx.lineTo(canvas.width, GROUND);
-ctx.strokeStyle = '#ddd';
-ctx.lineWidth = 1;
-ctx.stroke();
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
 
-balls.forEach(b => {
-if (b.gone) return;
+    dragging = false;
+    dragBall = null;
+    activePointerId = null;
+  }
 
-// Shadow
-const shadowY = GROUND;
-const dist = shadowY - (b.y + RADIUS);
-const shadowScale = Math.max(0.1, 1 - dist / (canvas.height * 0.7));
-const shadowAlpha = shadowScale * 0.15;
-ctx.save();
-ctx.translate(b.x, shadowY);
-ctx.scale(shadowScale, 0.3);
-ctx.beginPath();
-ctx.arc(0, 0, RADIUS, 0, Math.PI * 2);
-ctx.fillStyle = `rgba(0,0,0,${shadowAlpha})`;
-ctx.fill();
-ctx.restore();
+  function updateBall(ball, dt) {
+    if (ball.isDragged) return;
 
-// Ball (green)
-ctx.beginPath();
-ctx.arc(b.x, b.y, RADIUS, 0, Math.PI * 2);
-ctx.fillStyle = BALL_COLOR;
-ctx.fill();
+    ball.vy += gravity * dt;
+    ball.vx *= Math.pow(airDrag, dt * 60);
 
-// Shine
-ctx.beginPath();
-ctx.arc(b.x - 6, b.y - 6, 5, 0, Math.PI * 2);
-ctx.fillStyle = `rgba(255,255,255,${0.18 * b.opacity})`;
-ctx.fill();
-});
-}
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
 
-function loop() {
-update();
-draw();
-requestAnimationFrame(loop);
-}
+    if (ball.x - ball.radius < 0) {
+      ball.x = ball.radius;
+      ball.vx = Math.abs(ball.vx) * wallBounce;
+    }
 
-loop();
+    if (ball.x + ball.radius > width) {
+      ball.x = width - ball.radius;
+      ball.vx = -Math.abs(ball.vx) * wallBounce;
+    }
+
+    if (ball.y - ball.radius < 0) {
+      ball.y = ball.radius;
+      ball.vy = Math.abs(ball.vy) * bounce;
+    }
+
+    if (ball.y + ball.radius >= ground) {
+      ball.y = ground - ball.radius;
+
+      if (Math.abs(ball.vy) > 70) {
+        ball.vy = -Math.abs(ball.vy) * bounce;
+        ball.vx *= floorFriction;
+        score += 1;
+      } else {
+        ball.vy = 0;
+        ball.vx *= 0.9;
+      }
+    }
+
+    if (Math.abs(ball.vx) < 3 && Math.abs(ball.vy) < 3 && ball.y + ball.radius >= ground - 1) {
+      ball.restingTime += dt;
+    } else {
+      ball.restingTime = 0;
+    }
+
+    if (ball.restingTime > 7) {
+      ball.opacity -= dt * 0.3;
+    }
+
+    ball.trail.push({
+      x: ball.x,
+      y: ball.y,
+      alpha: ball.opacity
+    });
+
+    if (ball.trail.length > 10) {
+      ball.trail.shift();
+    }
+  }
+
+  function resolveBallCollision(a, b) {
+    if (a.isDragged && b.isDragged) return;
+
+    var dx = b.x - a.x;
+    var dy = b.y - a.y;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    var minimumDistance = a.radius + b.radius;
+
+    if (distance === 0 || distance >= minimumDistance) return;
+
+    var nx = dx / distance;
+    var ny = dy / distance;
+    var overlap = minimumDistance - distance;
+
+    var aMove = a.isDragged ? 0 : 0.5;
+    var bMove = b.isDragged ? 0 : 0.5;
+
+    if (a.isDragged) {
+      bMove = 1;
+    }
+
+    if (b.isDragged) {
+      aMove = 1;
+    }
+
+    a.x -= nx * overlap * aMove;
+    a.y -= ny * overlap * aMove;
+    b.x += nx * overlap * bMove;
+    b.y += ny * overlap * bMove;
+
+    var relativeVelocityX = b.vx - a.vx;
+    var relativeVelocityY = b.vy - a.vy;
+    var velocityAlongNormal =
+      relativeVelocityX * nx + relativeVelocityY * ny;
+
+    if (velocityAlongNormal > 0) return;
+
+    var restitution = 0.84;
+    var massA = a.radius * a.radius;
+    var massB = b.radius * b.radius;
+
+    var impulse =
+      -(1 + restitution) * velocityAlongNormal /
+      ((1 / massA) + (1 / massB));
+
+    var impulseX = impulse * nx;
+    var impulseY = impulse * ny;
+
+    if (!a.isDragged) {
+      a.vx -= impulseX / massA;
+      a.vy -= impulseY / massA;
+    }
+
+    if (!b.isDragged) {
+      b.vx += impulseX / massB;
+      b.vy += impulseY / massB;
+    }
+
+    score += 2;
+  }
+
+  function update(dt) {
+    if (paused) return;
+
+    for (var i = 0; i < balls.length; i++) {
+      updateBall(balls[i], dt);
+    }
+
+    for (var a = 0; a < balls.length; a++) {
+      for (var b = a + 1; b < balls.length; b++) {
+        resolveBallCollision(balls[a], balls[b]);
+      }
+    }
+
+    balls = balls.filter(function(ball) {
+      return ball.opacity > 0;
+    });
+
+    ballCountText.textContent = balls.length;
+    scoreText.textContent = score;
+  }
+
+  function drawBackground() {
+    var gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#1d2b45");
+    gradient.addColorStop(0.7, "#0c182b");
+    gradient.addColorStop(1, "#07111f");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+
+    for (var x = 0; x < width; x += 40) {
+      ctx.fillRect(x, 0, 1, ground);
+    }
+
+    for (var y = 0; y < ground; y += 40) {
+      ctx.fillRect(0, y, width, 1);
+    }
+  }
+
+  function drawGround() {
+    var floorGradient = ctx.createLinearGradient(0, ground, 0, height);
+    floorGradient.addColorStop(0, "#31546f");
+    floorGradient.addColorStop(1, "#17263b");
+
+    ctx.fillStyle = floorGradient;
+    ctx.fillRect(0, ground, width, height - ground);
+
+    ctx.strokeStyle = "rgba(141, 245, 170, 0.7)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, ground);
+    ctx.lineTo(width, ground);
+    ctx.stroke();
+  }
+
+  function drawTrail(ball) {
+    for (var i = 0; i < ball.trail.length; i++) {
+      var point = ball.trail[i];
+      var progress = i / ball.trail.length;
+      var alpha = progress * 0.18 * ball.opacity;
+      var size = ball.radius * (0.3 + progress * 0.25);
+
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, size, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(ball.color, alpha);
+      ctx.fill();
+    }
+  }
+
+  function hexToRgba(hex, alpha) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+
+    return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+  }
+
+  function drawBall(ball) {
+    var distanceFromGround = Math.max(0, ground - (ball.y + ball.radius));
+    var shadowScale = Math.max(0.15, 1 - distanceFromGround / (height * 0.7));
+    var shadowAlpha = shadowScale * 0.25 * ball.opacity;
+
+    ctx.save();
+    ctx.translate(ball.x, ground + 1);
+    ctx.scale(shadowScale, shadowScale * 0.28);
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0," + shadowAlpha + ")";
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = ball.opacity;
+
+    var gradient = ctx.createRadialGradient(
+      ball.x - ball.radius * 0.35,
+      ball.y - ball.radius * 0.4,
+      ball.radius * 0.1,
+      ball.x,
+      ball.y,
+      ball.radius
+    );
+
+    gradient.addColorStop(0, "#ffffff");
+    gradient.addColorStop(0.13, ball.color);
+    gradient.addColorStop(1, hexToRgba(ball.color, 0.65));
+
+    ctx.shadowColor = ball.color;
+    ctx.shadowBlur = 14;
+
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(
+      ball.x - ball.radius * 0.3,
+      ball.y - ball.radius * 0.32,
+      ball.radius * 0.17,
+      0,
+      Math.PI * 2
+    );
+    ctx.fillStyle = "rgba(255,255,255,0.52)";
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function draw() {
+    drawBackground();
+    drawGround();
+
+    for (var i = 0; i < balls.length; i++) {
+      drawTrail(balls[i]);
+    }
+
+    for (var j = 0; j < balls.length; j++) {
+      drawBall(balls[j]);
+    }
+
+    if (paused) {
+      ctx.fillStyle = "rgba(0,0,0,0.42)";
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 32px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("PAUSED", width / 2, height / 2);
+    }
+  }
+
+  function loop(time) {
+    var dt = Math.min(0.033, (time - lastFrameTime) / 1000);
+    lastFrameTime = time;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(loop);
+  }
+
+  canvas.addEventListener("pointerdown", startDrag);
+  canvas.addEventListener("pointermove", moveDrag);
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  pauseBtn.addEventListener("click", function() {
+    paused = !paused;
+    pauseBtn.textContent = paused ? "Resume" : "Pause";
+  });
+
+  clearBtn.addEventListener("click", function() {
+    balls = [];
+    score = 0;
+    ballCountText.textContent = "0";
+    scoreText.textContent = "0";
+  });
+
+  window.addEventListener("keydown", function(event) {
+    if (event.key === "p" || event.key === "P") {
+      paused = !paused;
+      pauseBtn.textContent = paused ? "Resume" : "Pause";
+    }
+
+    if (event.key === "c" || event.key === "C") {
+      balls = [];
+      score = 0;
+      ballCountText.textContent = "0";
+      scoreText.textContent = "0";
+    }
+  });
+
+  window.addEventListener("resize", resizeCanvas);
+
+  resizeCanvas();
+  requestAnimationFrame(loop);
 </script>
 </body>
 </html>
