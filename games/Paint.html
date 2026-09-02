@@ -2,62 +2,146 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro MS Paint</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pro MS Paint (Touch)</title>
 <style>
+  :root {
+    --bg: #f0f0f0;
+    --panel: #ffffff;
+    --border: #ccc;
+    --accent: #50c878;
+    --accent-hover: #764ba2;
+  }
+
   body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #eee;
+    background: var(--bg);
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 100vh;
+    touch-action: none; /* help prevent unwanted gestures */
   }
+
   #toolbar {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin: 10px;
     flex-wrap: wrap;
     align-items: center;
+    background: var(--panel);
+    padding: 8px 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    max-width: 95vw;
   }
-  canvas {
-    border: 2px solid #333;
+
+  #toolbar label {
+    font-size: 12px;
+    color: #555;
+    margin-right: 2px;
+  }
+
+  #toolbar input[type="color"],
+  #toolbar input[type="range"],
+  #toolbar select,
+  #toolbar button {
+    padding: 5px 7px;
+    font-size: 13px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
     background: #fff;
-    cursor: crosshair;
   }
-  #toolbar input, #toolbar button, #toolbar select {
-    padding: 5px;
-    font-size: 14px;
+
+  #toolbar button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.05s;
+  }
+
+  #toolbar button:hover {
+    background: var(--accent-hover);
+  }
+
+  #toolbar button:active {
+    transform: scale(0.96);
+  }
+
+  #canvasWrapper {
+    position: relative;
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    max-width: 95vw;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    cursor: crosshair;
+    background: #fff;
+    touch-action: none; /* critical for drawing on touch */
+  }
+
+  #status {
+    margin: 6px 0 10px;
+    font-size: 12px;
+    color: #444;
+    text-align: center;
+    padding: 0 8px;
   }
 </style>
 </head>
 <body>
 
 <div id="toolbar">
+  <label>Color</label>
   <input type="color" id="colorPicker" value="#000000">
+
+  <label>Size</label>
   <input type="range" id="brushSize" min="1" max="50" value="5">
+
+  <label>Tool</label>
   <select id="tool">
     <option value="brush">Brush</option>
     <option value="eraser">Eraser</option>
     <option value="line">Line</option>
-    <option value="rectangle">Rectangle</option>
+    <option value="rect">Rectangle</option>
+    <option value="rectFill">Rect (fill)</option>
     <option value="circle">Circle</option>
+    <option value="circleFill">Circle (fill)</option>
     <option value="fill">Fill</option>
+    <option value="spray">Spray</option>
   </select>
+
+  <label>Fill shape</label>
+  <input type="checkbox" id="shapeFill">
+
   <button id="undo">Undo</button>
   <button id="redo">Redo</button>
   <button id="clear">Clear</button>
   <button id="save">Save PNG</button>
 </div>
 
-<canvas id="paintCanvas" width="900" height="600"></canvas>
+<div id="status">Shortcuts: B=Brush, E=Eraser, L=Line, R=Rect, T=Rect-fill, C=Circle, O=Circle-fill, F=Fill, S=Spray, Ctrl+Z=Undo, Ctrl+Y=Redo</div>
+
+<div id="canvasWrapper">
+  <canvas id="paintCanvas" width="900" height="600"></canvas>
+</div>
 
 <script>
 const canvas = document.getElementById('paintCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
 const colorPicker = document.getElementById('colorPicker');
 const brushSize = document.getElementById('brushSize');
 const toolSelect = document.getElementById('tool');
+const shapeFillCheckbox = document.getElementById('shapeFill');
+
 const undoBtn = document.getElementById('undo');
 const redoBtn = document.getElementById('redo');
 const clearBtn = document.getElementById('clear');
@@ -66,202 +150,394 @@ const saveBtn = document.getElementById('save');
 let drawing = false;
 let startX = 0;
 let startY = 0;
+let lastX = 0;
+let lastY = 0;
+
 let currentColor = colorPicker.value;
-let currentSize = brushSize.value;
+let currentSize = parseInt(brushSize.value, 10);
 let currentTool = toolSelect.value;
+let shapeFill = shapeFillCheckbox.checked;
 
 let undoStack = [];
 let redoStack = [];
 
-// Save state for undo
+// Initialize canvas white
+ctx.fillStyle = '#fff';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
 function saveState() {
   undoStack.push(canvas.toDataURL());
+  if (undoStack.length > 20) undoStack.shift();
   redoStack = [];
 }
 
-// Start drawing
+function restoreState(dataUrl) {
+  const img = new Image();
+  img.src = dataUrl;
+  img.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+  };
+}
+
+// Get position from mouse or touch event
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  let clientX, clientY;
+
+  if (e.touches && e.touches.length > 0) {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
+// Prevent default touch actions on canvas (scrolling, zooming)
+function preventDefault(e) {
+  e.preventDefault();
+}
+
+// Drawing functions
+
 function startDraw(e) {
   drawing = true;
-  const rect = canvas.getBoundingClientRect();
-  startX = e.clientX - rect.left;
-  startY = e.clientY - rect.top;
+  const pos = getPos(e);
+  startX = pos.x;
+  startY = pos.y;
+  lastX = startX;
+  lastY = startY;
+
   if (currentTool === 'fill') {
     saveState();
-    fillCanvas(startX, startY);
-  } else if (currentTool === 'brush' || currentTool === 'eraser') {
+    floodFillAt(startX, startY);
+    drawing = false;
+    return;
+  }
+
+  if (['brush', 'eraser', 'spray'].includes(currentTool)) {
     saveState();
     draw(e);
   }
 }
 
-// End drawing
-function endDraw(e) {
+function endDraw() {
   if (!drawing) return;
   drawing = false;
-  if (['line','rectangle','circle'].includes(currentTool)) {
-    drawShape(e);
-    saveState();
-  }
   ctx.beginPath();
 }
 
-// Drawing freehand
 function draw(e) {
-  if (!drawing || !['brush','eraser'].includes(currentTool)) return;
+  if (!drawing) return;
+  const pos = getPos(e);
+
   ctx.lineWidth = currentSize;
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.strokeStyle = currentTool === 'eraser' ? '#fff' : currentColor;
-  
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y);
+  ctx.fillStyle = currentColor;
+
+  if (currentTool === 'brush' || currentTool === 'eraser') {
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  } else if (currentTool === 'spray') {
+    spray(pos.x, pos.y);
+  }
+
+  lastX = pos.x;
+  lastY = pos.y;
 }
 
-// Draw shapes with preview
-function drawShape(e, preview=false) {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+function spray(x, y) {
+  const radius = currentSize * 2;
+  const density = currentSize * 2;
+  for (let i = 0; i < density; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = Math.random() * radius;
+    const sx = x + Math.cos(angle) * r;
+    const sy = y + Math.sin(angle) * r;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+}
+
+// Shape drawing with live preview
+
+let baseSnapshot = null;
+
+function startShape(e) {
+  drawing = true;
+  const pos = getPos(e);
+  startX = pos.x;
+  startY = pos.y;
+  lastX = startX;
+  lastY = startY;
+
+  saveState();
+  baseSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+function moveShape(e) {
+  if (!drawing) return;
+  const pos = getPos(e);
+
+  // Restore base
+  ctx.putImageData(baseSnapshot, 0, 0);
 
   ctx.lineWidth = currentSize;
   ctx.strokeStyle = currentColor;
-  
-  if (preview) ctx.setLineDash([5,5]); 
-  else ctx.setLineDash([]);
+  ctx.fillStyle = currentColor;
 
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  if (undoStack.length) {
-    const img = new Image();
-    img.src = undoStack[undoStack.length-1];
-    img.onload = () => {
-      ctx.drawImage(img,0,0);
-      drawPreview(x, y);
-    }
-  } else drawPreview(x, y);
-}
+  const x1 = startX;
+  const y1 = startY;
+  const x2 = pos.x;
+  const y2 = pos.y;
 
-function drawPreview(x, y) {
   if (currentTool === 'line') {
     ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(x, y);
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
     ctx.stroke();
-  } else if (currentTool === 'rectangle') {
-    ctx.strokeRect(startX, startY, x-startX, y-startY);
-  } else if (currentTool === 'circle') {
-    const radius = Math.sqrt((x-startX)**2 + (y-startY)**2);
+  } else if (currentTool === 'rect' || currentTool === 'rectFill') {
+    if (currentTool === 'rect' || shapeFill) {
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    }
+    if (currentTool === 'rectFill' || shapeFill) {
+      ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+    }
+  } else if (currentTool === 'circle' || currentTool === 'circleFill') {
+    const radius = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
     ctx.beginPath();
-    ctx.arc(startX, startY, radius, 0, Math.PI*2);
-    ctx.stroke();
+    ctx.arc(x1, y1, radius, 0, Math.PI * 2);
+    if (currentTool === 'circle' || shapeFill) {
+      ctx.stroke();
+    }
+    if (currentTool === 'circleFill' || shapeFill) {
+      ctx.fill();
+    }
   }
 }
 
-// Fill bucket
-function fillCanvas(x, y) {
+function endShape() {
+  if (!drawing) return;
+  drawing = false;
+  baseSnapshot = null;
+  ctx.beginPath();
+}
+
+// Fill tool
+
+function floodFillAt(x, y) {
+  x = Math.floor(x);
+  y = Math.floor(y);
+  if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const targetColor = getPixelColor(imageData, x, y);
-  const fillColor = hexToRgb(currentColor);
-  if (!colorsMatch(targetColor, fillColor)) {
-    floodFill(imageData, x, y, targetColor, fillColor);
-    ctx.putImageData(imageData, 0, 0);
-  }
+  const target = getPixel(imageData, x, y);
+  const fill = hexToRgba(currentColor);
+
+  if (colorsEqual(target, fill)) return;
+
+  floodFill(imageData, x, y, target, fill);
+  ctx.putImageData(imageData, 0, 0);
 }
 
-// Helpers for fill
-function getPixelColor(imageData, x, y) {
-  const index = (y * imageData.width + x) * 4;
+function getPixel(imageData, x, y) {
+  const i = (y * imageData.width + x) * 4;
   const d = imageData.data;
-  return [d[index], d[index+1], d[index+2], d[index+3]];
+  return [d[i], d[i + 1], d[i + 2], d[i + 3]];
 }
 
-function colorsMatch(c1, c2) {
-  return c1[0]===c2[0] && c1[1]===c2[1] && c1[2]===c2[2] && c1[3]===255;
+function colorsEqual(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
 }
 
-function hexToRgb(hex) {
-  const bigint = parseInt(hex.slice(1),16);
-  return [(bigint>>16)&255, (bigint>>8)&255, bigint&255, 255];
+function hexToRgba(hex) {
+  const bigint = parseInt(hex.slice(1), 16);
+  return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255, 255];
 }
 
-function floodFill(imageData, x, y, targetColor, fillColor) {
-  const stack = [[x,y]];
+function floodFill(imageData, x, y, target, fill) {
   const w = imageData.width;
   const h = imageData.height;
   const d = imageData.data;
-  
-  while(stack.length) {
-    const [cx,cy] = stack.pop();
-    let idx = (cy*w + cx)*4;
-    if (cx<0||cx>=w||cy<0||cy>=h) continue;
-    const currentColor = [d[idx],d[idx+1],d[idx+2],d[idx+3]];
-    if (colorsMatch(currentColor,targetColor)) {
-      d[idx] = fillColor[0];
-      d[idx+1] = fillColor[1];
-      d[idx+2] = fillColor[2];
-      d[idx+3] = fillColor[3];
-      stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
-    }
+
+  const stack = [[x, y]];
+  const visited = new Uint8Array(w * h);
+
+  function idx(xx, yy) {
+    return yy * w + xx;
+  }
+
+  while (stack.length) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= w || cy >= h) continue;
+
+    const i = idx(cx, cy);
+    if (visited[i]) continue;
+
+    const cur = [d[i * 4], d[i * 4 + 1], d[i * 4 + 2], d[i * 4 + 3]];
+    if (!colorsEqual(cur, target)) continue;
+
+    visited[i] = 1;
+    d[i * 4] = fill[0];
+    d[i * 4 + 1] = fill[1];
+    d[i * 4 + 2] = fill[2];
+    d[i * 4 + 3] = fill[3];
+
+    stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
   }
 }
 
-// Event listeners
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mousemove', e => {
-  if (drawing && ['brush','eraser'].includes(currentTool)) draw(e);
-  if (drawing && ['line','rectangle','circle'].includes(currentTool)) drawShape(e,true);
+// Unified pointer handlers (mouse + touch)
+
+function onPointerDown(e) {
+  // Only handle primary pointer (first finger / left click)
+  if (e.touches && e.touches.length > 1) return;
+  if (!['line', 'rect', 'rectFill', 'circle', 'circleFill'].includes(currentTool)) {
+    startDraw(e);
+  } else {
+    startShape(e);
+  }
+}
+
+function onPointerMove(e) {
+  if (!drawing) return;
+  if (['brush', 'eraser', 'spray'].includes(currentTool)) {
+    draw(e);
+  } else if (['line', 'rect', 'rectFill', 'circle', 'circleFill'].includes(currentTool)) {
+    moveShape(e);
+  }
+}
+
+function onPointerUp() {
+  if (!drawing) return;
+  if (['line', 'rect', 'rectFill', 'circle', 'circleFill'].includes(currentTool)) {
+    endShape();
+  } else {
+    endDraw();
+  }
+}
+
+// Mouse events
+canvas.addEventListener('mousedown', onPointerDown);
+canvas.addEventListener('mousemove', onPointerMove);
+canvas.addEventListener('mouseup', onPointerUp);
+canvas.addEventListener('mouseleave', onPointerUp);
+
+// Touch events
+canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+canvas.addEventListener('touchend', onPointerUp, { passive: false });
+canvas.addEventListener('touchcancel', onPointerUp, { passive: false });
+
+// Prevent scrolling when touching the canvas
+canvas.addEventListener('touchstart', preventDefault, { passive: false });
+canvas.addEventListener('touchmove', preventDefault, { passive: false });
+
+// UI controls
+
+colorPicker.addEventListener('input', (e) => {
+  currentColor = e.target.value;
 });
 
-colorPicker.addEventListener('input', e => currentColor = e.target.value);
-brushSize.addEventListener('input', e => currentSize = e.target.value);
-toolSelect.addEventListener('change', e => currentTool = e.target.value);
+brushSize.addEventListener('input', (e) => {
+  currentSize = parseInt(e.target.value, 10);
+});
+
+toolSelect.addEventListener('change', (e) => {
+  currentTool = e.target.value;
+});
+
+shapeFillCheckbox.addEventListener('change', (e) => {
+  shapeFill = e.target.checked;
+});
 
 clearBtn.addEventListener('click', () => {
   saveState();
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 });
 
 undoBtn.addEventListener('click', () => {
   if (undoStack.length) {
     redoStack.push(canvas.toDataURL());
-    const img = new Image();
-    img.src = undoStack.pop();
-    img.onload = () => ctx.drawImage(img,0,0);
+    restoreState(undoStack.pop());
   }
 });
 
 redoBtn.addEventListener('click', () => {
   if (redoStack.length) {
     undoStack.push(canvas.toDataURL());
-    const img = new Image();
-    img.src = redoStack.pop();
-    img.onload = () => ctx.drawImage(img,0,0);
+    restoreState(redoStack.pop());
   }
 });
 
 saveBtn.addEventListener('click', () => {
   const link = document.createElement('a');
   link.download = 'paint.png';
-  link.href = canvas.toDataURL();
+  link.href = canvas.toDataURL('image/png');
   link.click();
 });
 
-// Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  switch(e.key.toLowerCase()) {
-    case 'b': currentTool='brush'; toolSelect.value='brush'; break;
-    case 'e': currentTool='eraser'; toolSelect.value='eraser'; break;
-    case 'l': currentTool='line'; toolSelect.value='line'; break;
-    case 'r': currentTool='rectangle'; toolSelect.value='rectangle'; break;
-    case 'c': currentTool='circle'; toolSelect.value='circle'; break;
-    case 'f': currentTool='fill'; toolSelect.value='fill'; break;
-    case 'z': undoBtn.click(); break;
-    case 'y': redoBtn.click(); break;
+// Keyboard shortcuts (for desktop)
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toLowerCase();
+  if (key === 'z' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    undoBtn.click();
+    return;
+  }
+  if (key === 'y' && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    redoBtn.click();
+    return;
+  }
+
+  switch (key) {
+    case 'b':
+      currentTool = 'brush';
+      toolSelect.value = 'brush';
+      break;
+    case 'e':
+      currentTool = 'eraser';
+      toolSelect.value = 'eraser';
+      break;
+    case 'l':
+      currentTool = 'line';
+      toolSelect.value = 'line';
+      break;
+    case 'r':
+      currentTool = 'rect';
+      toolSelect.value = 'rect';
+      break;
+    case 't':
+      currentTool = 'rectFill';
+      toolSelect.value = 'rectFill';
+      break;
+    case 'c':
+      currentTool = 'circle';
+      toolSelect.value = 'circle';
+      break;
+    case 'o':
+      currentTool = 'circleFill';
+      toolSelect.value = 'circleFill';
+      break;
+    case 'f':
+      currentTool = 'fill';
+      toolSelect.value = 'fill';
+      break;
+    case 's':
+      currentTool = 'spray';
+      toolSelect.value = 'spray';
+      break;
   }
 });
 </script>
