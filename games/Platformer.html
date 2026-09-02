@@ -4,625 +4,626 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jetpack Platformer</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
+  <style>
     * {
       box-sizing: border-box;
-      margin: 0;
-      padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      font-family: 'Inter', system-ui, sans-serif;
-      background: radial-gradient(circle at top, #14532d 0%, #022c22 40%, #020617 100%);
-      color: #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
+      margin: 0;
       min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #071827;
+      color: white;
+      font-family: Arial, sans-serif;
     }
 
-    .game-container {
+    #app {
+      width: min(900px, 100%);
+      padding: 16px;
+      border: 2px solid #22c55e;
+      border-radius: 14px;
       background: #020617;
-      border-radius: 20px;
-      padding: 24px;
-      box-shadow:
-        0 20px 40px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(15, 23, 42, 0.8);
-      max-width: 900px;
-      width: 100%;
-      border: 1px solid #065f46;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
     }
 
-    .title {
-      font-size: 32px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 16px;
+    h1 {
+      margin: 0 0 12px;
       color: #bbf7d0;
-      letter-spacing: 0.08em;
+      font-size: 26px;
+      text-align: center;
     }
 
-    canvas {
-      border-radius: 12px;
-      background: linear-gradient(180deg, #020617 0%, #022c22 100%);
-      box-shadow:
-        0 16px 32px rgba(0, 0, 0, 0.7),
-        inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+    #game {
       display: block;
       width: 100%;
-      max-width: 800px;
       height: auto;
+      border: 2px solid #166534;
+      border-radius: 10px;
+      background: #061827;
     }
 
-    .ui-panel {
+    #hud {
       display: flex;
-      gap: 16px;
       justify-content: space-between;
-      align-items: center;
-      margin-top: 16px;
+      gap: 10px;
+      margin-top: 12px;
       flex-wrap: wrap;
       color: #e5e7eb;
-    }
-
-    .info {
+      font-weight: bold;
       font-size: 14px;
-      line-height: 1.4;
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid #064e3b;
     }
 
-    .stats {
+    #help {
+      margin: 10px 0 0;
+      color: #a5b4c5;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    #mobileControls {
+      display: none;
+      justify-content: space-between;
+      margin-top: 12px;
+      gap: 10px;
+    }
+
+    .controlGroup {
       display: flex;
-      gap: 14px;
-      font-size: 14px;
-      align-items: center;
-      flex-wrap: wrap;
+      gap: 10px;
     }
 
-    .fuel-bar {
-      width: 160px;
-      height: 16px;
-      background: #111827;
-      border-radius: 999px;
-      overflow: hidden;
-      border: 1px solid #065f46;
+    .controlButton {
+      width: 58px;
+      height: 58px;
+      border: 1px solid #86efac;
+      border-radius: 12px;
+      color: white;
+      background: #166534;
+      font-size: 22px;
+      font-weight: bold;
+      touch-action: none;
     }
 
-    .fuel-fill {
-      height: 100%;
-      transition: width 0.2s ease-out;
-      background: #16a34a;
+    #jetButton {
+      width: 70px;
+      color: #1f1300;
+      background: #fde047;
+      font-size: 13px;
     }
 
-    @media (max-width: 768px) {
-      .game-container {
-        padding: 16px;
+    @media (max-width: 700px), (pointer: coarse) {
+      #mobileControls {
+        display: flex;
       }
-      .title {
-        font-size: 26px;
-      }
-      .ui-panel {
-        flex-direction: column;
-        align-items: stretch;
+
+      #help {
+        display: none;
       }
     }
   </style>
 </head>
+
 <body>
-  <div class="game-container">
-    <h1 class="title">Jetpack Platformer</h1>
+  <div id="app">
+    <h1>Jetpack Platformer</h1>
+
     <canvas id="game" width="800" height="450"></canvas>
 
-    <div class="ui-panel">
-      <div class="stats">
-        <div class="fuel-bar">
-          <div class="fuel-fill" id="fuelFill" style="width: 100%"></div>
-        </div>
-        <span id="fuelText">Fuel: 5.0s</span>
-        <span id="stageText">Stage: 1</span>
-        <span id="jumpsText">Jumps left: 2</span>
+    <div id="hud">
+      <span id="scoreText">Score: 0</span>
+      <span id="fuelText">Fuel: 5.0s</span>
+      <span id="statusText">Reach the purple portal!</span>
+    </div>
+
+    <p id="help">
+      A/D or Arrow Keys: move · W/Up: jump · Hold Space: jetpack
+    </p>
+
+    <div id="mobileControls">
+      <div class="controlGroup">
+        <button class="controlButton" id="leftButton" type="button">◀</button>
+        <button class="controlButton" id="rightButton" type="button">▶</button>
       </div>
-      <div class="info">
-        A/D or ← → Move • W/↑ Jump (double) • Space Jetpack • S/↓ Drop through platforms • 0 Toggle walls
+
+      <div class="controlGroup">
+        <button class="controlButton" id="jumpButton" type="button">↑</button>
+        <button class="controlButton" id="jetButton" type="button">JET</button>
       </div>
     </div>
   </div>
 
   <script>
-    class JetpackGame {
-      constructor() {
-        this.canvas = document.getElementById("game");
-        this.ctx = this.canvas.getContext("2d");
-        this.scale = 0.7;
+    var canvas = document.getElementById("game");
+    var ctx = canvas.getContext("2d");
 
-        this.keysDown = new Set();
-        this.wallsEnabled = true;
-        this.lastTime = performance.now();
+    var scoreText = document.getElementById("scoreText");
+    var fuelText = document.getElementById("fuelText");
+    var statusText = document.getElementById("statusText");
 
-        this.dropThroughTimer = 0;
-        this.dropThroughDuration = 0.2;
+    var keys = {
+      left: false,
+      right: false,
+      jet: false
+    };
 
-        this.deathFade = 0;
-        this.deathFadeTimer = 0;
-        this.isDead = false;
+    var player = {
+      x: 70,
+      y: 322,
+      width: 28,
+      height: 38,
+      vx: 0,
+      vy: 0,
+      onGround: true,
+      jumps: 0
+    };
 
-        this.player = {
-          x: 100 * this.scale, y: 300 * this.scale,
-          width: 40 * this.scale, height: 50 * this.scale,
-          vx: 0, vy: 0,
-          speed: 4 * this.scale,
-          jumpForce: 12 * this.scale,
-          onGround: false,
-          jumpCount: 0,
-          maxJumps: 2
-        };
+    var fuel = 5;
+    var maxFuel = 5;
+    var score = 0;
 
-        this.constants = {
-          gravity: 0.6 * this.scale,
-          maxFallSpeed: 15 * this.scale,
-          maxJetpackFuel: 5.0,
-          jetpackForce: -0.3 * this.scale,
-          jetpackCooldown: 2.0,
-          ceilingHeight: 60 * this.scale,
-          platformLowerOffset: 80 * this.scale
-        };
+    var gravity = 0.65;
+    var moveSpeed = 4.5;
+    var jumpForce = -12;
+    var jetForce = -0.42;
 
-        this.jetpack = {
-          fuel: this.constants.maxJetpackFuel,
-          active: false,
-          onCooldown: false,
-          cooldownTimer: 0
-        };
+    var platforms = [
+      { x: 0, y: 360, width: 180, height: 90, solid: true },
+      { x: 285, y: 320, width: 185, height: 130, solid: true },
+      { x: 555, y: 350, width: 245, height: 100, solid: true },
 
-        this.game = {
-          groundSegments: [],
-          ceilingSegments: [],
-          platforms: [],
-          deathZones: [],
-          currentStage: 1
-        };
+      { x: 185, y: 280, width: 95, height: 12, solid: false },
+      { x: 385, y: 225, width: 105, height: 12, solid: false },
+      { x: 530, y: 270, width: 95, height: 12, solid: false }
+    ];
 
-        this.fuelFill = document.getElementById("fuelFill");
-        this.fuelText = document.getElementById("fuelText");
-        this.stageText = document.getElementById("stageText");
-        this.jumpsText = document.getElementById("jumpsText");
+    var spikes = [
+      { x: 180, y: 420, width: 105, height: 30 },
+      { x: 470, y: 420, width: 85, height: 30 }
+    ];
 
-        this.initEvents();
-        this.generateStage();
-        requestAnimationFrame((t) => this.gameLoop(t));
-      }
+    var coins = [
+      { x: 230, y: 250, taken: false },
+      { x: 438, y: 195, taken: false },
+      { x: 577, y: 240, taken: false },
+      { x: 700, y: 316, taken: false }
+    ];
 
-      initEvents() {
-        window.addEventListener("keydown", (e) => {
-          if (!this.keysDown.has(e.code)) {
-            if ((e.code === "KeyW" || e.code === "ArrowUp") && 
-                this.player.jumpCount < this.player.maxJumps) {
-              this.player.vy = -this.player.jumpForce;
-              this.player.jumpCount++;
-              this.player.onGround = false;
-            }
-            else if ((e.code === "KeyS" || e.code === "ArrowDown") && 
-                     this.player.onGround && this.dropThroughTimer <= 0) {
-              this.dropThroughTimer = this.dropThroughDuration;
-            }
-          }
-          this.keysDown.add(e.code);
+    var portal = {
+      x: 735,
+      y: 288,
+      width: 36,
+      height: 62
+    };
 
-          if (e.code === "Digit0") {
-            this.wallsEnabled = !this.wallsEnabled;
-          }
+    function overlap(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
 
-          if (["ArrowUp", "ArrowDown", "Space", "ArrowLeft", "ArrowRight"].includes(e.code)) {
-            e.preventDefault();
-          }
-        });
+    function resetPlayer() {
+      player.x = 70;
+      player.y = 322;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = true;
+      player.jumps = 0;
+      fuel = maxFuel;
+      statusText.textContent = "Try again!";
+    }
 
-        window.addEventListener("keyup", (e) => {
-          this.keysDown.delete(e.code);
-        });
-      }
-
-      randRange(min, max) {
-        return Math.random() * (max - min) + min;
-      }
-
-      generateTerrain() {
-        this.game.groundSegments = [];
-        this.game.ceilingSegments = [];
-        this.game.platforms = [];
-        this.game.deathZones = [];
-        const segmentCount = 20;
-        const segWidth = this.canvas.width / segmentCount;
-        let baseGroundY = 380 * this.scale;
-        let baseCeilingY = this.constants.ceilingHeight;
-        
-        let prevGroundY = baseGroundY;
-        let prevCeilingY = baseCeilingY;
-        let inGap = false;
-        let gapStart = 0;
-        let gapWidth = 0;
-
-        for (let i = 0; i < segmentCount; i++) {
-          const x = i * segWidth;
-          
-          if (!inGap && i === 8 && i < segmentCount - 10) {
-            inGap = true;
-            gapStart = i;
-            gapWidth = 4;
-          }
-
-          if (inGap) {
-            gapWidth--;
-            if (gapWidth <= 0) {
-              inGap = false;
-              const leftChunkHeight = prevGroundY;
-              const rightChunkHeight = Math.max(
-                leftChunkHeight - 40 * this.scale, 
-                Math.min(leftChunkHeight + 40 * this.scale, baseGroundY)
-              );
-              
-              const gapLeftX = gapStart * segWidth;
-              const fullGapWidth = 4 * segWidth;
-              const platformWidth = fullGapWidth * 0.9;
-              const platformX = gapLeftX + (fullGapWidth - platformWidth) / 2;
-              
-              const platformY = Math.max(
-                250 * this.scale, 
-                Math.min(rightChunkHeight + this.constants.platformLowerOffset, baseGroundY - 20 * this.scale)
-              );
-              
-              this.game.platforms.push({
-                x: platformX,
-                y: platformY,
-                width: platformWidth,
-                height: 12 * this.scale
-              });
-              
-              this.game.deathZones.push({
-                x: gapLeftX,
-                width: fullGapWidth,
-                y: this.canvas.height - 40 * this.scale,
-                height: 40 * this.scale
-              });
-            }
-          }
-
-          if (!inGap) {
-            const groundDelta = this.randRange(-70, 70) * this.scale;
-            const groundY = Math.max(250 * this.scale, Math.min(430 * this.scale, prevGroundY + groundDelta));
-            this.game.groundSegments.push({ 
-              x: x, 
-              width: segWidth, 
-              y: groundY 
-            });
-            prevGroundY = groundY;
-          } else {
-            prevGroundY = baseGroundY;
-          }
-
-          const ceilingDelta = this.randRange(-15, 15) * this.scale;
-          const ceilingY = Math.max(20 * this.scale, Math.min(80 * this.scale, prevCeilingY + ceilingDelta));
-          this.game.ceilingSegments.push({ 
-            x: x, 
-            width: segWidth, 
-            y: ceilingY 
-          });
-          prevCeilingY = ceilingY;
-        }
-      }
-
-      isOnPlatform(x) {
-        for (const platform of this.game.platforms) {
-          if (x >= platform.x && x < platform.x + platform.width) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      getGroundYAt(x, ignorePlatforms = false) {
-        if (!ignorePlatforms) {
-          for (const platform of this.game.platforms) {
-            if (x >= platform.x && x < platform.x + platform.width) {
-              return platform.y;
-            }
-          }
-        }
-        
-        for (const seg of this.game.groundSegments) {
-          if (x >= seg.x && x < seg.x + seg.width) return seg.y;
-        }
-        return 380 * this.scale;
-      }
-
-      isInDeathZone(x, y) {
-        const playerBottom = y + this.player.height;
-        for (const zone of this.game.deathZones) {
-          if (x + this.player.width > zone.x && 
-              x < zone.x + zone.width &&
-              playerBottom > zone.y) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      getCeilingYAt(x) {
-        for (const seg of this.game.ceilingSegments) {
-          if (x >= seg.x && x < seg.x + seg.width) return seg.y;
-        }
-        return this.constants.ceilingHeight;
-      }
-
-      generateStage() {
-        this.generateTerrain();
-        this.resetPlayer();
-        this.game.currentStage++;
-        this.updateUI();
-      }
-
-      resetPlayer() {
-        this.player.x = 40 * this.scale;
-        this.player.y = this.getGroundYAt(40 * this.scale) - this.player.height + 2 * this.scale;
-        this.player.vx = 0;
-        this.player.vy = 0;
-        this.player.jumpCount = 0;
-        this.player.onGround = false;
-        this.jetpack.fuel = this.constants.maxJetpackFuel;
-        this.jetpack.onCooldown = false;
-        this.jetpack.cooldownTimer = 0;
-        this.deathFade = 0;
-        this.isDead = false;
-        this.dropThroughTimer = 0;
-      }
-
-      updateJetpackUI() {
-        const ratio = this.jetpack.fuel / this.constants.maxJetpackFuel;
-        this.fuelFill.style.width = `${Math.max(0, ratio) * 100}%`;
-        this.fuelFill.style.background = this.jetpack.onCooldown ? "#dc2626" : "#16a34a";
-
-        this.fuelText.textContent = this.jetpack.onCooldown
-          ? `Cooldown: ${this.jetpack.cooldownTimer.toFixed(1)}s`
-          : `Fuel: ${this.jetpack.fuel.toFixed(1)}s`;
-      }
-
-      updateUI() {
-        this.stageText.textContent = `Stage: ${this.game.currentStage}`;
-        const jumpsLeft = Math.max(0, this.player.maxJumps - this.player.jumpCount);
-        this.jumpsText.textContent = `Jumps left: ${jumpsLeft}`;
-        this.updateJetpackUI();
-      }
-
-      update(dt) {
-        if (this.isDead) {
-          this.deathFadeTimer -= dt;
-          this.deathFade = Math.min(1, this.deathFade + dt * 2);
-          if (this.deathFadeTimer <= 0) {
-            this.resetPlayer();
-            this.isDead = false;
-          }
-          return;
-        }
-
-        let moveDir = 0;
-        if (this.keysDown.has("KeyA") || this.keysDown.has("ArrowLeft")) moveDir -= 1;
-        if (this.keysDown.has("KeyD") || this.keysDown.has("ArrowRight")) moveDir += 1;
-        
-        this.player.x += moveDir * this.player.speed * dt * 60;
-
-        if (this.wallsEnabled && this.player.x < 0) {
-          this.player.x = 0;
-        }
-
-        const spaceHeld = this.keysDown.has("Space");
-        this.jetpack.active = spaceHeld && !this.jetpack.onCooldown && this.jetpack.fuel > 0;
-
-        if (this.jetpack.active) {
-          this.player.vy += this.constants.jetpackForce;
-          this.jetpack.fuel = Math.max(0, this.jetpack.fuel - dt);
-          if (this.jetpack.fuel <= 0) {
-            this.jetpack.onCooldown = true;
-            this.jetpack.cooldownTimer = this.constants.jetpackCooldown;
-          }
-        } else {
-          this.player.vy += this.constants.gravity;
-        }
-
-        if (this.player.vy > this.constants.maxFallSpeed) {
-          this.player.vy = this.constants.maxFallSpeed;
-        }
-
-        this.player.y += this.player.vy * dt * 60;
-
-        if (this.wallsEnabled) {
-          const ceilingY = this.getCeilingYAt(this.player.x + this.player.width / 2);
-          if (this.player.y < ceilingY) {
-            this.player.y = ceilingY;
-            this.player.vy = 0;
-          }
-        }
-
-        // Update drop through timer
-        if (this.dropThroughTimer > 0) {
-          this.dropThroughTimer -= dt;
-        }
-
-        const playerCenterX = this.player.x + this.player.width / 2;
-        const playerBottom = this.player.y + this.player.height;
-        const isOnPlatform = this.isOnPlatform(playerCenterX);
-
-        // GROUND SEGMENTS (always solid) - check first
-        const groundOnlyY = this.getGroundYAt(playerCenterX, true);
-        if (playerBottom >= groundOnlyY && this.player.vy >= -0.5 * this.scale) {
-          this.player.y = groundOnlyY - this.player.height;
-          this.player.vy = 0;
-          this.player.onGround = true;
-          this.player.jumpCount = 0;
-        } else {
-          this.player.onGround = false;
-        }
-
-        // PLATFORMS (one-way, drop-through) - check second
-        if (isOnPlatform && this.dropThroughTimer <= 0 && this.player.vy >= -0.5 * this.scale) {
-          const platformY = this.getGroundYAt(playerCenterX);
-          if (playerBottom >= platformY) {
-            this.player.y = platformY - this.player.height;
-            this.player.vy = 0;
-            this.player.onGround = true;
-            this.player.jumpCount = 0;
-          }
-        }
-
-        if (!this.jetpack.onCooldown && this.player.onGround) {
-          this.jetpack.fuel = Math.min(
-            this.constants.maxJetpackFuel,
-            this.jetpack.fuel + dt * 2
-          );
-        }
-
-        if (this.player.x + this.player.width >= this.canvas.width) {
-          this.player.x = 40 * this.scale;
-          this.generateStage();
-          return;
-        }
-
-        if (this.isInDeathZone(this.player.x, this.player.y) || this.player.y > this.canvas.height) {
-          this.isDead = true;
-          this.deathFadeTimer = 1.0;
-        }
-
-        if (this.jetpack.onCooldown) {
-          this.jetpack.cooldownTimer = Math.max(0, this.jetpack.cooldownTimer - dt);
-          if (this.jetpack.cooldownTimer <= 0) {
-            this.jetpack.onCooldown = false;
-          }
-        }
-
-        this.updateUI();
-      }
-
-      draw() {
-        const ctx = this.ctx;
-        ctx.save();
-        
-        if (this.isDead) {
-          ctx.fillStyle = `rgba(0, 0, 0, ${this.deathFade})`;
-          ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        }
-
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        const bgGradient = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        bgGradient.addColorStop(0, "#020617");
-        bgGradient.addColorStop(1, "#022c22");
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#10b981";
-        ctx.shadowColor = "#10b981";
-        ctx.shadowBlur = 10;
-        this.game.ceilingSegments.forEach((seg) => {
-          const g = ctx.createLinearGradient(0, this.canvas.height, 0, seg.y);
-          g.addColorStop(0, "#064e3b");
-          g.addColorStop(1, "#022c22");
-          ctx.fillStyle = g;
-          ctx.fillRect(seg.x, seg.y - 12 * this.scale, seg.width, 12 * this.scale);
-          ctx.strokeRect(seg.x, seg.y - 12 * this.scale, seg.width, 12 * this.scale);
-        });
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 1;
-
-        this.game.platforms.forEach((platform) => {
-          const g = ctx.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
-          g.addColorStop(0, "#22c55e");
-          g.addColorStop(1, "#15803d");
-          ctx.fillStyle = g;
-          ctx.shadowColor = "#22c55e";
-          ctx.shadowBlur = 8;
-          ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#16a34a";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
-        });
-
-        this.game.deathZones.forEach((zone) => {
-          ctx.fillStyle = "rgba(220, 38, 38, 0.4)";
-          ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
-          ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
-        });
-
-        this.game.groundSegments.forEach((seg) => {
-          const g = ctx.createLinearGradient(0, seg.y, 0, this.canvas.height);
-          g.addColorStop(0, "#15803d");
-          g.addColorStop(1, "#052e16");
-          ctx.fillStyle = g;
-          ctx.fillRect(seg.x, seg.y, seg.width, this.canvas.height - seg.y);
-        });
-
-        if (!this.isDead || this.deathFade < 1) {
-          ctx.fillStyle = "#e5e7eb";
-          ctx.shadowColor = "#bbf7d0";
-          ctx.shadowBlur = 12 * this.scale;
-          ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
-          ctx.shadowBlur = 0;
-        }
-
-        if (this.jetpack.active && !this.isDead) {
-          const flameGradient = ctx.createRadialGradient(
-            this.player.x + this.player.width / 2,
-            this.player.y + this.player.height,
-            0,
-            this.player.x + this.player.width / 2,
-            this.player.y + this.player.height + 10 * this.scale,
-            18 * this.scale
-          );
-          flameGradient.addColorStop(0, "#f97316");
-          flameGradient.addColorStop(1, "rgba(248, 250, 252, 0)");
-          ctx.shadowColor = "#f97316";
-          ctx.shadowBlur = 15 * this.scale;
-          ctx.fillStyle = flameGradient;
-          ctx.fillRect(
-            this.player.x + this.player.width / 2 - 8 * this.scale,
-            this.player.y + this.player.height,
-            16 * this.scale,
-            22 * this.scale
-          );
-          ctx.shadowBlur = 0;
-        }
-
-        if (this.wallsEnabled) {
-          ctx.strokeStyle = "#16a34a";
-          ctx.lineWidth = 3;
-          ctx.shadowColor = "#16a34a";
-          ctx.shadowBlur = 8;
-          ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
-          ctx.shadowBlur = 0;
-        }
-
-        ctx.restore();
-      }
-
-      gameLoop(timestamp) {
-        const dt = Math.min(1 / 60, (timestamp - this.lastTime) / 1000);
-        this.lastTime = timestamp;
-
-        this.update(dt);
-        this.draw();
-
-        requestAnimationFrame((t) => this.gameLoop(t));
+    function jump() {
+      if (player.jumps < 2) {
+        player.vy = jumpForce;
+        player.jumps += 1;
+        player.onGround = false;
       }
     }
 
-    new JetpackGame();
+    function update() {
+      if (keys.left) {
+        player.vx = -moveSpeed;
+      } else if (keys.right) {
+        player.vx = moveSpeed;
+      } else {
+        player.vx *= 0.75;
+      }
+
+      player.x += player.vx;
+
+      if (keys.jet && fuel > 0) {
+        player.vy += jetForce;
+        fuel -= 0.02;
+      } else {
+        player.vy += gravity;
+      }
+
+      if (player.vy > 14) {
+        player.vy = 14;
+      }
+
+      var oldBottom = player.y + player.height;
+      player.y += player.vy;
+      player.onGround = false;
+
+      for (var i = 0; i < platforms.length; i++) {
+        var platform = platforms[i];
+        var newBottom = player.y + player.height;
+        var playerCenterX = player.x + player.width / 2;
+
+        var isAbovePlatform =
+          playerCenterX >= platform.x &&
+          playerCenterX <= platform.x + platform.width;
+
+        if (
+          player.vy >= 0 &&
+          isAbovePlatform &&
+          oldBottom <= platform.y + 12 &&
+          newBottom >= platform.y
+        ) {
+          player.y = platform.y - player.height;
+          player.vy = 0;
+          player.onGround = true;
+          player.jumps = 0;
+        }
+      }
+
+      if (player.onGround && !keys.jet) {
+        fuel += 0.025;
+      }
+
+      if (fuel > maxFuel) fuel = maxFuel;
+      if (fuel < 0) fuel = 0;
+
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) {
+        player.x = canvas.width - player.width;
+      }
+
+      for (var s = 0; s < spikes.length; s++) {
+        if (overlap(player, spikes[s])) {
+          resetPlayer();
+        }
+      }
+
+      for (var c = 0; c < coins.length; c++) {
+        var coin = coins[c];
+
+        if (!coin.taken) {
+          var coinBox = {
+            x: coin.x - 9,
+            y: coin.y - 9,
+            width: 18,
+            height: 18
+          };
+
+          if (overlap(player, coinBox)) {
+            coin.taken = true;
+            score += 10;
+            statusText.textContent = "+10 coin!";
+          }
+        }
+      }
+
+      if (overlap(player, portal)) {
+        score += 100;
+        statusText.textContent = "Portal reached! +100";
+
+        for (var r = 0; r < coins.length; r++) {
+          coins[r].taken = false;
+        }
+
+        resetPlayer();
+      }
+
+      if (player.y > canvas.height + 60) {
+        resetPlayer();
+      }
+
+      scoreText.textContent = "Score: " + score;
+      fuelText.textContent = "Fuel: " + fuel.toFixed(1) + "s";
+    }
+
+    function drawBackground() {
+      var gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, "#061827");
+      gradient.addColorStop(0.65, "#064e3b");
+      gradient.addColorStop(1, "#02130d");
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (var i = 0; i < 45; i++) {
+        var starX = (i * 91) % canvas.width;
+        var starY = (i * 47) % 190;
+
+        ctx.fillStyle = i % 3 === 0 ? "#bbf7d0" : "#dbeafe";
+        ctx.fillRect(starX, starY, 2, 2);
+      }
+    }
+
+    function drawPlatforms() {
+      for (var i = 0; i < platforms.length; i++) {
+        var platform = platforms[i];
+
+        if (platform.solid) {
+          var groundGradient = ctx.createLinearGradient(
+            0,
+            platform.y,
+            0,
+            canvas.height
+          );
+
+          groundGradient.addColorStop(0, "#22c55e");
+          groundGradient.addColorStop(0.08, "#166534");
+          groundGradient.addColorStop(1, "#052e16");
+
+          ctx.fillStyle = groundGradient;
+          ctx.fillRect(
+            platform.x,
+            platform.y,
+            platform.width,
+            platform.height
+          );
+
+          ctx.strokeStyle = "#86efac";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(platform.x, platform.y + 1);
+          ctx.lineTo(platform.x + platform.width, platform.y + 1);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "#22c55e";
+          ctx.fillRect(
+            platform.x,
+            platform.y,
+            platform.width,
+            platform.height
+          );
+
+          ctx.fillStyle = "#14532d";
+          ctx.fillRect(
+            platform.x + 5,
+            platform.y + 5,
+            platform.width - 10,
+            4
+          );
+        }
+      }
+    }
+
+    function drawSpikes() {
+      for (var i = 0; i < spikes.length; i++) {
+        var spikeArea = spikes[i];
+
+        ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+        ctx.fillRect(
+          spikeArea.x,
+          spikeArea.y,
+          spikeArea.width,
+          spikeArea.height
+        );
+
+        ctx.fillStyle = "#ef4444";
+
+        for (var x = spikeArea.x; x < spikeArea.x + spikeArea.width; x += 16) {
+          ctx.beginPath();
+          ctx.moveTo(x, spikeArea.y + spikeArea.height);
+          ctx.lineTo(x + 8, spikeArea.y + 4);
+          ctx.lineTo(x + 16, spikeArea.y + spikeArea.height);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawCoins() {
+      var time = Date.now() / 250;
+
+      for (var i = 0; i < coins.length; i++) {
+        var coin = coins[i];
+        if (coin.taken) continue;
+
+        var bobY = coin.y + Math.sin(time + i) * 3;
+
+        ctx.fillStyle = "#fde047";
+        ctx.beginPath();
+        ctx.arc(coin.x, bobY, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#a16207";
+        ctx.fillRect(coin.x - 2, bobY - 5, 4, 10);
+      }
+    }
+
+    function drawPortal() {
+      var pulse = Math.sin(Date.now() / 180) * 4;
+
+      ctx.shadowColor = "#a855f7";
+      ctx.shadowBlur = 20 + pulse;
+      ctx.fillStyle = "#7e22ce";
+      ctx.fillRect(portal.x, portal.y, portal.width, portal.height);
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#c084fc";
+      ctx.fillRect(
+        portal.x + 7,
+        portal.y + 7,
+        portal.width - 14,
+        portal.height - 14
+      );
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.beginPath();
+      ctx.arc(
+        portal.x + portal.width / 2,
+        portal.y + portal.height / 2,
+        8 + pulse / 4,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+
+    function drawPlayer() {
+      ctx.save();
+
+      ctx.shadowColor = "#bbf7d0";
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = "#e5e7eb";
+      ctx.fillRect(
+        player.x,
+        player.y,
+        player.width,
+        player.height
+      );
+
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = "#22c55e";
+      ctx.fillRect(
+        player.x - 5,
+        player.y + 12,
+        7,
+        18
+      );
+
+      ctx.fillStyle = "#1f2937";
+      ctx.fillRect(
+        player.x + 17,
+        player.y + 8,
+        10,
+        8
+      );
+
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(player.x + 4, player.y + 35, 6, 6);
+      ctx.fillRect(player.x + 18, player.y + 35, 6, 6);
+
+      if (keys.jet && fuel > 0) {
+        var flame = ctx.createLinearGradient(
+          0,
+          player.y + player.height,
+          0,
+          player.y + player.height + 30
+        );
+
+        flame.addColorStop(0, "#fef3c7");
+        flame.addColorStop(0.4, "#f97316");
+        flame.addColorStop(1, "rgba(239, 68, 68, 0)");
+
+        ctx.fillStyle = flame;
+        ctx.beginPath();
+        ctx.moveTo(player.x + 8, player.y + player.height);
+        ctx.lineTo(player.x + 14, player.y + player.height + 28);
+        ctx.lineTo(player.x + 21, player.y + player.height);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function draw() {
+      drawBackground();
+      drawPlatforms();
+      drawSpikes();
+      drawCoins();
+      drawPortal();
+      drawPlayer();
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener("keydown", function(event) {
+      if (
+        event.code === "ArrowLeft" ||
+        event.code === "ArrowRight" ||
+        event.code === "ArrowUp" ||
+        event.code === "Space"
+      ) {
+        event.preventDefault();
+      }
+
+      if (event.code === "KeyA" || event.code === "ArrowLeft") {
+        keys.left = true;
+      }
+
+      if (event.code === "KeyD" || event.code === "ArrowRight") {
+        keys.right = true;
+      }
+
+      if (event.code === "Space") {
+        keys.jet = true;
+      }
+
+      if (
+        (event.code === "KeyW" || event.code === "ArrowUp") &&
+        !event.repeat
+      ) {
+        jump();
+      }
+    });
+
+    window.addEventListener("keyup", function(event) {
+      if (event.code === "KeyA" || event.code === "ArrowLeft") {
+        keys.left = false;
+      }
+
+      if (event.code === "KeyD" || event.code === "ArrowRight") {
+        keys.right = false;
+      }
+
+      if (event.code === "Space") {
+        keys.jet = false;
+      }
+    });
+
+    function holdButton(buttonId, actionName) {
+      var button = document.getElementById(buttonId);
+
+      function start(event) {
+        event.preventDefault();
+        keys[actionName] = true;
+        button.classList.add("active");
+      }
+
+      function end(event) {
+        event.preventDefault();
+        keys[actionName] = false;
+        button.classList.remove("active");
+      }
+
+      button.addEventListener("touchstart", start, { passive: false });
+      button.addEventListener("touchend", end, { passive: false });
+      button.addEventListener("touchcancel", end, { passive: false });
+
+      button.addEventListener("mousedown", start);
+      button.addEventListener("mouseup", end);
+      button.addEventListener("mouseleave", end);
+    }
+
+    holdButton("leftButton", "left");
+    holdButton("rightButton", "right");
+    holdButton("jetButton", "jet");
+
+    document.getElementById("jumpButton").addEventListener("click", function() {
+      jump();
+    });
+
+    draw();
+    gameLoop();
   </script>
 </body>
 </html>
