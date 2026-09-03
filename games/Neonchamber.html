@@ -256,7 +256,6 @@
     <div id="hud-bottom" class="hud-panel">
       <div id="round-info">loading chamber...</div>
       <div id="shells"></div>
-      <div id="items-row"></div>
       <div id="opp-items">rival is holding items too...</div>
       <div id="actions">
         <button class="shoot-btn" id="shoot-self-btn">SHOOT SELF</button>
@@ -273,7 +272,7 @@
     <p><span class="rule">Blank on yourself</span> &mdash; no damage, and you go again.<br>
        <span class="rule">Live on yourself</span> &mdash; you take damage, turn passes.<br>
        <span class="rule">Firing at the rival</span> &mdash; turn always passes after, live or not.</p>
-    <p>Items help you cheat the odds. First to zero HP loses.</p>
+    <p>Items on the table help you cheat the odds &mdash; tap one to use it. First to zero HP loses.</p>
     <button id="start-btn">START DUEL</button>
   </div>
 </div>
@@ -287,7 +286,6 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 (function(){
 
@@ -327,7 +325,6 @@
     roundInfo: document.getElementById('round-info'),
     shells: document.getElementById('shells'),
     log: document.getElementById('hud-log'),
-    itemsRow: document.getElementById('items-row'),
     oppItems: document.getElementById('opp-items'),
     shootSelf: document.getElementById('shoot-self-btn'),
     shootOpp: document.getElementById('shoot-opp-btn'),
@@ -410,7 +407,7 @@
   // reacts to it via Stage3D.setShellCount()/fireEffect()/collapse()/reset().
   // =====================================================================
   const Stage3D = (function(){
-    if (typeof THREE === 'undefined') return { setShellCount(){}, fireEffect(){}, collapse(){}, reset(){} };
+    if (typeof THREE === 'undefined') return { setShellCount(){}, fireEffect(){}, collapse(){}, reset(){}, refreshItemCounts(){} };
 
     const container = document.getElementById('stage');
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -418,102 +415,252 @@
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x040404);
-    scene.fog = new THREE.FogExp2(0x040404, 0.16);
+    scene.background = new THREE.Color(0x030303);
+    scene.fog = new THREE.FogExp2(0x030303, 0.1);
 
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 50);
-    camera.position.set(0, 2.05, 3.3);
+    // first-person camera, seated at the table looking across at the rival.
+    // OrbitControls always orbits AROUND a distant target (so clamping its
+    // distance near zero would just snap the camera onto that target) —
+    // for a true seated first-person view the position has to stay fixed
+    // and only rotation should respond to drag, so this is hand-rolled.
+    const HEAD_HEIGHT = 1.55;
+    const camera = new THREE.PerspectiveCamera(62, 1, 0.05, 50);
+    const basePos = new THREE.Vector3(0, HEAD_HEIGHT, 1.3);
+    camera.position.copy(basePos);
+    camera.rotation.order = 'YXZ'; // yaw around world Y, then pitch around local X, no roll
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 0.95, -0.2);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.enablePan = false;
-    controls.enableZoom = false;
-    controls.minDistance = 2.4;
-    controls.maxDistance = 4;
-    controls.minPolarAngle = Math.PI / 2 - 0.35;
-    controls.maxPolarAngle = Math.PI / 2 + 0.15;
-    controls.minAzimuthAngle = -Math.PI / 5;
-    controls.maxAzimuthAngle = Math.PI / 5;
-    controls.update();
+    let yaw = 0, pitch = 0;
+    const YAW_LIMIT = Math.PI / 4.2;
+    const PITCH_LIMIT = 0.32;
 
-    scene.add(new THREE.AmbientLight(0x2a1c1c, 1.1));
-    const lamp = new THREE.PointLight(0xd8c8a8, 1.4, 8);
-    lamp.position.set(0, 2.6, -0.2);
+    // ---- lighting: a hanging lamp is the only real light source, so it
+    // can visibly go dark/flicker on a shot ----
+    scene.add(new THREE.AmbientLight(0x1a1414, 0.55));
+    const lamp = new THREE.PointLight(0xd8c8a8, 1.6, 7, 2);
+    lamp.position.set(0, 2.35, -0.4);
     scene.add(lamp);
     const impactLight = new THREE.PointLight(0xff3050, 0, 6);
-    impactLight.position.set(0, 1.2, -0.2);
+    impactLight.position.set(0, 1.3, -0.6);
     scene.add(impactLight);
 
+    // visible lamp fixture: cord, shade, glowing bulb
+    const lampGroup = new THREE.Group();
+    lampGroup.position.set(0, 0, -0.4);
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.65, 6), new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
+    cord.position.y = 2.68;
+    lampGroup.add(cord);
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.14, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.6, side: THREE.DoubleSide }));
+    shade.position.y = 2.32;
+    lampGroup.add(shade);
+    const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff2c8, emissive: 0xfff2c8, emissiveIntensity: 1.4 });
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 12), bulbMat);
+    bulb.position.y = 2.24;
+    lampGroup.add(bulb);
+    scene.add(lampGroup);
+
+    // ---- room: floor, four walls, ceiling, all with a grungy procedural texture ----
+    function makeGrungeTexture(base, streak){
+      const size = 256;
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 900; i++) {
+        const v = Math.random() * 40 | 0;
+        ctx.fillStyle = `rgba(${v},${v},${v},0.15)`;
+        ctx.fillRect(Math.random() * size, Math.random() * size, Math.random() * 2 + 1, Math.random() * 2 + 1);
+      }
+      ctx.strokeStyle = streak;
+      for (let i = 0; i < 6; i++) {
+        ctx.globalAlpha = 0.08 + Math.random() * 0.1;
+        ctx.beginPath();
+        const x = Math.random() * size;
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + (Math.random() * 40 - 20), size);
+        ctx.lineWidth = 2 + Math.random() * 4;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+    const wallTex = makeGrungeTexture('#141210', 'rgba(60,50,40,0.6)');
+    wallTex.repeat.set(3, 1.5);
+    const floorTex = makeGrungeTexture('#0c0c0c', 'rgba(20,20,20,0.5)');
+    floorTex.repeat.set(5, 5);
+
     const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95 })
+      new THREE.PlaneGeometry(10, 10),
+      new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.95 })
     );
     floor.rotation.x = -Math.PI / 2;
     scene.add(floor);
 
-    // table
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(10, 10),
+      new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95 })
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = 3;
+    scene.add(ceiling);
+
+    const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.9 });
+    const wallDefs = [
+      { pos: [0, 1.5, -3.2], rot: [0, 0, 0] },
+      { pos: [0, 1.5, 3.2], rot: [0, Math.PI, 0] },
+      { pos: [-3.2, 1.5, 0], rot: [0, Math.PI / 2, 0] },
+      { pos: [3.2, 1.5, 0], rot: [0, -Math.PI / 2, 0] },
+    ];
+    wallDefs.forEach(w => {
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3), wallMat);
+      wall.position.set(w.pos[0], w.pos[1], w.pos[2]);
+      wall.rotation.set(w.rot[0], w.rot[1], w.rot[2]);
+      scene.add(wall);
+    });
+
+    // ---- table ----
     const tableMat = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.8 });
     const table = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.3), tableMat);
-    table.position.set(0, 0.86, -0.2);
+    table.position.set(0, 0.86, -0.4);
     scene.add(table);
-    [[-1.05, -0.55], [1.05, -0.55], [-1.05, 0.15], [1.05, 0.15]].forEach(([x, z]) => {
+    [[-1.05, -0.75], [1.05, -0.75], [-1.05, -0.05], [1.05, -0.05]].forEach(([x, z]) => {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.86, 0.08), tableMat);
       leg.position.set(x, 0.43, z);
       scene.add(leg);
     });
 
-    // low-poly figures
+    // ---- figures: an improved builder with tapered torso, neck, and
+    // bent arms with hands, used for both the rival (fully visible) and
+    // your own body (mostly hidden behind the first-person camera, but
+    // still present so it can fall over if you lose) ----
     function buildFigure(accent){
       const g = new THREE.Group();
       const bodyMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.7 });
       const accentMat = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.3, roughness: 0.5 });
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.5, 0.24), bodyMat);
-      torso.position.y = 0.7;
-      g.add(torso);
-      const shoulders = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.26), accentMat);
-      shoulders.position.y = 0.96;
-      g.add(shoulders);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 0.22), bodyMat);
-      head.position.y = 1.14;
-      g.add(head);
-      [-0.26, 0.26].forEach(x => {
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.42, 0.1), bodyMat);
-        arm.position.set(x, 0.72, 0);
-        g.add(arm);
+
+      const waist = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.28, 0.2), bodyMat);
+      waist.position.y = 0.5;
+      g.add(waist);
+      const chest = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.32, 0.24), bodyMat);
+      chest.position.y = 0.82;
+      g.add(chest);
+      [[-0.19, 0.82], [0.19, 0.82]].forEach(([x]) => {
+        const trim = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.32, 0.25), accentMat);
+        trim.position.set(x, 0.82, 0);
+        g.add(trim);
       });
+      const shoulders = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.26), accentMat);
+      shoulders.position.y = 1.0;
+      g.add(shoulders);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.08, 10), bodyMat);
+      neck.position.y = 1.06;
+      g.add(neck);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.26, 0.22), bodyMat);
+      head.position.y = 1.22;
+      g.add(head);
+
+      [-1, 1].forEach(side => {
+        const armGroup = new THREE.Group();
+        armGroup.position.set(0.27 * side, 0.98, 0);
+        const upper = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.26, 0.09), bodyMat);
+        upper.position.y = -0.13;
+        armGroup.add(upper);
+        const forearmGroup = new THREE.Group();
+        forearmGroup.position.set(0, -0.26, 0);
+        forearmGroup.rotation.x = 0.5;
+        const forearm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.24, 0.08), bodyMat);
+        forearm.position.y = -0.12;
+        forearmGroup.add(forearm);
+        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.07), bodyMat);
+        hand.position.y = -0.26;
+        forearmGroup.add(hand);
+        armGroup.add(forearmGroup);
+        g.add(armGroup);
+      });
+
       g.userData.head = head;
       return g;
     }
+
     const playerFigure = buildFigure(0xe8203f);
-    playerFigure.position.set(0, 0, 1.35);
+    playerFigure.position.set(0, 0, 1.3);
     playerFigure.rotation.y = Math.PI;
     scene.add(playerFigure);
 
     const rivalFigure = buildFigure(0x7fa6bd);
-    rivalFigure.position.set(0, 0, -1.6);
+    rivalFigure.position.set(0, 0, -1.75);
     scene.add(rivalFigure);
 
-    // shotgun prop, resting on the table
+    function headWorldPos(who){
+      const target = who === 'player' ? playerFigure : rivalFigure;
+      const v = new THREE.Vector3();
+      target.userData.head.getWorldPosition(v);
+      return v;
+    }
+    const selfHeadPos = new THREE.Vector3(0, 1.42, 0.95); // just in front of the camera
+
+    // ---- shotgun: rests on the table, and travels to whichever head is
+    // being fired at, then travels back ----
+    const gunRest = { pos: new THREE.Vector3(0.1, 0.93, -0.35), rot: 0.15 };
     const gun = new THREE.Group();
-    const gunMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.6 });
-    const woodMat = new THREE.MeshStandardMaterial({ color: 0x3a2818, roughness: 0.8 });
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.75, 10), gunMat);
-    barrel.rotation.z = Math.PI / 2;
-    barrel.position.set(0, 0, -0.05);
-    gun.add(barrel);
-    const pump = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.05), gunMat);
-    pump.position.set(0.15, -0.03, -0.05);
-    gun.add(pump);
-    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.07, 0.06), woodMat);
-    stock.position.set(-0.5, -0.01, -0.05);
-    gun.add(stock);
-    gun.rotation.y = 0.15;
-    gun.position.set(0.1, 0.93, -0.15);
+    (function buildGun(){
+      const gunMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.6 });
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x3a2818, roughness: 0.8 });
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.75, 10), gunMat);
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.z = 0.3;
+      gun.add(barrel);
+      const pump = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.14), gunMat);
+      pump.position.z = 0.05;
+      gun.add(pump);
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.32), woodMat);
+      stock.position.z = -0.32;
+      gun.add(stock);
+    })();
+    gun.position.copy(gunRest.pos);
+    gun.rotation.y = gunRest.rot;
     scene.add(gun);
 
-    // shell/round props — rebuilt to match the current chamber count
+    let gunTween = null;
+    function tweenGun(toPos, lookAtPos, duration, onArrive, onDone){
+      if (gunTween) gunTween.cancelled = true;
+      const state = { cancelled: false };
+      gunTween = state;
+      const fromPos = gun.position.clone();
+      const start = performance.now();
+      function step(now){
+        if (state.cancelled) return;
+        const t = Math.min((now - start) / duration, 1);
+        gun.position.lerpVectors(fromPos, toPos, t);
+        gun.lookAt(lookAtPos);
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          if (onArrive) onArrive();
+          if (onDone) onDone();
+        }
+      }
+      requestAnimationFrame(step);
+    }
+    function gunFireAt(target, onImpact){
+      const headPos = target === 'player' ? selfHeadPos : headWorldPos('opponent');
+      // snap back to rest instantly if a previous animation is still mid-flight
+      gun.position.copy(gunRest.pos);
+      gun.rotation.set(0, gunRest.rot, 0);
+      tweenGun(headPos.clone().add(new THREE.Vector3(0, 0, target === 'player' ? 0.05 : -0.08)), headPos, 260, () => {
+        if (onImpact) onImpact();
+      }, () => {
+        setTimeout(() => {
+          tweenGun(gunRest.pos.clone(), new THREE.Vector3(0, 0.9, -2), 260, null, () => {
+            gun.rotation.set(0, gunRest.rot, 0);
+          });
+        }, 160);
+      });
+    }
+
+    // ---- shell/round props on the table, mirroring the real chamber count ----
     const shellGroup = new THREE.Group();
     scene.add(shellGroup);
     function setShellCount(n){
@@ -530,14 +677,15 @@
         cap.position.y = -0.035;
         shell.add(cap);
         shell.rotation.z = Math.PI / 2;
-        shell.position.set(startX + i * 0.09, 0.91, 0.15);
+        shell.position.set(startX + i * 0.09, 0.91, -0.15);
         shellGroup.add(shell);
       }
     }
     setShellCount(6);
 
-    // item tray — detailed low-poly props, one per item type, each built
-    // from several primitives instead of a single abstract shape
+    // ---- item props on the table, doubling as the real "use item" UI:
+    // click/tap one to use it. a small floating sprite shows how many
+    // you're holding, and the prop dims when you have none. ----
     function buildSodaCan(){
       const g = new THREE.Group();
       const metal = new THREE.MeshStandardMaterial({ color: 0xc8c8c8, metalness: 0.7, roughness: 0.35 });
@@ -555,7 +703,6 @@
       g.add(tab);
       return g;
     }
-
     function buildFlipPhone(){
       const g = new THREE.Group();
       const shell = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.5 });
@@ -572,7 +719,6 @@
       g.add(nub);
       return g;
     }
-
     function buildStunner(){
       const g = new THREE.Group();
       const dark = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.5 });
@@ -595,7 +741,6 @@
       g.add(arc);
       return g;
     }
-
     function buildBattery(){
       const g = new THREE.Group();
       const copper = new THREE.MeshStandardMaterial({ color: 0xff8020, metalness: 0.5, roughness: 0.4 });
@@ -610,7 +755,6 @@
       g.add(tip);
       return g;
     }
-
     function buildPryTool(){
       const g = new THREE.Group();
       const metal = new THREE.MeshStandardMaterial({ color: 0x9a9a9a, metalness: 0.6, roughness: 0.35 });
@@ -628,7 +772,6 @@
       g.add(grip);
       return g;
     }
-
     function buildInverter(){
       const g = new THREE.Group();
       const casing = new THREE.MeshStandardMaterial({ color: 0x1c1c24, roughness: 0.5 });
@@ -644,6 +787,32 @@
       return g;
     }
 
+    function makeCountSprite(){
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 64;
+      const tex = new THREE.CanvasTexture(c);
+      const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(0.09, 0.09, 1);
+      sprite.userData.canvas = c;
+      sprite.userData.tex = tex;
+      return sprite;
+    }
+    function drawCount(sprite, n){
+      const c = sprite.userData.canvas;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, 64, 64);
+      if (n > 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.beginPath(); ctx.arc(32, 32, 24, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#d8d4c8';
+        ctx.font = 'bold 28px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('x' + n, 32, 34);
+      }
+      sprite.userData.tex.needsUpdate = true;
+    }
+
     const itemBuilders = {
       scanner: buildFlipPhone,
       medkit: buildSodaCan,
@@ -652,14 +821,72 @@
       ejector: buildPryTool,
       polarity: buildInverter,
     };
+    const itemProps = {}; // type -> { group, mesh, countSprite }
     const trayGroup = new THREE.Group();
     Object.keys(itemBuilders).forEach((type, i) => {
+      const holder = new THREE.Group();
       const mesh = itemBuilders[type]();
-      mesh.position.set(-0.85 + i * 0.32, 0.9, -0.55);
-      mesh.rotation.y = (i - 2.5) * 0.12;
-      trayGroup.add(mesh);
+      holder.add(mesh);
+      const countSprite = makeCountSprite();
+      countSprite.position.set(0, 0.07, 0);
+      holder.add(countSprite);
+      holder.position.set(-0.85 + i * 0.32, 0.9, -0.72);
+      holder.rotation.y = (i - 2.5) * 0.12;
+      holder.userData.itemType = type;
+      trayGroup.add(holder);
+      itemProps[type] = { holder, mesh, countSprite };
     });
     scene.add(trayGroup);
+
+    function refreshItemCounts(counts){
+      Object.keys(itemProps).forEach(type => {
+        const n = counts[type] || 0;
+        drawCount(itemProps[type].countSprite, n);
+        const targetOpacity = n > 0 ? 1 : 0.25;
+        itemProps[type].mesh.traverse(o => { if (o.material) o.material.opacity = targetOpacity; });
+        itemProps[type].mesh.traverse(o => { if (o.material) { o.material.transparent = true; } });
+      });
+    }
+
+    // one set of pointer handlers drives both "drag to look around" (yaw/pitch)
+    // and "tap an item to use it" — a short drag is a look, anything under the
+    // threshold on release is treated as a tap and raycast against the tray
+    let onItemClick = null; // set from outside via setItemClickHandler
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let dragging = false, downPos = null, lastX = 0, lastY = 0;
+
+    renderer.domElement.addEventListener('pointerdown', e => {
+      dragging = true;
+      downPos = { x: e.clientX, y: e.clientY };
+      lastX = e.clientX; lastY = e.clientY;
+    });
+    renderer.domElement.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX, dy = e.clientY - lastY;
+      lastX = e.clientX; lastY = e.clientY;
+      yaw = Math.max(-YAW_LIMIT, Math.min(YAW_LIMIT, yaw - dx * 0.0045));
+      pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, pitch - dy * 0.0045));
+    });
+    function endDrag(e){
+      dragging = false;
+      if (!downPos) return;
+      const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+      downPos = null;
+      if (dist > 6 || !onItemClick) return; // was a look-drag, not a tap
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(trayGroup.children, true);
+      if (hits.length) {
+        let obj = hits[0].object;
+        while (obj && !obj.userData.itemType) obj = obj.parent;
+        if (obj) onItemClick(obj.userData.itemType);
+      }
+    }
+    renderer.domElement.addEventListener('pointerup', endDrag);
+    renderer.domElement.addEventListener('pointercancel', () => { dragging = false; downPos = null; });
 
     function resize(){
       const w = container.clientWidth, h = container.clientHeight;
@@ -671,23 +898,35 @@
     window.addEventListener('resize', resize);
     resize();
 
+    // ---- the lamp visibly cuts out for every shot (harder/longer on a
+    // live round), and the gun physically travels to whoever's being
+    // fired at before the impact effects play ----
     let shakeUntil = 0;
     function fireEffect(shooter, target, isLive){
-      impactLight.color.set(isLive ? 0xff3050 : 0x7fa6bd);
-      impactLight.intensity = isLive ? 3.2 : 1.4;
-      setTimeout(() => { impactLight.intensity = 0; }, isLive ? 260 : 140);
-
-      if (isLive) {
-        shakeUntil = performance.now() + 260;
-        const targetFigure = target === 'player' ? playerFigure : rivalFigure;
-        const baseY = targetFigure.rotation.y;
-        targetFigure.rotation.y = baseY + (target === 'player' ? -0.28 : 0.28);
-        targetFigure.position.y -= 0.04;
+      gunFireAt(target, () => {
+        const dark = isLive ? 1 : 0.55;
+        lamp.intensity = 1.6 * (1 - dark);
+        bulbMat.emissiveIntensity = 1.4 * (1 - dark);
+        impactLight.color.set(isLive ? 0xff3050 : 0x7fa6bd);
+        impactLight.intensity = isLive ? 3.4 : 1.2;
         setTimeout(() => {
-          targetFigure.rotation.y = baseY;
-          targetFigure.position.y += 0.04;
-        }, 180);
-      }
+          impactLight.intensity = 0;
+          lamp.intensity = 1.6;
+          bulbMat.emissiveIntensity = 1.4;
+        }, isLive ? 260 : 150);
+
+        if (isLive) {
+          shakeUntil = performance.now() + 260;
+          const targetFigure = target === 'player' ? playerFigure : rivalFigure;
+          const baseY = targetFigure.rotation.y;
+          targetFigure.rotation.y = baseY + (target === 'player' ? -0.24 : 0.24);
+          targetFigure.position.y -= 0.03;
+          setTimeout(() => {
+            targetFigure.rotation.y = baseY;
+            targetFigure.position.y += 0.03;
+          }, 180);
+        }
+      });
     }
 
     function collapse(who){
@@ -701,29 +940,34 @@
         f.rotation.x = 0;
         f.position.y = 0;
       });
+      gun.position.copy(gunRest.pos);
+      gun.rotation.set(0, gunRest.rot, 0);
+      lamp.intensity = 1.6;
+      bulbMat.emissiveIntensity = 1.4;
     }
 
-    const basePos = camera.position.clone();
     function animate(t){
       requestAnimationFrame(animate);
-      playerFigure.userData.head.position.y = 1.14 + Math.sin(t * 0.0016) * 0.006;
-      rivalFigure.userData.head.position.y = 1.14 + Math.sin(t * 0.0016 + 1.4) * 0.006;
+      playerFigure.userData.head.position.y = 1.22 + Math.sin(t * 0.0016) * 0.006;
+      rivalFigure.userData.head.position.y = 1.22 + Math.sin(t * 0.0016 + 1.4) * 0.006;
 
+      camera.position.copy(basePos);
       if (performance.now() < shakeUntil) {
-        camera.position.set(
-          basePos.x + (Math.random() - 0.5) * 0.05,
-          basePos.y + (Math.random() - 0.5) * 0.05,
-          basePos.z + (Math.random() - 0.5) * 0.05
-        );
-      } else {
-        camera.position.copy(basePos);
+        camera.position.x += (Math.random() - 0.5) * 0.04;
+        camera.position.y += (Math.random() - 0.5) * 0.04;
+        camera.position.z += (Math.random() - 0.5) * 0.04;
       }
-      controls.update();
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+
       renderer.render(scene, camera);
     }
     requestAnimationFrame(animate);
 
-    return { setShellCount, fireEffect, collapse, reset };
+    return {
+      setShellCount, fireEffect, collapse, reset, refreshItemCounts,
+      setItemClickHandler(fn){ onItemClick = fn; },
+    };
   })();
 
   function initGame(){
@@ -794,17 +1038,9 @@
       els.shells.appendChild(s);
     }
 
-    els.itemsRow.innerHTML = '';
     const counts = {};
     playerItems.forEach(t => counts[t] = (counts[t] || 0) + 1);
-    Object.keys(counts).forEach(type => {
-      const btn = document.createElement('button');
-      btn.className = 'item-btn';
-      btn.innerHTML = `${ITEM_LABEL[type]} x${counts[type]}<br><span style="opacity:.6">${ITEM_HINT[type]}</span>`;
-      btn.disabled = gameOver || turn !== 'player';
-      btn.addEventListener('click', () => usePlayerItem(type));
-      els.itemsRow.appendChild(btn);
-    });
+    Stage3D.refreshItemCounts(counts);
 
     els.oppItems.textContent = oppItems.length
       ? `rival is holding ${oppItems.length} item${oppItems.length > 1 ? 's' : ''}...`
@@ -978,6 +1214,7 @@
   els.shootOpp.addEventListener('click', () => fire('player', 'opponent'));
 
   els.startBtn.addEventListener('click', () => {
+    Stage3D.setItemClickHandler(usePlayerItem);
     els.introOverlay.style.display = 'none';
     document.getElementById('hidden-until-start').style.display = 'block';
     initGame();
