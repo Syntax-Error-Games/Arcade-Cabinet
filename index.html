@@ -157,6 +157,51 @@
     #crosshair-hint{ font-size:.45rem; padding:8px 12px; }
     #fallback .panel{ width:88vw; padding:28px 20px; }
   }
+
+  /* ---------- room / character mode ---------- */
+  #room-prompt{
+    position:fixed;
+    left:50%;
+    bottom:28px;
+    transform:translateX(-50%);
+    z-index:20;
+    display:none;
+    padding:10px 16px;
+    border:1px solid rgba(57,255,20,.55);
+    background:rgba(2,4,2,.72);
+    color:#39ff14;
+    font-size:.55rem;
+    line-height:1.7;
+    text-align:center;
+    text-shadow:0 0 8px #39ff14;
+    pointer-events:none;
+  }
+  #session-restore{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:#020402;
+    color:#39ff14;
+    font-size:.65rem;
+    text-align:center;
+    text-shadow:0 0 12px #39ff14;
+  }
+  #session-restore.show{display:flex;}
+  #session-restore .restore-inner{
+    padding:28px 34px;
+    border:2px solid #39ff14;
+    box-shadow:0 0 25px rgba(57,255,20,.3);
+    background:rgba(0,0,0,.9);
+  }
+  #session-restore .restore-sub{
+    margin-top:12px;
+    color:#7bbf73;
+    font-size:.42rem;
+  }
+
 </style>
 </head>
 <body>
@@ -189,7 +234,15 @@
 </div>
 
 <div id="app">
-  <div id="crosshair-hint">drag to look around &nbsp;&bull;&nbsp; click the screen, a button, or press ENTER to play<br>arrow keys, scroll, or drag the joystick to browse</div>
+  <div id="crosshair-hint">WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk to the arcade cabinet</div>
+  <div id="room-prompt">CLICK THE ARCADE CABINET<br><span>or press ENTER</span></div>
+</div>
+
+<div id="session-restore">
+  <div class="restore-inner">
+    RESTORING ARCADE SESSION...
+    <div class="restore-sub">returning you to the screen &amp; controls</div>
+  </div>
 </div>
 
 <div id="game-overlay">
@@ -293,20 +346,20 @@
   scene.background = new THREE.Color(0x0a0612);
   scene.fog = new THREE.FogExp2(0x0a0612, 0.06);
 
-  const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 1.55, 3.1);
+  const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 1.65, 4.8);
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 1.3, 0.35);
+  controls.target.set(0, 1.3, 3.65);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.enablePan = false;
-  controls.minDistance = 1.4;
-  controls.maxDistance = 4.5;
-  controls.minPolarAngle = Math.PI / 2 - 0.5;
-  controls.maxPolarAngle = Math.PI / 2 + 0.35;
-  controls.minAzimuthAngle = -Math.PI / 2.6;
-  controls.maxAzimuthAngle = Math.PI / 2.6;
+  controls.enableZoom = false;
+  controls.minPolarAngle = Math.PI / 2 - 0.48;
+  controls.maxPolarAngle = Math.PI / 2 + 0.28;
+  controls.minAzimuthAngle = -Math.PI / 2.2;
+  controls.maxAzimuthAngle = Math.PI / 2.2;
+  controls.rotateSpeed = 0.55;
   controls.update();
 
   // =====================================================================
@@ -375,6 +428,29 @@
   room.position.y = 3.9; // bottom sits slightly below the floor, top unchanged
   scene.add(room);
 
+  // The player's deliberately nondescript low-detail character.
+  const player = new THREE.Group();
+  const playerMat = new THREE.MeshStandardMaterial({color:0x55505f, roughness:0.9});
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), playerMat);
+  head.position.y = 1.48;
+  player.add(head);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.48, 0.18), playerMat);
+  torso.position.y = 1.12;
+  player.add(torso);
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.48, 0.12), playerMat);
+  legL.position.set(-0.075, 0.62, 0);
+  player.add(legL);
+  const legR = legL.clone();
+  legR.position.x = 0.075;
+  player.add(legR);
+  player.position.set(0, 0, 3.8);
+  scene.add(player);
+
+  // A few dark wall/floor details make the starting room feel larger.
+  const roomGlow = new THREE.PointLight(0x22e0ff, 0.65, 8);
+  roomGlow.position.set(0, 2.5, -4.8);
+  scene.add(roomGlow);
+
   // thin neon strips along the back wall for atmosphere
   const stripGeo = new THREE.BoxGeometry(0.06, 5, 0.06);
   [-4, -2.6, 2.6, 4].forEach((x, i) => {
@@ -424,9 +500,10 @@
   }
   drawMarqueeTexture();
   const marqueeTexture = new THREE.CanvasTexture(marqueeCanvas);
+  const marqueeMaterial = new THREE.MeshBasicMaterial({ map: marqueeTexture, transparent:true, opacity:0.08 });
   const marquee = new THREE.Mesh(
     new THREE.BoxGeometry(1.35, 0.34, 0.16),
-    new THREE.MeshBasicMaterial({ map: marqueeTexture })
+    marqueeMaterial
   );
   marquee.position.set(0, 1.98, 0.02);
   marquee.rotation.x = -0.12;
@@ -581,14 +658,111 @@
     buttons.push(btn);
   });
 
-  cabinet.position.set(0, 0, -1.2);
+  cabinet.position.set(0, 0, -3.8);
 
   // =====================================================================
-  // Interaction: raycasting, keyboard, click
+  // Interaction / room state / persistent session
   // =====================================================================
+  const STORAGE_KEY = 'arcadeHubSessionV2';
+  const PHASE_ROOM = 'room';
+  const PHASE_ARCADE = 'arcade';
+  const PHASE_GAME = 'game';
+
+  let phase = PHASE_ROOM;
+  let arcadePowered = false;
+  let playerNearCabinet = false;
+  let playerVelocity = new THREE.Vector3();
+  const moveKeys = {w:false,a:false,s:false,d:false};
+  const roomPrompt = document.getElementById('room-prompt');
+  const restoreScreen = document.getElementById('session-restore');
+
+  function saveSession(extra = {}) {
+    try {
+      const data = {
+        phase: extra.phase || phase,
+        selected,
+        player: {x:player.position.x, y:player.position.y, z:player.position.z},
+        camera: {x:camera.position.x, y:camera.position.y, z:camera.position.z},
+        target: {x:controls.target.x, y:controls.target.y, z:controls.target.z},
+        savedAt: Date.now(),
+        ...extra
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  function readSession() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); }
+    catch(e) { return null; }
+  }
+
+  function powerOnArcade() {
+    if (arcadePowered) return;
+    arcadePowered = true;
+    marqueeMaterial.opacity = 1;
+    marqueeMaterial.needsUpdate = true;
+    marqueeMaterial.color.set(0xffffff);
+    marqueeMaterial.emissive = new THREE.Color(0x22e0ff);
+    marqueeMaterial.emissiveIntensity = 1.0;
+    // A brief electrical flicker.
+    let n = 0;
+    const flicker = setInterval(() => {
+      n++;
+      marqueeMaterial.opacity = (n < 5 && n % 2 === 0) ? 0.25 : 1;
+      if (n >= 6) { clearInterval(flicker); marqueeMaterial.opacity = 1; }
+    }, 65);
+  }
+
+  function cabinetWorldPosition() {
+    return cabinet.position.clone().add(new THREE.Vector3(0, 0, 0));
+  }
+
+  function updateRoomProximity() {
+    if (phase !== PHASE_ROOM) {
+      roomPrompt.style.display = 'none';
+      return;
+    }
+    const dist = player.position.distanceTo(cabinetWorldPosition());
+    playerNearCabinet = dist < 1.65;
+    if (playerNearCabinet) {
+      powerOnArcade();
+      roomPrompt.style.display = 'block';
+    } else {
+      roomPrompt.style.display = 'none';
+    }
+  }
+
+  function enterArcadeView(fromRestore = false) {
+    phase = PHASE_ARCADE;
+    powerOnArcade();
+    roomPrompt.style.display = 'none';
+    document.getElementById('crosshair-hint').innerHTML =
+      'ARCADE MODE<br>arrow keys / scroll / joystick &bull; click a game to play &bull; ESC to return';
+    saveSession({phase:PHASE_ARCADE});
+
+    screenMesh.getWorldPosition(_worldPos);
+    screenMesh.getWorldQuaternion(_worldQuat);
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
+    const zoomPos = _worldPos.clone().addScaledVector(forward, 1.15);
+    animateCameraTo(zoomPos, _worldPos.clone(), fromRestore ? 10 : 900, () => {
+      controls.enabled = true;
+      controls.enableZoom = false;
+    });
+  }
+
+  function leaveArcadeView() {
+    if (gameOpen || cameraAnimating) return;
+    phase = PHASE_ROOM;
+    document.getElementById('crosshair-hint').innerHTML =
+      'WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk to the arcade cabinet';
+    controls.enabled = true;
+    controls.enableZoom = false;
+    saveSession({phase:PHASE_ROOM});
+  }
+
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  const interactiveObjects = [screenMesh, stickGrabZone, ...buttons];
+  const interactiveObjects = [cabinet, screenMesh, stickGrabZone, ...buttons];
 
   let overScreen = false;
   let hoveredButton = -1;
@@ -605,7 +779,7 @@
     hoveredButton = -1;
     let cursor = 'grab';
 
-    if (hit) {
+    if (hit && (phase === PHASE_ARCADE)) {
       if (hit.object === screenMesh) {
         overScreen = true;
         const u = hit.uv.x, v = hit.uv.y;
@@ -644,11 +818,12 @@
   let dragStartPos = null;
 
   renderer.domElement.addEventListener('wheel', e => {
-    if (gameOpen || cameraAnimating || !overScreen) return;
+    if (phase !== PHASE_ARCADE || gameOpen || cameraAnimating || !overScreen) return;
     e.preventDefault();
     if (e.deltaY > 0) selected = Math.min(selected + 1, GAMES.length - 1);
     else selected = Math.max(selected - 1, 0);
     drawMenu();
+    saveSession({phase:PHASE_ARCADE});
   }, { passive: false });
 
   // ---- joystick: press and drag up/down on the ball to browse the menu.
@@ -660,8 +835,8 @@
   let joystickRepeatTimer = null;
 
   function joystickStep(){
-    if (joystickNorm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); drawMenu(); }
-    else if (joystickNorm < -0.65) { selected = Math.max(selected - 1, 0); drawMenu(); }
+    if (joystickNorm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); drawMenu(); saveSession({phase:PHASE_ARCADE}); }
+    else if (joystickNorm < -0.65) { selected = Math.max(selected - 1, 0); drawMenu(); saveSession({phase:PHASE_ARCADE}); }
   }
 
   renderer.domElement.addEventListener('pointerdown', e => {
@@ -672,7 +847,7 @@
     pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObject(stickGrabZone)[0];
+    const hit = phase === PHASE_ARCADE ? raycaster.intersectObject(stickGrabZone)[0] : null;
     if (hit) {
       joystickDragging = true;
       joystickStartY = e.clientY;
@@ -714,29 +889,75 @@
       if (dragDist > 6) return; // was a camera-orbit drag/swipe, not a tap
     }
     updateHoverFromEvent(e.clientX, e.clientY);
-    if (hoverRow >= 0) {
-      selected = hoverRow;
-      launchGame(selected);
-    } else if (hoveredButton >= 0) {
-      launchGame(selected);
+    if (phase === PHASE_ARCADE) {
+      if (hoverRow >= 0) {
+        selected = hoverRow;
+        launchGame(selected);
+      } else if (hoveredButton >= 0) {
+        launchGame(selected);
+      }
+    } else if (phase === PHASE_ROOM && playerNearCabinet) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const cabinetHit = raycaster.intersectObject(cabinet, true)[0];
+      if (cabinetHit) enterArcadeView();
     }
   });
   renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
 
   window.addEventListener('keydown', e => {
+    const k = e.key;
+    const lower = k.toLowerCase();
+
     if (gameOpen) {
-      if (e.key === 'Escape') closeGame();
+      if (k === 'Escape') closeGame();
       return;
     }
+
     if (cameraAnimating) return;
-    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
-      selected = Math.min(selected + 1, GAMES.length - 1);
-      drawMenu();
-    } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-      selected = Math.max(selected - 1, 0);
-      drawMenu();
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      launchGame(selected);
+
+    if (phase === PHASE_ROOM) {
+      if (lower === 'w' || lower === 'a' || lower === 's' || lower === 'd') {
+        moveKeys[lower] = true;
+        e.preventDefault();
+      }
+      if (k === 'Enter' && playerNearCabinet) {
+        enterArcadeView();
+        e.preventDefault();
+      }
+      return;
+    }
+
+    if (phase === PHASE_ARCADE) {
+      if (k === 'Escape') {
+        leaveArcadeView();
+        e.preventDefault();
+        return;
+      }
+      if (k === 'ArrowDown') {
+        selected = Math.min(selected + 1, GAMES.length - 1);
+        drawMenu();
+        saveSession({phase:PHASE_ARCADE});
+        e.preventDefault();
+      } else if (k === 'ArrowUp') {
+        selected = Math.max(selected - 1, 0);
+        drawMenu();
+        saveSession({phase:PHASE_ARCADE});
+        e.preventDefault();
+      } else if (k === 'Enter' || k === ' ') {
+        launchGame(selected);
+        e.preventDefault();
+      }
+    }
+  });
+
+  window.addEventListener('keyup', e => {
+    const lower = e.key.toLowerCase();
+    if (lower in moveKeys) {
+      moveKeys[lower] = false;
+      e.preventDefault();
     }
   });
 
@@ -788,6 +1009,8 @@
     const game = GAMES[index];
     if (!game || gameOpen || cameraAnimating) return;
     gameOpen = true;
+    phase = PHASE_GAME;
+    saveSession({phase:PHASE_GAME, gameIndex:index});
 
     savedCameraPos = camera.position.clone();
     savedTarget = controls.target.clone();
@@ -795,6 +1018,7 @@
     // start loading the real file from the repo (e.g. "games/Terminal.html")
     // right away so it's ready by the time the zoom-in finishes
     frame.src = game.file;
+    saveSession({phase:PHASE_GAME, gameIndex:index});
 
     screenMesh.getWorldPosition(_worldPos);
     screenMesh.getWorldQuaternion(_worldQuat);
@@ -823,10 +1047,18 @@
     const backTarget = savedTarget || controls.target.clone();
     animateCameraTo(backPos, backTarget, 700, () => {
       gameOpen = false;
+      phase = PHASE_ARCADE;
+      document.getElementById('crosshair-hint').innerHTML =
+        'ARCADE MODE<br>arrow keys / scroll / joystick &bull; click a game to play &bull; ESC to return';
+      saveSession({phase:PHASE_ARCADE, gameIndex:selected});
       renderer.domElement.focus();
     });
   }
   backBtn.addEventListener('click', closeGame);
+
+  window.addEventListener('beforeunload', () => {
+    saveSession({phase: gameOpen ? PHASE_GAME : phase, gameIndex:selected});
+  });
 
   // =====================================================================
   // Texture self-healing: some browsers (notably mobile Safari) silently
@@ -865,19 +1097,114 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  let lastFrame = performance.now();
+  let saveAccumulator = 0;
+
+  function updatePlayer(dt){
+    if (phase !== PHASE_ROOM || cameraAnimating) return;
+
+    const dir = new THREE.Vector3();
+    if (moveKeys.w) dir.z -= 1;
+    if (moveKeys.s) dir.z += 1;
+    if (moveKeys.a) dir.x -= 1;
+    if (moveKeys.d) dir.x += 1;
+
+    if (dir.lengthSq() > 0) {
+      dir.normalize();
+      const speed = 2.35;
+      playerVelocity.lerp(dir.multiplyScalar(speed), Math.min(1, dt * 12));
+    } else {
+      playerVelocity.multiplyScalar(Math.max(0, 1 - dt * 10));
+    }
+
+    player.position.x += playerVelocity.x * dt;
+    player.position.z += playerVelocity.z * dt;
+
+    // Keep the player inside the room and away from the cabinet.
+    player.position.x = THREE.MathUtils.clamp(player.position.x, -5.2, 5.2);
+    player.position.z = THREE.MathUtils.clamp(player.position.z, -1.8, 5.3);
+
+    // Third-person camera follows behind the character while still allowing look.
+    if (phase === PHASE_ROOM) {
+      // OrbitControls supplies the 3rd/1st-person mouse look. We only keep
+      // its focal point attached to the player so looking around stays smooth.
+      const desiredTarget = new THREE.Vector3(player.position.x, 1.3, player.position.z);
+      controls.target.lerp(desiredTarget, Math.min(1, dt * 5));
+    }
+  }
+
   function animate(){
     requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt = Math.min((now - lastFrame) / 1000, 0.05);
+    lastFrame = now;
+
+    updatePlayer(dt);
     controls.update();
-    if (!joystickDragging) stickTilt.rotation.x *= 0.82; // spring back to neutral
+
+    if (!joystickDragging) stickTilt.rotation.x *= 0.82;
     screenGlow.intensity = 1.2 + Math.sin(Date.now() * 0.004) * 0.2;
+    updateRoomProximity();
+
+    saveAccumulator += dt;
+    if (saveAccumulator > 2) {
+      saveAccumulator = 0;
+      if (phase === PHASE_ROOM) saveSession({phase:PHASE_ROOM});
+    }
+
     renderer.render(scene, camera);
   }
 
   // wait for the pixel font so the CRT text doesn't redraw mid-flicker, then go
+  function restoreSavedSession(){
+    const saved = readSession();
+    if (!saved) return false;
+
+    if (saved.selected != null) {
+      selected = Math.max(0, Math.min(Number(saved.selected) || 0, GAMES.length - 1));
+      drawMenu();
+    }
+
+    // The requested behavior: reopening the site returns to the screen/buttons,
+    // never to the very beginning, once a session has reached the arcade.
+    if (saved.phase === PHASE_ARCADE || saved.phase === PHASE_GAME) {
+      if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || 0, saved.player.z || 3.8);
+      restoreScreen.classList.add('show');
+      phase = PHASE_ARCADE;
+      setTimeout(() => {
+        restoreScreen.classList.remove('show');
+        enterArcadeView(true);
+      }, 550);
+      return true;
+    }
+
+    if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || 0, saved.player.z || 3.8);
+    if (saved.camera && saved.target) {
+      camera.position.set(saved.camera.x, saved.camera.y, saved.camera.z);
+      controls.target.set(saved.target.x, saved.target.y, saved.target.z);
+      controls.update();
+    }
+    return false;
+  }
+
+  // Clicking the canvas in room mode should only activate the arcade when
+  // the player is actually close enough to it.
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (phase === PHASE_ROOM) {
+      updateRoomProximity();
+    }
+  });
+
   function reveal(){
     document.getElementById('fallback').style.display = 'none';
     appEl.style.display = 'block';
     drawMenu();
+    const restored = restoreSavedSession();
+    if (!restored) {
+      phase = PHASE_ROOM;
+      marqueeMaterial.opacity = 0.08;
+      marqueeMaterial.needsUpdate = true;
+    }
     animate();
   }
   if (document.fonts && document.fonts.ready) {
