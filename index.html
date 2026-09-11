@@ -490,12 +490,13 @@
   <div class="panel">
     <h2>OPERATOR ACCESS</h2>
     <p>Restricted cabinet controls.<br>Enter operator PIN.</p>
-    <div id="admin-pin-display" aria-label="operator PIN">&bull;&bull;&bull;&bull;</div>
+    <div id="admin-pin-display" aria-label="operator PIN"></div>
     <div id="admin-pad">
       <button data-pin="1">1</button><button data-pin="2">2</button><button data-pin="3">3</button>
       <button data-pin="4">4</button><button data-pin="5">5</button><button data-pin="6">6</button>
       <button data-pin="7">7</button><button data-pin="8">8</button><button data-pin="9">9</button>
       <button class="pin-clear" data-pin="clear">CLR</button><button data-pin="0">0</button><button class="pin-enter" data-pin="enter">OK</button>
+      <button class="pin-backspace" data-pin="backspace">&#9003; BKSP</button>
     </div>
     <button id="admin-cancel-btn">CANCEL</button>
   </div>
@@ -1493,7 +1494,7 @@
     try{localStorage.setItem('neonArcade.admin',''+(adminMode?1:0));}catch(e){}
   }
   function updateAdminPinDisplay(error=false){
-    adminPinDisplay.textContent=adminPin ? '•'.repeat(adminPin.length) : '••••';
+    adminPinDisplay.textContent=adminPin ? '•'.repeat(adminPin.length) : '';
     adminPinDisplay.classList.toggle('error',!!error);
   }
   function openAdmin(){
@@ -1537,6 +1538,17 @@
     }
     else{adminPin='';updateAdminPinDisplay(true);AudioEngine.error();setTimeout(()=>updateAdminPinDisplay(),650);}
   }
+  function handleAdminPadKey(key){
+    AudioEngine.click();
+    if(key==='clear'){adminPin='';updateAdminPinDisplay();return;}
+    if(key==='backspace'){adminPin=adminPin.slice(0,-1);updateAdminPinDisplay();return;}
+    if(key==='enter'){unlockAdmin();return;}
+    if(/^[0-9]$/.test(key) && adminPin.length<4){
+      adminPin+=key;
+      updateAdminPinDisplay();
+      if(adminPin.length===4) setTimeout(unlockAdmin,120);
+    }
+  }
   document.querySelectorAll('#admin-pad button[data-pin]').forEach(btn=>{
     btn.addEventListener('pointerdown',()=>{
       document.querySelectorAll('#admin-pad button[data-pin]').forEach(b=>b.classList.remove('lit'));
@@ -1544,13 +1556,28 @@
       clearTimeout(btn._litTimer);
       btn._litTimer=setTimeout(()=>btn.classList.remove('lit'),180);
     });
-    btn.addEventListener('click',()=>{
-    const key=btn.dataset.pin; AudioEngine.click();
-    if(key==='clear'){adminPin='';updateAdminPinDisplay();return;}
-    if(key==='enter'){unlockAdmin();return;}
-    if(adminPin.length<4){adminPin+=key;updateAdminPinDisplay();}
-    if(adminPin.length===4) setTimeout(unlockAdmin,120);
-    });
+    btn.addEventListener('click',()=>handleAdminPadKey(btn.dataset.pin));
+  });
+  const adminIsTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+  document.addEventListener('keydown',e=>{
+    if(adminOverlay.style.display!=='flex' || adminIsTouchDevice) return;
+    if(/^[0-9]$/.test(e.key)){
+      e.preventDefault();
+      const btn=document.querySelector('#admin-pad button[data-pin="'+e.key+'"]');
+      if(btn) btn.click();
+      return;
+    }
+    if(e.key==='Backspace'){
+      e.preventDefault();
+      const btn=document.querySelector('#admin-pad button[data-pin="backspace"]');
+      if(btn) btn.click();
+    }else if(e.key==='Enter'){
+      e.preventDefault();
+      const btn=document.querySelector('#admin-pad button[data-pin="enter"]');
+      if(btn) btn.click();
+    }else if(e.key==='Escape'){
+      adminPin=''; adminOverlay.style.display='none';
+    }
   });
   document.getElementById('admin-cancel-btn').addEventListener('click',()=>{adminPin='';adminOverlay.style.display='none';});
   adminOverlay.addEventListener('keydown',e=>{if(e.key==='Escape'){adminPin='';adminOverlay.style.display='none';}});
