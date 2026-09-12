@@ -378,6 +378,9 @@
   .settings-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 10px; margin-top:8px; background:#10071a; border:1px solid #3a2860; border-radius:5px; }
   .settings-row-label{ color:#eae6ff; font-size:.36rem; line-height:1.5; }
   .settings-row-sub{ display:block; color:#6f668c; font:10px monospace; margin-top:3px; }
+  .mode-switch{display:flex;gap:4px;background:#08040e;border:1px solid #3a2860;border-radius:4px;padding:3px;flex-shrink:0;}
+  .mode-switch button{min-width:72px;padding:8px 6px;font:.3rem 'Press Start 2P',monospace;color:#8a7fb0;background:#140a24;border:0;border-radius:3px;cursor:pointer;}
+  .mode-switch button.active{color:#050505;background:var(--cyan);box-shadow:0 0 9px rgba(34,224,255,.35);}
   .toggle-btn{ min-width:68px; padding:8px 7px; font: .34rem 'Press Start 2P',monospace; color:#050505; background:var(--phosphor); border:0; border-radius:3px; cursor:pointer; }
   .toggle-btn.off{ color:#aaa; background:#29232f; border:1px solid #4b4058; }
   .volume-row{ display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 0 4px; }
@@ -453,6 +456,14 @@
           <button class="inventory-tab" data-tab="accessories">ACCESSORIES</button>
         </div>
         <div id="customize-grid"></div>
+      </div>
+    </div>
+    <div class="settings-section-title">CONTROL MODE</div>
+    <div class="settings-row control-mode-row">
+      <div class="settings-row-label">PLAY MODE<span class="settings-row-sub">Switch between touch controls and computer controls</span></div>
+      <div class="mode-switch" id="control-mode-switch">
+        <button type="button" data-mode="mobile">MOBILE</button>
+        <button type="button" data-mode="computer">COMPUTER</button>
       </div>
     </div>
     <div class="settings-section-title">AUDIO</div>
@@ -613,9 +624,24 @@
   // =====================================================================
   // Scene / renderer / camera
   // =====================================================================
-  const isMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 ||
+  const detectedMobile = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 ||
     (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
     /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent);
+  let isMobile = detectedMobile;
+  try {
+    const savedControlMode = localStorage.getItem('neonArcade.controlMode');
+    if(savedControlMode === 'mobile') isMobile = true;
+    else if(savedControlMode === 'computer') isMobile = false;
+  } catch(e) {}
+
+  function setControlMode(mode){
+    isMobile = mode === 'mobile';
+    try { localStorage.setItem('neonArcade.controlMode', isMobile ? 'mobile' : 'computer'); } catch(e) {}
+    updateControlModeUI();
+    updateMobileControlsVisibility();
+    if(!isMobile) resetPadIfNeeded();
+    if(typeof updateInputHints === 'function') updateInputHints();
+  }
 
   // =====================================================================
   // Sound — everything here is synthesized with the Web Audio API (no
@@ -1456,6 +1482,18 @@
   let devControlsEnabled=true;
   try{ devControlsEnabled=localStorage.getItem('neonArcade.devControls')!=='0'; }catch(e){}
   const devControlsToggle=document.getElementById('dev-controls-toggle');
+  const controlModeSwitch=document.getElementById('control-mode-switch');
+  function updateControlModeUI(){
+    if(!controlModeSwitch) return;
+    controlModeSwitch.querySelectorAll('button[data-mode]').forEach(btn=>{
+      btn.classList.toggle('active', (btn.dataset.mode==='mobile')===isMobile);
+    });
+  }
+  controlModeSwitch.querySelectorAll('button[data-mode]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ setControlMode(btn.dataset.mode); AudioEngine.click(); });
+  });
+  updateControlModeUI();
+
   function refreshDevControlsUI(){
     devControlsToggle.textContent=devControlsEnabled?'ON':'OFF';
     devControlsToggle.classList.toggle('off',!devControlsEnabled);
@@ -1558,9 +1596,8 @@
     });
     btn.addEventListener('click',()=>handleAdminPadKey(btn.dataset.pin));
   });
-  const adminIsTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
   document.addEventListener('keydown',e=>{
-    if(adminOverlay.style.display!=='flex' || adminIsTouchDevice) return;
+    if(adminOverlay.style.display!=='flex' || isMobile) return;
     if(/^[0-9]$/.test(e.key)){
       e.preventDefault();
       const btn=document.querySelector('#admin-pad button[data-pin="'+e.key+'"]');
@@ -1636,7 +1673,7 @@
   const movePadNub = document.getElementById('move-pad-nub');
   const jumpBtn = document.getElementById('jump-btn');
 
-  if (isMobile) {
+  {
     let padTouchId = null;
     const PAD_RADIUS = 46; // px the nub can travel from center before clamping
     const PAD_DEADZONE = 12; // px before a direction registers, avoids jitter
@@ -1689,13 +1726,12 @@
   }
 
   function updateMobileControlsVisibility(){
-    if (!isMobile) return;
-    const inRoom = phase === PHASE_ROOM && !gameOpen && !cameraAnimating;
+    const inRoom = isMobile && phase === PHASE_ROOM && !gameOpen && !cameraAnimating;
     movePad.style.display = inRoom ? 'block' : 'none';
     jumpBtn.style.display = inRoom ? 'block' : 'none';
     if (!inRoom) resetPadIfNeeded();
 
-    const inArcade = phase === PHASE_ARCADE && !gameOpen && !cameraAnimating;
+    const inArcade = isMobile && phase === PHASE_ARCADE && !gameOpen && !cameraAnimating;
     document.getElementById('arcade-exit-btn').style.display = inArcade ? 'block' : 'none';
   }
   function resetPadIfNeeded(){
