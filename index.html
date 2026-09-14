@@ -327,7 +327,20 @@
   .feedback-note{margin-top:12px;color:#6f668c;font:10px/1.5 monospace;text-align:center;}
   .admin-status{margin:14px auto 0;text-align:center;font:10px monospace;letter-spacing:.08em;color:#6f668c;}
   .admin-status.on{color:#39ff14;text-shadow:0 0 8px #39ff14;}
-  #admin-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.94);}
+  #feedback-inbox-overlay{position:fixed;inset:0;z-index:68;display:none;align-items:center;justify-content:center;background:rgba(2,2,4,.94);}
+#feedback-inbox-overlay .panel{background:#0a0612;border:2px solid #39ff14;box-shadow:0 0 30px rgba(57,255,20,.25);padding:22px;max-width:720px;width:94vw;max-height:88vh;overflow:auto;}
+#feedback-inbox-overlay h2{margin:0 0 6px;color:#39ff14;font-size:.75rem;text-align:center;text-shadow:0 0 8px #39ff14;}
+#feedback-inbox-overlay .sub{text-align:center;color:#8a7fb0;font-size:.4rem;margin-bottom:14px;line-height:1.6;}
+#feedback-inbox-list{display:flex;flex-direction:column;gap:10px;}
+.feedback-entry{background:#140a24;border:1px solid #3a2860;border-left:3px solid #ff8a20;border-radius:5px;padding:12px;font:11px/1.55 monospace;color:#eae6ff;}
+.feedback-entry-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:#ff8a20;margin-bottom:7px;font-size:10px;}
+.feedback-entry-meta{color:#8a7fb0;font-size:10px;margin-bottom:7px;overflow-wrap:anywhere;}
+.feedback-entry-message{white-space:pre-wrap;overflow-wrap:anywhere;}
+.feedback-inbox-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:15px;}
+.feedback-inbox-actions button{font:10px 'Press Start 2P',monospace;padding:9px 12px;border:0;border-radius:4px;cursor:pointer;background:#3a2860;color:#eae6ff;}
+#feedback-export-btn{background:#39ff14;color:#050505;} #feedback-clear-btn{background:#642631;color:#ffb7c2;}
+.feedback-empty{text-align:center;padding:28px 10px;color:#6f668c;font:11px monospace;}
+#admin-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.94);}
   #admin-overlay .panel{background:#080808;border:2px solid #39ff14;box-shadow:0 0 28px rgba(57,255,20,.22);padding:22px;width:min(330px,90vw);}
   #admin-overlay h2{margin:0 0 8px;color:#39ff14;font:14px 'Press Start 2P',monospace;text-align:center;}
   #admin-overlay p{color:#777;text-align:center;font:11px monospace;line-height:1.5;margin:0 0 14px;}
@@ -477,6 +490,7 @@
       <button id="dev-controls-toggle" class="toggle-btn">ON</button>
     </div>
     <div class="admin-status" id="admin-status">ADMIN MODE: OFF</div>
+    <button id="feedback-inbox-btn" style="display:none;width:100%;margin-top:12px;font:10px 'Press Start 2P',monospace;padding:11px;background:#39ff14;color:#050505;border:0;border-radius:4px;cursor:pointer;">VIEW FEEDBACK INBOX</button>
     <button id="settings-close-btn">CLOSE</button>
   </div>
 </div>
@@ -496,6 +510,8 @@
     </form>
   </div>
 </div>
+
+<div id="feedback-inbox-overlay"><div class="panel"><h2>FEEDBACK INBOX</h2><div class="sub">ADMIN VIEW • SAVED ON THIS BROWSER<br>NEWEST SUBMISSIONS APPEAR FIRST</div><div id="feedback-inbox-list"></div><div class="feedback-inbox-actions"><button id="feedback-export-btn">COPY ALL</button><button id="feedback-clear-btn">CLEAR ALL</button><button id="feedback-inbox-close-btn">CLOSE</button></div></div></div>
 
 <div id="admin-overlay">
   <div class="panel">
@@ -1451,7 +1467,7 @@
   // this keeps a local copy and also supports an optional Formspree endpoint.
   // Set FEEDBACK_ENDPOINT below if you want automatic submissions.
   // ---------------------------------------------------------------------
-  const FEEDBACK_ENDPOINT = '';
+  const FEEDBACK_ENDPOINT = 'https://formspree.io/f/xyeyqlpz';
   const feedbackBtn=document.getElementById('feedback-btn');
   const feedbackOverlay=document.getElementById('feedback-overlay');
   const feedbackForm=document.getElementById('feedback-form');
@@ -1463,7 +1479,12 @@
     e.preventDefault();
     const payload={type:document.getElementById('feedback-type').value,message:document.getElementById('feedback-message').value.trim(),contact:document.getElementById('feedback-contact').value.trim(),page:location.href,time:new Date().toISOString()};
     if(!payload.message){feedbackNote.textContent='PLEASE ENTER A MESSAGE.'; return;}
-    try{localStorage.setItem('neonArcade.lastFeedback',JSON.stringify(payload));}catch(err){}
+    try{
+      const saved=JSON.parse(localStorage.getItem('neonArcade.feedbackInbox')||'[]');
+      saved.unshift(payload);
+      localStorage.setItem('neonArcade.feedbackInbox',JSON.stringify(saved.slice(0,250)));
+      localStorage.setItem('neonArcade.lastFeedback',JSON.stringify(payload));
+    }catch(err){}
     if(FEEDBACK_ENDPOINT){
       try{const r=await fetch(FEEDBACK_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)}); if(!r.ok) throw new Error('send failed'); feedbackNote.textContent='FEEDBACK SENT — THANK YOU!';}
       catch(err){feedbackNote.textContent='COULD NOT SEND. YOUR FEEDBACK WAS SAVED LOCALLY.';}
@@ -1473,6 +1494,24 @@
     }
   });
 
+  // Admin feedback inbox: submissions saved on this browser/device.
+  const feedbackInboxOverlay=document.getElementById('feedback-inbox-overlay');
+  const feedbackInboxList=document.getElementById('feedback-inbox-list');
+  const feedbackInboxBtn=document.getElementById('feedback-inbox-btn');
+  function readFeedbackInbox(){try{const d=JSON.parse(localStorage.getItem('neonArcade.feedbackInbox')||'[]');return Array.isArray(d)?d:[];}catch(e){return [];}}
+  function escapeHtml(v){return String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+  function renderFeedbackInbox(){
+    const items=readFeedbackInbox(); feedbackInboxList.innerHTML='';
+    if(!items.length){feedbackInboxList.innerHTML='<div class="feedback-empty">NO FEEDBACK HAS BEEN SAVED ON THIS BROWSER.</div>';return;}
+    items.forEach((item,index)=>{const e=document.createElement('div');e.className='feedback-entry';const date=item.time?new Date(item.time).toLocaleString():'Unknown time';e.innerHTML=`<div class="feedback-entry-head"><strong>${escapeHtml(item.type||'Other')}</strong><span>#${items.length-index} · ${escapeHtml(date)}</span></div><div class="feedback-entry-meta">CONTACT: ${escapeHtml(item.contact||'(none)')}</div><div class="feedback-entry-message">${escapeHtml(item.message||'')}</div>`;feedbackInboxList.appendChild(e);});
+  }
+  function openFeedbackInbox(){if(!adminMode)return;renderFeedbackInbox();feedbackInboxOverlay.style.display='flex';}
+  function closeFeedbackInbox(){feedbackInboxOverlay.style.display='none';}
+  feedbackInboxBtn.addEventListener('click',openFeedbackInbox);
+  document.getElementById('feedback-inbox-close-btn').addEventListener('click',closeFeedbackInbox);
+  feedbackInboxOverlay.addEventListener('click',e=>{if(e.target===feedbackInboxOverlay)closeFeedbackInbox();});
+  document.getElementById('feedback-export-btn').addEventListener('click',async()=>{const text=readFeedbackInbox().map((x,i)=>`--- FEEDBACK ${i+1} ---\nType: ${x.type||'Other'}\nMessage: ${x.message||''}\nContact: ${x.contact||'(none)'}\nPage: ${x.page||'(unknown)'}\nTime: ${x.time||'(unknown)'}`).join('\n\n');if(!text)return;try{await navigator.clipboard.writeText(text);showToast('FEEDBACK COPIED');}catch(e){showToast('COPY FAILED');}});
+  document.getElementById('feedback-clear-btn').addEventListener('click',()=>{if(adminMode&&confirm('Delete all saved feedback from this browser?')){try{localStorage.removeItem('neonArcade.feedbackInbox');}catch(e){}renderFeedbackInbox();}});
   // ---------------------------------------------------------------------
   // Operator/admin mode. This is intentionally unobtrusive, but because this
   // is a client-side HTML file it is NOT a secure authentication system.
@@ -1528,6 +1567,7 @@
     }
     adminStatus.textContent='ADMIN MODE: '+(adminMode?'ON • INFINITE TICKETS • ALL UNLOCKED':'OFF');
     adminStatus.classList.toggle('on',adminMode);
+    feedbackInboxBtn.style.display=adminMode?'block':'none';
     refreshTicketDisplay();
     renderCustomizeMenu();
     try{localStorage.setItem('neonArcade.admin',''+(adminMode?1:0));}catch(e){}
