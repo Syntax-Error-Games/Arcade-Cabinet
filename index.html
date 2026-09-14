@@ -2080,9 +2080,14 @@
   });
   renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
 
+  // Keep movement state based on physical key codes so WASD remains held
+  // reliably even when focus changes between the settings overlay and canvas.
+  const movementCodes = {KeyW:'w', KeyA:'a', KeyS:'s', KeyD:'d'};
+
   window.addEventListener('keydown', e => {
     const k = e.key;
     const lower = k.toLowerCase();
+    const movementKey = movementCodes[e.code];
 
     // Hidden operator shortcut: Ctrl+Shift+Alt+A.
     if (e.ctrlKey && e.shiftKey && e.altKey && lower === 'a') { e.preventDefault(); openAdmin(); return; }
@@ -2107,8 +2112,8 @@
         tryJump();
         return;
       }
-      if (lower === 'w' || lower === 'a' || lower === 's' || lower === 'd') {
-        moveKeys[lower] = true;
+      if (movementKey) {
+        moveKeys[movementKey] = true;
         e.preventDefault();
       }
       if (k === 'Enter' && playerNearCabinet) {
@@ -2144,11 +2149,16 @@
   });
 
   window.addEventListener('keyup', e => {
-    const lower = e.key.toLowerCase();
-    if (lower in moveKeys) {
-      moveKeys[lower] = false;
+    const movementKey = movementCodes[e.code];
+    if (movementKey) {
+      moveKeys[movementKey] = false;
       e.preventDefault();
     }
+  });
+
+  // Never leave a direction stuck after Alt-Tab, opening a menu, or losing focus.
+  window.addEventListener('blur', () => {
+    moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
   });
 
   setInterval(() => { blinkOn = !blinkOn; if(!gameOpen) drawMenu(); }, 500);
