@@ -273,7 +273,7 @@
     background:rgba(10,6,18,.78); border:2px solid #ffe600; border-radius:4px; padding:6px 10px;
     transition:opacity .25s, top .25s;
   }
-  #settings-btn,#leaderboard-btn{
+  #settings-btn,#leaderboard-btn,#feedback-btn{
     position:fixed; right:14px; z-index:52;
     font-family:'Press Start 2P', monospace; font-size:.5rem;
     background:rgba(10,6,18,.78); border-radius:4px; padding:8px 10px; cursor:pointer;
@@ -727,6 +727,7 @@
       osc.connect(g); g.connect(sfxGain);
       osc.start(t0); osc.stop(t0 + 0.55);
     }
+    function errorSfx(){ tone(180, 0.14, 'sawtooth', sfxGain, 0.22, 0); tone(120, 0.18, 'sawtooth', sfxGain, 0.2, 0.06); }
 
     // ---- background music: an actual little composed loop (melody + bass),
     // not just a scale run — one mellow pattern for the room, one brighter
@@ -790,7 +791,7 @@
       startMusic();
     }
 
-    return { footstep, jump: jumpSfx, land, click, launch: launchSfx, whoosh, powerOn, setMood,
+    return { footstep, jump: jumpSfx, land, click, launch: launchSfx, whoosh, powerOn, error: errorSfx, setMood,
              setMuted, isMuted, setVolume, getVolume, unlock };
   })();
 
@@ -1648,8 +1649,6 @@
   });
   document.getElementById('leaderboard-close-btn').addEventListener('click', () => {
     leaderboardOverlay.style.display = 'none';
-    feedbackOverlay.style.display = 'none';
-    adminOverlay.style.display = 'none';
   });
   settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) settingsOverlay.style.display = 'none'; });
   leaderboardOverlay.addEventListener('click', e => { if (e.target === leaderboardOverlay) leaderboardOverlay.style.display = 'none'; });
@@ -2049,7 +2048,7 @@
     if (e.ctrlKey && e.shiftKey && e.altKey && lower === 'a') { e.preventDefault(); openAdmin(); return; }
 
     if (k === 'Escape') {
-      if (settingsOverlay.style.display === 'flex' || leaderboardOverlay.style.display === 'flex') {
+      if (settingsOverlay.style.display === 'flex' || leaderboardOverlay.style.display === 'flex' || feedbackOverlay.style.display === 'flex' || adminOverlay.style.display === 'flex') {
         closeMenus();
         e.preventDefault();
         return;
