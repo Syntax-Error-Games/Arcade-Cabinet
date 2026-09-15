@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -24,377 +25,390 @@
     overflow:hidden;
   }
 
-  /* ---------- fallback list (shown until / unless the 3D scene loads) ---------- */
-  #fallback{
-    position:fixed;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:radial-gradient(ellipse at center, #1a0e2e 0%, #0a0612 70%);
-  }
-  #fallback .panel{
-    text-align:center;
-    padding:40px 32px;
-    border-radius:10px;
-    background:#140a24;
-    border:2px solid var(--magenta);
-    box-shadow:0 0 25px rgba(255,43,214,.4), inset 0 0 20px rgba(34,224,255,.08);
-    width:320px;
-  }
-  #fallback h1{
-    margin:0 0 24px;
-    font-size:1rem;
-    color:var(--cyan);
-    text-shadow:0 0 8px var(--cyan);
-  }
-  #fallback ul{list-style:none;padding:0;margin:0;}
-  #fallback li{margin:12px 0;}
-  #fallback .game-link{
-    text-decoration:none;
-    color:#0a0612;
-    background:var(--magenta);
-    padding:12px 14px;
-    border-radius:4px;
-    display:block;
-    font-family:'Press Start 2P', monospace;
-    font-size:.6rem;
-    line-height:1.4;
-    transition:background .2s, transform .2s;
-  }
-  #fallback .game-link:hover{
-    background:var(--cyan);
-    transform:translateY(-2px);
-  }
-  #fallback .hint{
-    margin-top:20px;
-    font-size:.5rem;
-    color:#8a7fb0;
-    line-height:1.6;
-  }
+/* ---------- fallback list (shown until / unless the 3D scene loads) ---------- */
+#fallback{
+position;
+inset:0;
+display;
+justify-content;
+align-items;
+background(ellipse at center, #1a0e2e 0%, #0a0612 70%);
+}
+#fallback .panel{
+text-align;
+padding:40px 32px;
+border-radius:10px;
+background:#140a24;
+border:2px solid var(--magenta);
+box-shadow:0 0 25px rgba(255,43,214,.4), inset 0 0 20px rgba(34,224,255,.08);
+width:320px;
+}
+#fallback h1{
+margin:0 0 24px;
+font-size:1rem;
+color(--cyan);
+text-shadow:0 0 8px var(--cyan);
+}
+#fallback ul{list-style;padding:0;margin:0;}
+#fallback li{margin:12px 0;}
+#fallback .game-link{
+text-decoration;
+color:#0a0612;
+background(--magenta);
+padding:12px 14px;
+border-radius:4px;
+display;
+font-family:'Press Start 2P', monospace;
+font-size:.6rem;
+line-height:1.4;
+transition .2s, transform .2s;
+}
+#fallback .game-link{
+background(--cyan);
+transform(-2px);
+}
+#fallback .hint{
+margin-top:20px;
+font-size:.5rem;
+color:#8a7fb0;
+line-height:1.6;
+}
 
-  /* ---------- 3D app ---------- */
-  #app{
-    position:fixed;
-    inset:0;
-    display:none;
-  }
-  #app canvas{display:block;}
+/* ---------- 3D app ---------- */
+#app{
+position;
+inset:0;
+display;
+}
+#app canvas{display;}
 
-  #crosshair-hint{
-    position:fixed;
-    left:50%;
-    bottom:24px;
-    transform:translateX(-50%);
-    font-size:.55rem;
-    color:#8a7fb0;
-    background:rgba(10,6,18,.6);
-    padding:10px 16px;
-    border:1px solid rgba(255,43,214,.4);
-    border-radius:6px;
-    pointer-events:none;
-    opacity:.9;
-    text-align:center;
-    line-height:1.8;
-  }
+#crosshair-hint{
+position;
+left:50%;
+bottom:24px;
+transform(-50%);
+font-size:.55rem;
+color:#8a7fb0;
+background(10,6,18,.6);
+padding:10px 16px;
+border:1px solid rgba(255,43,214,.4);
+border-radius:6px;
+pointer-events;
+opacity:.9;
+text-align;
+line-height:1.8;
+}
 
-  /* ---------- game overlay ---------- */
-  #game-overlay{
-    position:fixed;
-    inset:0;
-    display:none;
-    flex-direction:column;
-    background:#000;
-    z-index:50;
-  }
-  #game-overlay iframe{
-    flex:1;
-    width:100%;
-    border:0;
-    background:#fff;
-  }
-  #back-btn{
-    position:absolute;
-    top:12px;
-    left:12px;
-    z-index:51;
-    font-family:'Press Start 2P', monospace;
-    font-size:.45rem;
-    color:var(--cyan);
-    background:#0a0612;
-    border:2px solid var(--cyan);
-    border-radius:4px;
-    padding:7px 10px;
-    cursor:pointer;
-    box-shadow:0 0 12px rgba(34,224,255,.5);
-    opacity:.4;
-    transition:opacity .25s, transform .15s;
-  }
-  #back-btn:hover, #back-btn:focus, #back-btn.active{ opacity:1; }
-  #back-btn:hover{ background:var(--cyan); color:#0a0612; }
+/* ---------- game overlay ---------- */
+#game-overlay{
+position;
+inset:0;
+display;
+flex-direction;
+background:#000;
+z-index:50;
+}
+#game-overlay iframe{
+flex:1;
+width:100%;
+border:0;
+background:#fff;
+}
+#back-btn{
+position;
+top:12px;
+left:12px;
+z-index:51;
+font-family:'Press Start 2P', monospace;
+font-size:.45rem;
+color(--cyan);
+background:#0a0612;
+border:2px solid var(--cyan);
+border-radius:4px;
+padding:7px 10px;
+cursor;
+box-shadow:0 0 12px rgba(34,224,255,.5);
+opacity:.4;
+transition .25s, transform .15s;
+}
+#back-btn, #back-btn, #back-btn.active{ opacity:1; }
+#back-btn{ background(--cyan); color:#0a0612; }
 
-  #open-tab-btn{
-    position:absolute;
-    top:12px;
-    right:12px;
-    z-index:51;
-    font-family:'Press Start 2P', monospace;
-    font-size:.45rem;
-    color:var(--magenta);
-    background:#0a0612;
-    border:2px solid var(--magenta);
-    border-radius:4px;
-    padding:7px 10px;
-    text-decoration:none;
-    box-shadow:0 0 12px rgba(255,43,214,.5);
-    opacity:.4;
-    transition:opacity .25s;
-  }
-  #open-tab-btn:hover, #open-tab-btn:focus, #open-tab-btn.active{ opacity:1; }
-  #open-tab-btn:hover{ background:var(--magenta); color:#0a0612; }
+#open-tab-btn{
+position;
+top:12px;
+right:12px;
+z-index:51;
+font-family:'Press Start 2P', monospace;
+font-size:.45rem;
+color(--magenta);
+background:#0a0612;
+border:2px solid var(--magenta);
+border-radius:4px;
+padding:7px 10px;
+text-decoration;
+box-shadow:0 0 12px rgba(255,43,214,.5);
+opacity:.4;
+transition .25s;
+}
+#open-tab-btn, #open-tab-btn, #open-tab-btn.active{ opacity:1; }
+#open-tab-btn{ background(--magenta); color:#0a0612; }
 
-  @media (max-width:600px){
-    #crosshair-hint{ font-size:.45rem; padding:8px 12px; }
-    #fallback .panel{ width:88vw; padding:28px 20px; }
-  }
+@media (max-width:600px){
+#crosshair-hint{ font-size:.45rem; padding:8px 12px; }
+#fallback .panel{ width:88vw; padding:28px 20px; }
+}
 
-  /* ---------- room / character mode ---------- */
-  #room-prompt{
-    position:fixed;
-    left:50%;
-    bottom:96px;
-    transform:translateX(-50%);
-    z-index:20;
-    display:none;
-    padding:10px 16px;
-    border:1px solid rgba(57,255,20,.55);
-    background:rgba(2,4,2,.72);
-    color:#39ff14;
-    font-size:.55rem;
-    line-height:1.7;
-    text-align:center;
-    text-shadow:0 0 8px #39ff14;
-    pointer-events:none;
-  }
-  #session-restore{
-    position:fixed;
-    inset:0;
-    z-index:100;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background:#020402;
-    color:#39ff14;
-    font-size:.65rem;
-    text-align:center;
-    text-shadow:0 0 12px #39ff14;
-  }
-  #session-restore.show{display:flex;}
-  #session-restore .restore-inner{
-    padding:28px 34px;
-    border:2px solid #39ff14;
-    box-shadow:0 0 25px rgba(57,255,20,.3);
-    background:rgba(0,0,0,.9);
-  }
-  #session-restore .restore-sub{
-    margin-top:12px;
-    color:#7bbf73;
-    font-size:.42rem;
-  }
+/* ---------- room / character mode ---------- */
+#room-prompt{
+position;
+left:50%;
+bottom:96px;
+transform(-50%);
+z-index:20;
+display;
+padding:10px 16px;
+border:1px solid rgba(57,255,20,.55);
+background(2,4,2,.72);
+color:#39ff14;
+font-size:.55rem;
+line-height:1.7;
+text-align;
+text-shadow:0 0 8px #39ff14;
+pointer-events;
+}
+#session-restore{
+position;
+inset:0;
+z-index:100;
+display;
+align-items;
+justify-content;
+background:#020402;
+color:#39ff14;
+font-size:.65rem;
+text-align;
+text-shadow:0 0 12px #39ff14;
+}
+#session-restore.show{display;}
+#session-restore .restore-inner{
+padding:28px 34px;
+border:2px solid #39ff14;
+box-shadow:0 0 25px rgba(57,255,20,.3);
+background(0,0,0,.9);
+}
+#session-restore .restore-sub{
+margin-top:12px;
+color:#7bbf73;
+font-size:.42rem;
+}
 
-  /* ---------- mobile touch controls (shown only when isMobile is true) ---------- */
-  #move-pad{
-    position:fixed;
-    left:26px;
-    bottom:26px;
-    width:120px;
-    height:120px;
-    display:none;
-    z-index:30;
-    touch-action:none;
-  }
-  #move-pad-outer{
-    width:100%;
-    height:100%;
-    border-radius:50%;
-    background:rgba(10,6,18,.55);
-    border:2px solid rgba(255,43,214,.5);
-  }
-  #move-pad-nub{
-    position:absolute;
-    left:50%; top:50%;
-    width:52px;
-    height:52px;
-    margin:-26px 0 0 -26px;
-    border-radius:50%;
-    background:rgba(255,43,214,.7);
-    border:2px solid var(--cyan);
-    transition:transform .05s linear;
-    pointer-events:none;
-  }
-  #jump-btn{
-    position:fixed;
-    right:26px;
-    bottom:26px;
-    width:78px;
-    height:78px;
-    border-radius:50%;
-    display:none;
-    z-index:30;
-    font-family:'Press Start 2P', monospace;
-    font-size:.5rem;
-    color:var(--cyan);
-    background:rgba(10,6,18,.55);
-    border:2px solid var(--cyan);
-    touch-action:none;
-  }
-  #jump-btn:active{ background:rgba(34,224,255,.35); }
+/* ---------- mobile touch controls (shown only when isMobile is true) ---------- */
+#move-pad{
+position;
+left:26px;
+bottom:26px;
+width:120px;
+height:120px;
+display;
+z-index:30;
+touch-action;
+}
+#move-pad-outer{
+width:100%;
+height:100%;
+border-radius:50%;
+background(10,6,18,.55);
+border:2px solid rgba(255,43,214,.5);
+}
+#move-pad-nub{
+position;
+left:50%; top:50%;
+width:52px;
+height:52px;
+margin:-26px 0 0 -26px;
+border-radius:50%;
+background(255,43,214,.7);
+border:2px solid var(--cyan);
+transition .05s linear;
+pointer-events;
+}
+#jump-btn{
+position;
+right:26px;
+bottom:26px;
+width:78px;
+height:78px;
+border-radius:50%;
+display;
+z-index:30;
+font-family:'Press Start 2P', monospace;
+font-size:.5rem;
+color(--cyan);
+background(10,6,18,.55);
+border:2px solid var(--cyan);
+touch-action;
+}
+#jump-btn{ background(34,224,255,.35); }
 
-  #arcade-exit-btn{
-    position:fixed;
-    left:14px;
-    top:14px;
-    z-index:52;
-    display:none;
-    font-family:'Press Start 2P', monospace;
-    font-size:.42rem;
-    color:var(--magenta);
-    background:rgba(10,6,18,.7);
-    border:2px solid var(--magenta);
-    border-radius:4px;
-    padding:8px 10px;
-    touch-action:none;
-  }
-  #arcade-exit-btn:active{ background:rgba(255,43,214,.3); }
+#arcade-exit-btn{
+position;
+left:14px;
+top:14px;
+z-index:52;
+display;
+font-family:'Press Start 2P', monospace;
+font-size:.42rem;
+color(--magenta);
+background(10,6,18,.7);
+border:2px solid var(--magenta);
+border-radius:4px;
+padding:8px 10px;
+touch-action;
+}
+#arcade-exit-btn{ background(255,43,214,.3); }
 
-  #ticket-display{
-    position:fixed; left:50%; top:14px; transform:translateX(-50%); z-index:52;
-    font-family:'Press Start 2P', monospace; font-size:.55rem; color:#ffe600;
-    background:rgba(10,6,18,.78); border:2px solid #ffe600; border-radius:4px; padding:6px 10px;
-    transition:opacity .25s, top .25s;
-  }
-  #settings-btn,#leaderboard-btn,#feedback-btn{
-    position:fixed; right:14px; z-index:52;
-    font-family:'Press Start 2P', monospace; font-size:.5rem;
-    background:rgba(10,6,18,.78); border-radius:4px; padding:8px 10px; cursor:pointer;
-    transition:opacity .25s, top .25s, transform .2s;
-  }
-  #settings-btn{top:14px;color:var(--cyan);border:2px solid var(--cyan);}
-  #leaderboard-btn{top:60px;color:#ffe600;border:2px solid #ffe600;}
-  body.game-playing #settings-btn{top:60px;}
-  body.game-playing #leaderboard-btn{top:106px;}
-  body.game-playing #settings-btn,
-  body.game-playing #leaderboard-btn,
-  body.game-playing #ticket-display{opacity:.22;}
-  body.game-playing #settings-btn:hover,
-  body.game-playing #leaderboard-btn:hover{opacity:1;}
-  #leaderboard-overlay{
-    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
-    background:rgba(2,2,4,.9);
-  }
-  #leaderboard-overlay .panel{
-    background:#0a0612; border:2px solid #ffe600; box-shadow:0 0 30px rgba(255,230,0,.35);
-    padding:24px; max-width:420px; width:90vw;
-  }
-  #leaderboard-overlay h2{ margin:0 0 6px; color:#ffe600; font-size:.75rem; text-align:center; text-shadow:0 0 8px #ffe600; }
-  #leaderboard-overlay .sub{ text-align:center; color:#8a7fb0; font-size:.4rem; margin-bottom:16px; }
-  #leaderboard-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
-  .stat-row{
-    display:flex; justify-content:space-between; align-items:center;
-    background:#140a24; border:2px solid #3a2860; border-radius:6px; padding:10px 14px;
-    font-family:'Press Start 2P', monospace; font-size:.42rem; color:#eae6ff;
-  }
-  .stat-row .stat-value{ color:#ffe600; }
-  #leaderboard-close-btn{
-    display:block; margin:0 auto; font-family:'Press Start 2P', monospace; font-size:.5rem;
-    padding:10px 18px; background:#ffe600; color:#050505; border:none; border-radius:4px; cursor:pointer;
-  }
-  #feedback-btn{top:106px;color:#ff8a20;border:2px solid #ff8a20;}
-  body.game-playing #feedback-btn{top:152px;}
-  body.game-playing #feedback-btn{opacity:.22;}
-  body.game-playing #feedback-btn:hover{opacity:1;}
-  #feedback-overlay{position:fixed;inset:0;z-index:65;display:none;align-items:center;justify-content:center;background:rgba(2,2,4,.92);}
-  #feedback-overlay .panel{background:#0a0612;border:2px solid #ff8a20;box-shadow:0 0 30px rgba(255,138,32,.35);padding:24px;max-width:520px;width:92vw;max-height:88vh;overflow:auto;}
-  #feedback-overlay h2{margin:0 0 6px;color:#ff8a20;font-size:.75rem;text-align:center;text-shadow:0 0 8px #ff8a20;}
-  #feedback-overlay .sub{text-align:center;color:#8a7fb0;font-size:.4rem;margin-bottom:16px;}
-  #feedback-form label{display:block;color:#8a7fb0;font-family:'Press Start 2P',monospace;font-size:.38rem;margin:12px 0;}
-  #feedback-form input,#feedback-form select,#feedback-form textarea{display:block;width:100%;margin-top:7px;padding:10px;background:#140a24;color:#eae6ff;border:2px solid #3a2860;border-radius:4px;font:inherit;outline:none;}
-  #feedback-form textarea{resize:vertical;min-height:110px;line-height:1.5;}
-  #feedback-form input:focus,#feedback-form select:focus,#feedback-form textarea:focus{border-color:#ff8a20;}
-  .feedback-actions{display:flex;gap:10px;justify-content:center;margin-top:16px;}
-  .feedback-actions button{font-family:'Press Start 2P',monospace;font-size:.42rem;padding:10px 14px;border:0;border-radius:4px;cursor:pointer;}
-  #feedback-submit{background:#ff8a20;color:#050505;} #feedback-close-btn{background:#3a2860;color:#eae6ff;}
-  .feedback-note{margin-top:12px;color:#6f668c;font:10px/1.5 monospace;text-align:center;}
-  .admin-status{margin:14px auto 0;text-align:center;font:10px monospace;letter-spacing:.08em;color:#6f668c;}
-  .admin-status.on{color:#39ff14;text-shadow:0 0 8px #39ff14;}
-  #admin-overlay{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.94);}
-  #admin-overlay .panel{background:#080808;border:2px solid #39ff14;box-shadow:0 0 28px rgba(57,255,20,.22);padding:22px;width:min(330px,90vw);}
-  #admin-overlay h2{margin:0 0 8px;color:#39ff14;font:14px 'Press Start 2P',monospace;text-align:center;}
-  #admin-overlay p{color:#777;text-align:center;font:11px monospace;line-height:1.5;margin:0 0 14px;}
-  #admin-pin-display{height:38px;box-sizing:border-box;background:#020402;color:#39ff14;border:1px solid #245d24;display:flex;align-items:center;justify-content:center;letter-spacing:.35em;font:18px monospace;margin-bottom:12px;text-shadow:0 0 7px #39ff14;}
-  #admin-pin-display.error{color:#ff3b5c;border-color:#7b2030;text-shadow:0 0 7px #ff3b5c;}
-  #admin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  #admin-pad button{height:46px;font:12px 'Press Start 2P',monospace;color:#39ff14;background:#101610;border:1px solid #245d24;border-radius:3px;cursor:pointer;}
-  #admin-pad button:hover{background:#182418;border-color:#39ff14;}
-  #admin-pad button:active{transform:translateY(1px);}
-  #admin-pad button.lit{background:#39ff14;color:#050505;border-color:#9cff9c;box-shadow:0 0 14px rgba(57,255,20,.85),inset 0 0 10px rgba(255,255,255,.18);text-shadow:none;}
-  #admin-pad .pin-clear.lit{background:#ff3b5c;color:#050505;border-color:#ff9aaa;box-shadow:0 0 14px rgba(255,59,92,.75);}
-  #admin-pad .pin-enter.lit{background:#9cff9c;color:#000;box-shadow:0 0 16px rgba(57,255,20,.95);}
-  #admin-pad .pin-clear{color:#ff7b8f;border-color:#642631;}
-  #admin-pad .pin-enter{color:#000;background:#39ff14;border-color:#39ff14;}
-  #admin-cancel-btn{width:100%;margin-top:10px;height:36px;font:10px 'Press Start 2P',monospace;color:#aaa;background:#222;border:0;border-radius:3px;cursor:pointer;}
-  #settings-overlay{
-    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
-    background:rgba(2,2,4,.9);
-  }
-  #settings-overlay .panel{
-    background:linear-gradient(180deg,#10071b,#08050d); border:2px solid var(--magenta);
-    box-shadow:0 0 30px rgba(255,43,214,.35), inset 0 0 24px rgba(34,224,255,.04);
-    padding:18px; max-width:620px; width:94vw; max-height:88vh; overflow-y:auto;
-  }
-  #settings-overlay h2{ margin:0 0 14px; color:var(--cyan); font-size:.75rem; text-align:center; text-shadow:0 0 8px var(--cyan); }
-  .settings-section-title{ color:#8a7fb0; font-size:.38rem; text-align:left; margin:12px 2px 7px; letter-spacing:.1em; }
-  .inventory-layout{ display:grid; grid-template-columns:150px 1fr; gap:14px; align-items:start; }
-  .inventory-preview{ background:#08040e; border:2px solid #3a2860; border-radius:6px; padding:8px; position:sticky; top:0; }
-  .inventory-preview-label{ text-align:center; color:#8a7fb0; font-size:.32rem; margin-top:2px; }
-  #mini-preview{ width:120px; height:140px; margin:0 auto; }
-  #mini-preview canvas{ display:block; }
-  .inventory-main{ min-width:0; }
-  .inventory-tabs{ display:flex; gap:6px; margin-bottom:9px; }
-  .inventory-tab{ flex:1; padding:9px 5px; font: .36rem 'Press Start 2P',monospace; color:#8a7fb0; background:#140a24; border:2px solid #3a2860; border-radius:4px; cursor:pointer; }
-  .inventory-tab.active{ color:#050505; background:var(--cyan); border-color:var(--cyan); box-shadow:0 0 10px rgba(34,224,255,.35); }
-  #customize-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
-  .inventory-item{ min-height:112px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-    background:#12081f; border:2px solid #3a2860; border-radius:5px; padding:9px 5px;
-    font-family:'Press Start 2P',monospace; font-size:.36rem; color:#eae6ff; cursor:pointer; position:relative; }
-  .inventory-item:hover:not(:disabled){ border-color:var(--cyan); transform:translateY(-1px); }
-  .inventory-item:disabled{ opacity:.42; cursor:not-allowed; }
-  .inventory-item.equipped{ border-color:var(--phosphor); box-shadow:0 0 10px rgba(57,255,20,.3), inset 0 0 12px rgba(57,255,20,.05); }
-  .inventory-item.equipped::after{ content:'EQUIPPED'; position:absolute; top:4px; right:4px; color:var(--phosphor); font-size:.25rem; }
-  .inventory-icon{ width:48px; height:48px; display:flex; align-items:center; justify-content:center; border-radius:5px; background:#08040d; border:1px solid #3a2860; box-shadow:inset 0 0 12px rgba(255,255,255,.03); font-size:1.35rem; }
-  .swatch-dot{ width:38px; height:38px; border-radius:50%; background:var(--swatch-color); border:2px solid #000; box-shadow:inset -5px -6px 8px rgba(0,0,0,.28),0 0 8px rgba(255,255,255,.05); }
-  .swatch-sub{ color:#8a7fb0; font-size:.27rem; text-align:center; line-height:1.4; }
-  .inventory-empty{ grid-column:1/-1; text-align:center; padding:26px 8px; color:#6f668c; font:10px monospace; }
-  .settings-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 10px; margin-top:8px; background:#10071a; border:1px solid #3a2860; border-radius:5px; }
-  .settings-row-label{ color:#eae6ff; font-size:.36rem; line-height:1.5; }
-  .settings-row-sub{ display:block; color:#6f668c; font:10px monospace; margin-top:3px; }
-  .mode-switch{display:flex;gap:4px;background:#08040e;border:1px solid #3a2860;border-radius:4px;padding:3px;flex-shrink:0;}
-  .mode-switch button{min-width:72px;padding:8px 6px;font:.3rem 'Press Start 2P',monospace;color:#8a7fb0;background:#140a24;border:0;border-radius:3px;cursor:pointer;}
-  .mode-switch button.active{color:#050505;background:var(--cyan);box-shadow:0 0 9px rgba(34,224,255,.35);}
-  .toggle-btn{ min-width:68px; padding:8px 7px; font: .34rem 'Press Start 2P',monospace; color:#050505; background:var(--phosphor); border:0; border-radius:3px; cursor:pointer; }
-  .toggle-btn.off{ color:#aaa; background:#29232f; border:1px solid #4b4058; }
-  .volume-row{ display:flex; align-items:center; justify-content:center; gap:12px; padding:12px 0 4px; }
-  @media(max-width:560px){ #settings-overlay .panel{padding:14px;} .inventory-layout{grid-template-columns:1fr;} .inventory-preview{position:relative;} #customize-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-  #mute-btn{
-    font-family:'Press Start 2P', monospace; font-size:1rem; color:var(--cyan);
-    background:none; border:none; cursor:pointer; line-height:1;
-  }
-  #mute-btn.muted{ color:#666; }
-  #volume-slider{ width:140px; accent-color:var(--cyan); cursor:pointer; }
-  #settings-close-btn{
-    display:block; margin:16px auto 0; font-family:'Press Start 2P', monospace; font-size:.5rem;
-    padding:10px 18px; background:var(--magenta); color:#050505; border:none; border-radius:4px; cursor:pointer;
-  }
+#ticket-display{
+position; left:50%; top:14px; transform(-50%); z-index:52;
+font-family:'Press Start 2P', monospace; font-size:.55rem; color:#ffe600;
+background(10,6,18,.78); border:2px solid #ffe600; border-radius:4px; padding:6px 10px;
+transition .25s, top .25s;
+}
+#settings-btn,#leaderboard-btn,#feedback-btn{
+position; right:14px; z-index:52;
+font-family:'Press Start 2P', monospace; font-size:.5rem;
+background(10,6,18,.78); border-radius:4px; padding:8px 10px; cursor;
+transition .25s, top .25s, transform .2s;
+}
+#settings-btn{top:14px;color(--cyan);border:2px solid var(--cyan);}
+#leaderboard-btn{top:60px;color:#ffe600;border:2px solid #ffe600;}
+body.game-playing #settings-btn{top:60px;}
+body.game-playing #leaderboard-btn{top:106px;}
+body.game-playing #settings-btn,
+body.game-playing #leaderboard-btn,
+body.game-playing #ticket-display{opacity:.22;}
+body.game-playing #settings-btn,
+body.game-playing #leaderboard-btn{opacity:1;}
+#leaderboard-overlay{
+position; inset:0; z-index:60; display; align-items; justify-content;
+background(2,2,4,.9);
+}
+#leaderboard-overlay .panel{
+background:#0a0612; border:2px solid #ffe600; box-shadow:0 0 30px rgba(255,230,0,.35);
+padding:24px; max-width:420px; width:90vw;
+}
+#leaderboard-overlay h2{ margin:0 0 6px; color:#ffe600; font-size:.75rem; text-align; text-shadow:0 0 8px #ffe600; }
+#leaderboard-overlay .sub{ text-align; color:#8a7fb0; font-size:.4rem; margin-bottom:16px; }
+#leaderboard-list{ display; flex-direction; gap:10px; margin-bottom:16px; }
+.stat-row{
+display; justify-content; align-items;
+background:#140a24; border:2px solid #3a2860; border-radius:6px; padding:10px 14px;
+font-family:'Press Start 2P', monospace; font-size:.42rem; color:#eae6ff;
+}
+.stat-row .stat-value{ color:#ffe600; }
+#leaderboard-close-btn{
+display; margin:0 auto; font-family:'Press Start 2P', monospace; font-size:.5rem;
+padding:10px 18px; background:#ffe600; color:#050505; border; border-radius:4px; cursor;
+}
+#feedback-btn{top:106px;color:#ff8a20;border:2px solid #ff8a20;}
+body.game-playing #feedback-btn{top:152px;}
+body.game-playing #feedback-btn{opacity:.22;}
+body.game-playing #feedback-btn{opacity:1;}
+#feedback-overlay{position;inset:0;z-index:65;display;align-items;justify-content;background(2,2,4,.92);}
+#feedback-overlay .panel{background:#0a0612;border:2px solid #ff8a20;box-shadow:0 0 30px rgba(255,138,32,.35);padding:24px;max-width:520px;width:92vw;max-height:88vh;overflow;}
+#feedback-overlay h2{margin:0 0 6px;color:#ff8a20;font-size:.75rem;text-align;text-shadow:0 0 8px #ff8a20;}
+#feedback-overlay .sub{text-align;color:#8a7fb0;font-size:.4rem;margin-bottom:16px;}
+#feedback-form label{display;color:#8a7fb0;font-family:'Press Start 2P',monospace;font-size:.38rem;margin:12px 0;}
+#feedback-form input,#feedback-form select,#feedback-form textarea{display;width:100%;margin-top:7px;padding:10px;background:#140a24;color:#eae6ff;border:2px solid #3a2860;border-radius:4px;font;outline;}
+#feedback-form textarea{resize;min-height:110px;line-height:1.5;}
+#feedback-form input,#feedback-form select,#feedback-form textarea
+.feedback-actions{display;gap:10px;justify-content;margin-top:16px;}
+.feedback-actions button{font-family:'Press Start 2P',monospace;font-size:.42rem;padding:10px 14px;border:0;border-radius:4px;cursor;}
+#feedback-submit{background:#ff8a20;color:#050505;} #feedback-close-btn{background:#3a2860;color:#eae6ff;}
+.feedback-note{margin-top:12px;color:#6f668c;font:10px/1.5 monospace;text-align;}
+.admin-status{margin:14px auto 0;text-align;font:10px monospace;letter-spacing:.08em;color:#6f668c;}
+.admin-status.on{color:#39ff14;text-shadow:0 0 8px #39ff14;}
+#feedback-inbox-overlay{position;inset:0;z-index:68;display;align-items;justify-content;background(2,2,4,.94);}
+#feedback-inbox-overlay .panel{background:#0a0612;border:2px solid #39ff14;box-shadow:0 0 30px rgba(57,255,20,.25);padding:22px;max-width:720px;width:94vw;max-height:88vh;overflow;}
+#feedback-inbox-overlay h2{margin:0 0 6px;color:#39ff14;font-size:.75rem;text-align;text-shadow:0 0 8px #39ff14;}
+#feedback-inbox-overlay .sub{text-align;color:#8a7fb0;font-size:.4rem;margin-bottom:14px;line-height:1.6;}
+#feedback-inbox-list{display;flex-direction;gap:10px;}
+.feedback-entry{background:#140a24;border:1px solid #3a2860;border-left:3px solid #ff8a20;border-radius:5px;padding:12px;font:11px/1.55 monospace;color:#eae6ff;}
+.feedback-entry-head{display;justify-content;gap:10px;flex-wrap;color:#ff8a20;margin-bottom:7px;font-size:10px;}
+.feedback-entry-meta{color:#8a7fb0;font-size:10px;margin-bottom:7px;overflow-wrap;}
+.feedback-entry-message{white-space;overflow-wrap;}
+.feedback-inbox-actions{display;gap:8px;justify-content;flex-wrap;margin-top:15px;}
+.feedback-inbox-actions button{font:10px 'Press Start 2P',monospace;padding:9px 12px;border:0;border-radius:4px;cursor;background:#3a2860;color:#eae6ff;}
+#feedback-export-btn{background:#39ff14;color:#050505;} #feedback-clear-btn{background:#642631;color:#ffb7c2;}
+.feedback-empty{text-align;padding:28px 10px;color:#6f668c;font:11px monospace;}
+#admin-overlay{position;inset:0;z-index:70;display;align-items;justify-content;background(0,0,0,.94);}
+#admin-overlay .panel{background:#080808;border:2px solid #39ff14;box-shadow:0 0 28px rgba(57,255,20,.22);padding:22px;width(330px,90vw);}
+#admin-overlay h2{margin:0 0 8px;color:#39ff14;font:14px 'Press Start 2P',monospace;text-align;}
+#admin-overlay p{color:#777;text-align;font:11px monospace;line-height:1.5;margin:0 0 14px;}
+#admin-pin-display{height:38px;box-sizing;background:#020402;color:#39ff14;border:1px solid #245d24;display;align-items;justify-content;letter-spacing:.35em;font:18px monospace;margin-bottom:12px;text-shadow:0 0 7px #39ff14;}
+#admin-pin-display.error{color:#ff3b5c;border-color:#7b2030;text-shadow:0 0 7px #ff3b5c;}
+#admin-pad{display;grid-template-columns(3,1fr);gap:8px;}
+#admin-pad button{height:46px;font:12px 'Press Start 2P',monospace;color:#39ff14;background:#101610;border:1px solid #245d24;border-radius:3px;cursor;}
+#admin-pad button
+#admin-pad button{transform(1px);}
+#admin-pad button.lit{background:#39ff14;color:#050505;border-color:#9cff9c;box-shadow:0 0 14px rgba(57,255,20,.85),inset 0 0 10px rgba(255,255,255,.18);text-shadow;}
+#admin-pad .pin-clear.lit{background:#ff3b5c;color:#050505;border-color:#ff9aaa;box-shadow:0 0 14px rgba(255,59,92,.75);}
+#admin-pad .pin-enter.lit{background:#9cff9c;color:#000;box-shadow:0 0 16px rgba(57,255,20,.95);}
+#admin-pad .pin-clear{color:#ff7b8f;border-color:#642631;}
+#admin-pad .pin-enter{color:#000;background:#39ff14;border-color:#39ff14;}
+#admin-cancel-btn{width:100%;margin-top:10px;height:36px;font:10px 'Press Start 2P',monospace;color:#aaa;background:#222;border:0;border-radius:3px;cursor;}
+#settings-overlay{
+position; inset:0; z-index:60; display; align-items; justify-content;
+background(2,2,4,.9);
+}
+#settings-overlay .panel{
+background(180deg,#10071b,#08050d); border:2px solid var(--magenta);
+box-shadow:0 0 30px rgba(255,43,214,.35), inset 0 0 24px rgba(34,224,255,.04);
+padding:18px; max-width:620px; width:94vw; max-height:88vh; overflow-y;
+}
+#settings-overlay h2{ margin:0 0 14px; color(--cyan); font-size:.75rem; text-align; text-shadow:0 0 8px var(--cyan); }
+.settings-section-title{ color:#8a7fb0; font-size:.38rem; text-align; margin:12px 2px 7px; letter-spacing:.1em; }
+.inventory-layout{ display; grid-template-columns:150px 1fr; gap:14px; align-items; }
+.inventory-preview{ background:#08040e; border:2px solid #3a2860; border-radius:6px; padding:8px; position; top:0; }
+.inventory-preview-label{ text-align; color:#8a7fb0; font-size:.32rem; margin-top:2px; }
+#mini-preview{ width:120px; height:140px; margin:0 auto; }
+#mini-preview canvas{ display; }
+.inventory-main{ min-width:0; }
+.inventory-tabs{ display; gap:6px; margin-bottom:9px; }
+.inventory-tab{ flex:1; padding:9px 5px; font: .36rem 'Press Start 2P',monospace; color:#8a7fb0; background:#140a24; border:2px solid #3a2860; border-radius:4px; cursor; }
+.inventory-tab.active{ color:#050505; background(--cyan); border-color(--cyan); box-shadow:0 0 10px rgba(34,224,255,.35); }
+#customize-grid{ display; grid-template-columns(3,minmax(0,1fr)); gap:8px; margin-bottom:12px; }
+.inventory-item{ min-height:112px; display; flex-direction; align-items; justify-content; gap:6px;
+background:#12081f; border:2px solid #3a2860; border-radius:5px; padding:9px 5px;
+font-family:'Press Start 2P',monospace; font-size:.36rem; color:#eae6ff; cursor; position; }
+.inventory-item:hover(){ border-color(--cyan); transform(-1px); }
+.inventory-item{ opacity:.42; cursor; }
+.inventory-item.equipped{ border-color(--phosphor); box-shadow:0 0 10px rgba(57,255,20,.3), inset 0 0 12px rgba(57,255,20,.05); }
+.inventory-item.equipped::after{ content:'EQUIPPED'; position; top:4px; right:4px; color(--phosphor); font-size:.25rem; }
+.inventory-icon{ width:48px; height:48px; display; align-items; justify-content; border-radius:5px; background:#08040d; border:1px solid #3a2860; box-shadow 0 0 12px rgba(255,255,255,.03); font-size:1.35rem; }
+.swatch-dot{ width:38px; height:38px; border-radius:50%; background(--swatch-color); border:2px solid #000; box-shadow -5px -6px 8px rgba(0,0,0,.28),0 0 8px rgba(255,255,255,.05); }
+.swatch-sub{ color:#8a7fb0; font-size:.27rem; text-align; line-height:1.4; }
+.inventory-empty{ grid-column:1/-1; text-align; padding:26px 8px; color:#6f668c; font:10px monospace; }
+.settings-row{ display; align-items; justify-content; gap:12px; padding:11px 10px; margin-top:8px; background:#10071a; border:1px solid #3a2860; border-radius:5px; }
+.settings-row-label{ color:#eae6ff; font-size:.36rem; line-height:1.5; }
+.settings-row-sub{ display; color:#6f668c; font:10px monospace; margin-top:3px; }
+.mode-switch{display;gap:4px;background:#08040e;border:1px solid #3a2860;border-radius:4px;padding:3px;flex-shrink:0;}
+.mode-switch button{min-width:72px;padding:8px 6px;font:.3rem 'Press Start 2P',monospace;color:#8a7fb0;background:#140a24;border:0;border-radius:3px;cursor;}
+.mode-switch button.active{color:#050505;background(--cyan);box-shadow:0 0 9px rgba(34,224,255,.35);}
+.toggle-btn{ min-width:68px; padding:8px 7px; font: .34rem 'Press Start 2P',monospace; color:#050505; background(--phosphor); border:0; border-radius:3px; cursor; }
+.toggle-btn.off{ color:#aaa; background:#29232f; border:1px solid #4b4058; }
+.volume-row{ display; align-items; justify-content; gap:12px; padding:12px 0 4px; }
+@media(max-width:560px){ #settings-overlay .panel{padding:14px;} .inventory-layout{grid-template-columns:1fr;} .inventory-preview{position;} #customize-grid{grid-template-columns(2,minmax(0,1fr));} }
+#mute-btn{
+font-family:'Press Start 2P', monospace; font-size:1rem; color(--cyan);
+background; border; cursor; line-height:1;
+}
+#mute-btn.muted{ color:#666; }
+#volume-slider{ width:140px; accent-color(--cyan); cursor; }
+#settings-close-btn{
+display; margin:16px auto 0; font-family:'Press Start 2P', monospace; font-size:.5rem;
+padding:10px 18px; background(--magenta); color:#050505; border; border-radius:4px; cursor;
+}
 
 </style>
 </head>
@@ -477,6 +491,7 @@
       <button id="dev-controls-toggle" class="toggle-btn">ON</button>
     </div>
     <div class="admin-status" id="admin-status">ADMIN MODE: OFF</div>
+    <button id="feedback-inbox-btn" style="display:none;width:100%;margin-top:12px;font:10px 'Press Start 2P',monospace;padding:11px;background:#39ff14;color:#050505;border:0;border-radius:4px;cursor:pointer;">VIEW FEEDBACK INBOX</button>
     <button id="settings-close-btn">CLOSE</button>
   </div>
 </div>
@@ -492,10 +507,12 @@
       <label>MESSAGE<textarea id="feedback-message" rows="6" maxlength="2000" placeholder="Tell me what you noticed..."></textarea></label>
       <label>CONTACT (OPTIONAL)<input id="feedback-contact" maxlength="120" placeholder="email or Discord"></label>
       <div class="feedback-actions"><button type="submit" id="feedback-submit">SEND FEEDBACK</button><button type="button" id="feedback-close-btn">CANCEL</button></div>
-      <div class="feedback-note" id="feedback-note">Feedback is prepared in your browser. To receive submissions automatically, connect a form endpoint in the source.</div>
+      <div class="feedback-note" id="feedback-note">Feedback is greatly appreciated! If you have more than one thing to report or suggest, please report it in one message.</div>
     </form>
   </div>
 </div>
+
+<div id="feedback-inbox-overlay"><div class="panel"><h2>FEEDBACK INBOX</h2><div class="sub">ADMIN VIEW • SAVED ON THIS BROWSER<br>NEWEST SUBMISSIONS APPEAR FIRST</div><div id="feedback-inbox-list"></div><div class="feedback-inbox-actions"><button id="feedback-export-btn">COPY ALL</button><button id="feedback-clear-btn">CLEAR ALL</button><button id="feedback-inbox-close-btn">CLOSE</button></div></div></div>
 
 <div id="admin-overlay">
   <div class="panel">
@@ -532,11 +549,11 @@
 <div id="game-overlay">
   <button id="back-btn">&larr; BACK</button>
   <a id="open-tab-btn" href="#" target="_blank" rel="noopener">OPEN TAB &nearr;</a>
-  <button id="fullscreen-btn" type="button">FULLSCREEN ⛶</button>
   <iframe id="game-frame" src="about:blank" title="game"></iframe>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
 <script>
@@ -546,6 +563,7 @@
   // GAMES — add / remove entries here. Everything else adapts automatically.
   // =====================================================================
   const GAMES = [
+    { title: "Open in About Blank", file: "games/AboutBlank.html" },
     { title: "Terminal",          file: "games/Terminal.html" },
     { title: "Jetpack Joyride",   file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
     { title: "Gravity Simulator", file: "games/GravitySim.html" },
@@ -821,7 +839,7 @@
   controls.enablePan = false;
   controls.enableZoom = true;
   controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
-  controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+  controls.mouseButtons.RIGHT = THREE.MOUSE.DOLLY;
   controls.touches.ONE = THREE.TOUCH.ROTATE;
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
   controls.minDistance = 1.05;
@@ -1452,7 +1470,7 @@
   // this keeps a local copy and also supports an optional Formspree endpoint.
   // Set FEEDBACK_ENDPOINT below if you want automatic submissions.
   // ---------------------------------------------------------------------
-  const FEEDBACK_ENDPOINT = '';
+  const FEEDBACK_ENDPOINT = 'https://formspree.io/f/xyeyqlpz';
   const feedbackBtn=document.getElementById('feedback-btn');
   const feedbackOverlay=document.getElementById('feedback-overlay');
   const feedbackForm=document.getElementById('feedback-form');
@@ -1464,7 +1482,12 @@
     e.preventDefault();
     const payload={type:document.getElementById('feedback-type').value,message:document.getElementById('feedback-message').value.trim(),contact:document.getElementById('feedback-contact').value.trim(),page:location.href,time:new Date().toISOString()};
     if(!payload.message){feedbackNote.textContent='PLEASE ENTER A MESSAGE.'; return;}
-    try{localStorage.setItem('neonArcade.lastFeedback',JSON.stringify(payload));}catch(err){}
+    try{
+      const saved=JSON.parse(localStorage.getItem('neonArcade.feedbackInbox')||'[]');
+      saved.unshift(payload);
+      localStorage.setItem('neonArcade.feedbackInbox',JSON.stringify(saved.slice(0,250)));
+      localStorage.setItem('neonArcade.lastFeedback',JSON.stringify(payload));
+    }catch(err){}
     if(FEEDBACK_ENDPOINT){
       try{const r=await fetch(FEEDBACK_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload)}); if(!r.ok) throw new Error('send failed'); feedbackNote.textContent='FEEDBACK SENT — THANK YOU!';}
       catch(err){feedbackNote.textContent='COULD NOT SEND. YOUR FEEDBACK WAS SAVED LOCALLY.';}
@@ -1474,6 +1497,24 @@
     }
   });
 
+  // Admin feedback inbox: submissions saved on this browser/device.
+  const feedbackInboxOverlay=document.getElementById('feedback-inbox-overlay');
+  const feedbackInboxList=document.getElementById('feedback-inbox-list');
+  const feedbackInboxBtn=document.getElementById('feedback-inbox-btn');
+  function readFeedbackInbox(){try{const d=JSON.parse(localStorage.getItem('neonArcade.feedbackInbox')||'[]');return Array.isArray(d)?d:[];}catch(e){return [];}}
+  function escapeHtml(v){return String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+  function renderFeedbackInbox(){
+    const items=readFeedbackInbox(); feedbackInboxList.innerHTML='';
+    if(!items.length){feedbackInboxList.innerHTML='<div class="feedback-empty">NO FEEDBACK HAS BEEN SAVED ON THIS BROWSER.</div>';return;}
+    items.forEach((item,index)=>{const e=document.createElement('div');e.className='feedback-entry';const date=item.time?new Date(item.time).toLocaleString():'Unknown time';e.innerHTML=`<div class="feedback-entry-head"><strong>${escapeHtml(item.type||'Other')}</strong><span>#${items.length-index} · ${escapeHtml(date)}</span></div><div class="feedback-entry-meta">CONTACT: ${escapeHtml(item.contact||'(none)')}</div><div class="feedback-entry-message">${escapeHtml(item.message||'')}</div>`;feedbackInboxList.appendChild(e);});
+  }
+  function openFeedbackInbox(){if(!adminMode)return;renderFeedbackInbox();feedbackInboxOverlay.style.display='flex';}
+  function closeFeedbackInbox(){feedbackInboxOverlay.style.display='none';}
+  feedbackInboxBtn.addEventListener('click',openFeedbackInbox);
+  document.getElementById('feedback-inbox-close-btn').addEventListener('click',closeFeedbackInbox);
+  feedbackInboxOverlay.addEventListener('click',e=>{if(e.target===feedbackInboxOverlay)closeFeedbackInbox();});
+  document.getElementById('feedback-export-btn').addEventListener('click',async()=>{const text=readFeedbackInbox().map((x,i)=>`--- FEEDBACK ${i+1} ---\nType: ${x.type||'Other'}\nMessage: ${x.message||''}\nContact: ${x.contact||'(none)'}\nPage: ${x.page||'(unknown)'}\nTime: ${x.time||'(unknown)'}`).join('\n\n');if(!text)return;try{await navigator.clipboard.writeText(text);showToast('FEEDBACK COPIED');}catch(e){showToast('COPY FAILED');}});
+  document.getElementById('feedback-clear-btn').addEventListener('click',()=>{if(adminMode&&confirm('Delete all saved feedback from this browser?')){try{localStorage.removeItem('neonArcade.feedbackInbox');}catch(e){}renderFeedbackInbox();}});
   // ---------------------------------------------------------------------
   // Operator/admin mode. This is intentionally unobtrusive, but because this
   // is a client-side HTML file it is NOT a secure authentication system.
@@ -1529,6 +1570,7 @@
     }
     adminStatus.textContent='ADMIN MODE: '+(adminMode?'ON • INFINITE TICKETS • ALL UNLOCKED':'OFF');
     adminStatus.classList.toggle('on',adminMode);
+    feedbackInboxBtn.style.display=adminMode?'block':'none';
     refreshTicketDisplay();
     renderCustomizeMenu();
     try{localStorage.setItem('neonArcade.admin',''+(adminMode?1:0));}catch(e){}
@@ -2041,9 +2083,14 @@
   });
   renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
 
+  // Keep movement state based on physical key codes so WASD remains held
+  // reliably even when focus changes between the settings overlay and canvas.
+  const movementCodes = {KeyW:'w', KeyA:'a', KeyS:'s', KeyD:'d'};
+
   window.addEventListener('keydown', e => {
     const k = e.key;
     const lower = k.toLowerCase();
+    const movementKey = movementCodes[e.code];
 
     // Hidden operator shortcut: Ctrl+Shift+Alt+A.
     if (e.ctrlKey && e.shiftKey && e.altKey && lower === 'a') { e.preventDefault(); openAdmin(); return; }
@@ -2068,7 +2115,6 @@
         tryJump();
         return;
       }
-      const movementKey = ({KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d'})[e.code];
       if (movementKey) {
         moveKeys[movementKey] = true;
         e.preventDefault();
@@ -2106,11 +2152,16 @@
   });
 
   window.addEventListener('keyup', e => {
-    const movementKey = ({KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d'})[e.code];
+    const movementKey = movementCodes[e.code];
     if (movementKey) {
       moveKeys[movementKey] = false;
       e.preventDefault();
     }
+  });
+
+  // Never leave a direction stuck after Alt-Tab, opening a menu, or losing focus.
+  window.addEventListener('blur', () => {
+    moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
   });
 
   setInterval(() => { blinkOn = !blinkOn; if(!gameOpen) drawMenu(); }, 500);
@@ -2124,27 +2175,10 @@
   const frame = document.getElementById('game-frame');
   const backBtn = document.getElementById('back-btn');
   const openTabBtn = document.getElementById('open-tab-btn');
-  const fullscreenBtn = document.getElementById('fullscreen-btn');
-
-  function updateFullscreenButton(){
-    fullscreenBtn.style.display = document.fullscreenElement ? 'none' : 'block';
-  }
-  async function enterGameFullscreen(){
-    try{
-      if(!document.fullscreenElement) await (overlay.requestFullscreen ? overlay.requestFullscreen() : frame.requestFullscreen());
-    }catch(err){}
-    updateFullscreenButton();
-    setTimeout(()=>{ try{ frame.contentWindow && frame.contentWindow.focus(); }catch(err){} frame.focus(); },120);
-  }
-  fullscreenBtn.addEventListener('click',enterGameFullscreen);
-  document.addEventListener('fullscreenchange',updateFullscreenButton);
-  updateFullscreenButton();
 
   let savedCameraPos = null;
   let savedTarget = null;
   let overlayFadeTimer = null;
-  frame.addEventListener('load',()=>{ if(gameOpen){ try{frame.contentWindow.focus();}catch(err){} frame.focus(); } });
-  frame.addEventListener('pointerdown',()=>{ try{frame.contentWindow.focus();}catch(err){} frame.focus(); });
   const _worldPos = new THREE.Vector3();
   const _worldQuat = new THREE.Quaternion();
 
@@ -2204,8 +2238,6 @@
       openTabBtn.href = game.file;
       overlay.style.display = 'flex';
       backBtn.classList.add('active');
-      updateFullscreenButton();
-      enterGameFullscreen();
       openTabBtn.classList.add('active');
       clearTimeout(overlayFadeTimer);
       overlayFadeTimer = setTimeout(() => {
@@ -2215,7 +2247,7 @@
     });
   }
 
-  async function closeGame(){
+  function closeGame(){
     if (!gameOpen || cameraAnimating) return;
     clearTimeout(overlayFadeTimer);
     if (playStartedAt) {
@@ -2225,7 +2257,6 @@
     }
     currentGameIndex = -1;
     document.body.classList.remove('game-playing');
-    if(document.fullscreenElement){ try{await document.exitFullscreen();}catch(err){} }
     overlay.style.display = 'none';
     frame.src = 'about:blank';
     AudioEngine.whoosh();
@@ -2546,5 +2577,6 @@
 
 })();
 </script>
+
 </body>
 </html>
