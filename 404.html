@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — Cabinet Not Found</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --magenta:#ff2bd6;
+    --cyan:#22e0ff;
+    --phosphor:#39ff14;
+    --amber:#ffe600;
+    --bg:#0a0612;
+    --panel:#140a24;
+    --dim:#8a7fb0;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background:var(--bg);
+    color:#eae6ff;
+    font-family:'Press Start 2P', monospace;
+  }
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:28px 16px 40px;
+    overflow-x:hidden;
+  }
+
+  /* neon grid floor, same vocabulary as the arcade room */
+  .floor{
+    position:fixed;
+    left:50%;
+    bottom:0;
+    width:220vw;
+    height:52vh;
+    margin-left:-110vw;
+    background:
+      repeating-linear-gradient(to right, rgba(255,43,214,.42) 0 2px, transparent 2px 84px),
+      repeating-linear-gradient(to bottom, rgba(255,43,214,.42) 0 2px, transparent 2px 84px);
+    transform:perspective(320px) rotateX(70deg);
+    transform-origin:bottom center;
+    animation:scrollFloor 4.5s linear infinite;
+    pointer-events:none;
+    opacity:.5;
+  }
+  .floor::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to bottom, var(--bg) 0%, rgba(10,6,18,0) 45%);
+  }
+  @keyframes scrollFloor{ from{background-position:0 0,0 0;} to{background-position:0 0,0 84px;} }
+  .haze{
+    position:fixed; inset:0; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 38%, rgba(34,224,255,.10) 0%, rgba(10,6,18,0) 60%);
+  }
+
+  /* ---------- cabinet ---------- */
+  .cabinet{
+    position:relative;
+    z-index:2;
+    width:min(620px,100%);
+  }
+  .marquee{
+    text-align:center;
+    font-size:clamp(.55rem,2.4vw,.72rem);
+    color:var(--cyan);
+    text-shadow:0 0 12px var(--cyan);
+    background:#0a0612;
+    border:2px solid rgba(34,224,255,.45);
+    border-bottom:0;
+    border-radius:8px 8px 0 0;
+    padding:14px 10px;
+    letter-spacing:.08em;
+  }
+  .screen-shell{
+    background:var(--panel);
+    border:2px solid var(--magenta);
+    box-shadow:0 0 28px rgba(255,43,214,.32), inset 0 0 26px rgba(34,224,255,.06);
+    border-radius:0 0 10px 10px;
+    padding:20px;
+  }
+  .crt{
+    position:relative;
+    background:#020402;
+    border:2px solid #123a0c;
+    border-radius:10px;
+    padding:22px 18px 18px;
+    overflow:hidden;
+  }
+  .crt::before{ /* scanlines */
+    content:'';
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(to bottom, rgba(0,0,0,.28) 0 1px, transparent 1px 4px);
+    pointer-events:none;
+  }
+  .crt::after{ /* vignette */
+    content:'';
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,.6) 100%);
+    pointer-events:none;
+  }
+
+  .code{
+    position:relative;
+    text-align:center;
+    font-size:clamp(2.6rem,13vw,4.6rem);
+    line-height:1;
+    color:var(--phosphor);
+    text-shadow:0 0 14px rgba(57,255,20,.8);
+    margin:4px 0 14px;
+    animation:flicker 5.5s infinite steps(1);
+  }
+  .code span{ position:relative; display:inline-block; }
+  .code span::before,.code span::after{
+    content:attr(data-ch);
+    position:absolute; left:0; top:0; width:100%;
+  }
+  .code span::before{ color:var(--magenta); animation:slipL 3.4s infinite steps(1); }
+  .code span::after{ color:var(--cyan); animation:slipR 3.4s infinite steps(1); }
+  @keyframes slipL{ 0%,92%{transform:translate(0,0);opacity:0} 93%{transform:translate(-4px,2px);opacity:.85} 96%{transform:translate(3px,-2px);opacity:.7} 99%{opacity:0} }
+  @keyframes slipR{ 0%,90%{transform:translate(0,0);opacity:0} 91%{transform:translate(4px,-2px);opacity:.8} 95%{transform:translate(-3px,2px);opacity:.6} 98%{opacity:0} }
+  @keyframes flicker{ 0%,97%{opacity:1} 97.5%{opacity:.45} 98%{opacity:1} 98.5%{opacity:.6} 99%{opacity:1} }
+
+  .msg{
+    text-align:center;
+    color:var(--phosphor);
+    font-size:clamp(.5rem,2.3vw,.62rem);
+    line-height:2;
+    text-shadow:0 0 8px rgba(57,255,20,.55);
+  }
+  .msg .sub{
+    display:block;
+    margin-top:12px;
+    color:#1c8a0c;
+    font-size:.48rem;
+    line-height:2;
+    text-shadow:none;
+  }
+
+  /* ---------- mini game ---------- */
+  .game{
+    position:relative;
+    margin:18px auto 6px;
+    width:100%;
+    max-width:460px;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:auto;
+    image-rendering:pixelated;
+    border:1px solid #1c8a0c;
+    border-radius:4px;
+    background:#020402;
+    touch-action:none;
+    cursor:pointer;
+  }
+  canvas:focus-visible{ outline:2px solid var(--cyan); outline-offset:3px; }
+  .hud{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:8px;
+    font-size:.42rem;
+    color:#1c8a0c;
+  }
+  .hud b{ color:var(--phosphor); font-weight:normal; }
+
+  .controls-note{
+    margin-top:14px;
+    text-align:center;
+    color:#0f5c06;
+    font-size:.4rem;
+    line-height:2;
+  }
+
+  /* ---------- exits ---------- */
+  .exits{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    justify-content:center;
+    margin-top:18px;
+  }
+  .btn{
+    font-family:'Press Start 2P', monospace;
+    font-size:.5rem;
+    line-height:1.4;
+    text-decoration:none;
+    padding:13px 16px;
+    border-radius:4px;
+    border:2px solid transparent;
+    cursor:pointer;
+  }
+  .btn-primary{ background:var(--magenta); color:#0a0612; box-shadow:0 0 16px rgba(255,43,214,.45); }
+  .btn-primary:hover{ background:var(--cyan); box-shadow:0 0 16px rgba(34,224,255,.5); }
+  .btn-ghost{ background:#0a0612; color:var(--cyan); border-color:var(--cyan); }
+  .btn-ghost:hover{ background:var(--cyan); color:#0a0612; }
+  .btn:focus-visible{ outline:2px solid var(--amber); outline-offset:3px; }
+  .btn-primary.found{ animation:pulse 1s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{box-shadow:0 0 16px rgba(255,43,214,.45)} 50%{box-shadow:0 0 30px rgba(255,43,214,.95)} }
+
+  .coin{
+    position:relative;
+    z-index:2;
+    margin-top:22px;
+    color:var(--dim);
+    font-size:.42rem;
+    line-height:2;
+    text-align:center;
+  }
+
+  @media (max-width:520px){
+    .screen-shell{ padding:13px; }
+    .crt{ padding:16px 11px 13px; }
+    .exits .btn{ width:100%; text-align:center; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .floor{ animation:none; }
+    .code, .code span::before, .code span::after, .btn-primary.found{ animation:none; }
+    .code span::before,.code span::after{ opacity:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="floor"></div>
+<div class="haze"></div>
+
+<main class="cabinet">
+  <div class="marquee">OUT OF ORDER</div>
+
+  <div class="screen-shell">
+    <div class="crt">
+      <h1 class="code"><span data-ch="4">4</span><span data-ch="0">0</span><span data-ch="4">4</span></h1>
+
+      <p class="msg">
+        THIS CABINET ISN'T ON THE FLOOR
+        <span class="sub">The page you asked for moved, changed name,<br>or never got plugged in.</span>
+      </p>
+
+      <div class="game">
+        <canvas id="scr" width="460" height="230" tabindex="0"
+                aria-label="Mini game: catch the loose cartridges, dodge the dead links"></canvas>
+        <div class="hud">
+          <span>CARTRIDGES <b id="score">0</b></span>
+          <span>BEST <b id="best">0</b></span>
+          <span>LIVES <b id="lives">3</b></span>
+        </div>
+      </div>
+
+      <p class="controls-note">MOVE: ARROW KEYS / A D / DRAG &nbsp;&bull;&nbsp; START: SPACE OR TAP</p>
+    </div>
+
+    <div class="exits">
+      <a class="btn btn-primary" id="home" href="/">BACK TO THE ARCADE</a>
+      <a class="btn btn-ghost" href="javascript:history.back()">PREVIOUS SCREEN</a>
+    </div>
+  </div>
+</main>
+
+<p class="coin">Error 404 &bull; no credits were consumed</p>
+
+<script>
+(function(){
+  const cv = document.getElementById('scr');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const scoreEl = document.getElementById('score');
+  const bestEl  = document.getElementById('best');
+  const livesEl = document.getElementById('lives');
+  const homeBtn = document.getElementById('home');
+
+  const C = { green:'#39ff14', dimGreen:'#1c8a0c', cyan:'#22e0ff', magenta:'#ff2bd6', amber:'#ffe600', red:'#ff3b5c' };
+
+  let best = 0;
+  try { best = parseInt(localStorage.getItem('arcade404.best'), 10) || 0; } catch(e){}
+  bestEl.textContent = best;
+
+  const STATE = { READY:0, PLAY:1, OVER:2, WIN:3 };
+  let state = STATE.READY;
+  let score = 0, lives = 3, tick = 0, spawnTimer = 0, fallSpeed = 62;
+  let flash = 0;
+  const TARGET = 5; // cartridges needed to "find" the missing page
+
+  const cart = { x: W/2, y: H - 26, w: 34, h: 16, vx: 0 };
+  let items = []; // {x,y,type:'cart'|'link',vy}
+
+  const keys = { left:false, right:false };
+
+  function reset(){
+    score = 0; lives = 3; items = []; spawnTimer = 0; fallSpeed = 62; flash = 0;
+    cart.x = W/2; cart.vx = 0;
+    scoreEl.textContent = 0; livesEl.textContent = 3;
+    homeBtn.classList.remove('found');
+    homeBtn.textContent = 'BACK TO THE ARCADE';
+    state = STATE.PLAY;
+  }
+
+  function spawn(){
+    const isCart = Math.random() < 0.46;
+    items.push({
+      x: 18 + Math.random() * (W - 36),
+      y: -14,
+      type: isCart ? 'cart' : 'link',
+      vy: fallSpeed * (0.8 + Math.random() * 0.5),
+      wob: Math.random() * Math.PI * 2
+    });
+  }
+
+  function hit(it){
+    return it.y + 12 > cart.y && it.y - 6 < cart.y + cart.h &&
+           it.x + 9 > cart.x - cart.w/2 && it.x - 9 < cart.x + cart.w/2;
+  }
+
+  function update(dt){
+    if (state !== STATE.PLAY) return;
+    tick += dt;
+    flash = Math.max(0, flash - dt * 3);
+
+    const accel = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (accel) cart.vx += accel * 900 * dt;
+    cart.vx *= Math.max(0, 1 - dt * 7);
+    cart.x += cart.vx * dt;
+    cart.x = Math.max(cart.w/2 + 2, Math.min(W - cart.w/2 - 2, cart.x));
+
+    spawnTimer -= dt;
+    if (spawnTimer <= 0){ spawn(); spawnTimer = Math.max(0.34, 0.95 - score * 0.06); }
+    fallSpeed = 62 + score * 7;
+
+    for (let i = items.length - 1; i >= 0; i--){
+      const it = items[i];
+      it.y += it.vy * dt;
+      it.wob += dt * 6;
+
+      if (hit(it)){
+        items.splice(i, 1);
+        if (it.type === 'cart'){
+          score++; scoreEl.textContent = score;
+          if (score >= TARGET) win();
+        } else {
+          lives--; livesEl.textContent = Math.max(0, lives); flash = 1;
+          if (lives <= 0) gameOver();
+        }
+        continue;
+      }
+      if (it.y > H + 16) items.splice(i, 1);
+    }
+  }
+
+  function saveBest(){
+    if (score > best){
+      best = score; bestEl.textContent = best;
+      try { localStorage.setItem('arcade404.best', String(best)); } catch(e){}
+    }
+  }
+  function gameOver(){ state = STATE.OVER; saveBest(); }
+  function win(){
+    state = STATE.WIN; saveBest();
+    homeBtn.classList.add('found');
+    homeBtn.textContent = 'TAKE THE PAGE HOME';
+  }
+
+  // ---------- drawing ----------
+  function px(x,y,w,h,color){ ctx.fillStyle = color; ctx.fillRect(x|0, y|0, w, h); }
+
+  function drawCart(){
+    const x = cart.x - cart.w/2, y = cart.y;
+    px(x, y, cart.w, cart.h, '#0d2f07');
+    px(x, y, cart.w, 3, C.green);
+    px(x + 4, y + 6, cart.w - 8, 5, C.dimGreen);
+    px(x - 2, y + cart.h - 3, cart.w + 4, 3, C.green);
+  }
+
+  function drawItem(it){
+    if (it.type === 'cart'){
+      const bob = Math.sin(it.wob) * 1.5;
+      px(it.x - 8, it.y + bob - 7, 16, 14, C.cyan);
+      px(it.x - 5, it.y + bob - 4, 10, 5, '#020402');
+      px(it.x - 8, it.y + bob + 5, 16, 2, '#0a6f86');
+    } else {
+      ctx.save();
+      ctx.font = "12px 'Press Start 2P', monospace";
+      ctx.textAlign = 'center';
+      ctx.fillStyle = C.red;
+      ctx.shadowColor = C.red; ctx.shadowBlur = 8;
+      ctx.fillText('404', it.x + Math.sin(it.wob) * 2, it.y + 6);
+      ctx.restore();
+    }
+  }
+
+  function centerText(lines, gap){
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.shadowColor = C.green; ctx.shadowBlur = 8;
+    let y = H/2 - ((lines.length - 1) * gap) / 2;
+    lines.forEach(l => {
+      ctx.font = (l.size || 10) + "px 'Press Start 2P', monospace";
+      ctx.fillStyle = l.color || C.green;
+      ctx.fillText(l.t, W/2, y);
+      y += gap;
+    });
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.fillStyle = '#020402';
+    ctx.fillRect(0, 0, W, H);
+
+    // faint back grid
+    ctx.strokeStyle = 'rgba(57,255,20,.07)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 23){ ctx.beginPath(); ctx.moveTo(x+.5, 0); ctx.lineTo(x+.5, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 23){ ctx.beginPath(); ctx.moveTo(0, y+.5); ctx.lineTo(W, y+.5); ctx.stroke(); }
+
+    if (state === STATE.PLAY || state === STATE.OVER || state === STATE.WIN){
+      items.forEach(drawItem);
+      if (state !== STATE.OVER) drawCart();
+    }
+
+    if (flash > 0){
+      ctx.fillStyle = 'rgba(255,59,92,' + (flash * 0.28).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    if (state === STATE.READY){
+      centerText([
+        { t:'LOOSE CARTRIDGES DETECTED', size:10, color:C.green },
+        { t:'catch 5 to find your page', size:8, color:C.dimGreen },
+        { t:'dodge the dead links', size:8, color:C.red },
+        { t:'PRESS SPACE OR TAP', size:9, color:C.amber }
+      ], 26);
+    } else if (state === STATE.OVER){
+      centerText([
+        { t:'ALL LINKS BROKEN', size:12, color:C.red },
+        { t:'cartridges recovered: ' + score, size:8, color:C.dimGreen },
+        { t:'PRESS SPACE TO RETRY', size:9, color:C.amber }
+      ], 28);
+    } else if (state === STATE.WIN){
+      centerText([
+        { t:'PAGE RECOVERED', size:12, color:C.cyan },
+        { t:'the exit below is lit', size:8, color:C.dimGreen },
+        { t:'PRESS SPACE TO PLAY AGAIN', size:8, color:C.amber }
+      ], 28);
+    }
+  }
+
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---------- input ----------
+  function start(){
+    if (state === STATE.PLAY) return;
+    reset();
+  }
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a'){ keys.left = true; e.preventDefault(); }
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd'){ keys.right = true; e.preventDefault(); }
+    if (e.key === ' ' || e.code === 'Space'){ start(); e.preventDefault(); }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') keys.right = false;
+  });
+  window.addEventListener('blur', () => { keys.left = keys.right = false; });
+
+  let dragging = false;
+  function pointerX(e){
+    const r = cv.getBoundingClientRect();
+    return (e.clientX - r.left) * (W / r.width);
+  }
+  cv.addEventListener('pointerdown', e => {
+    cv.focus();
+    if (state !== STATE.PLAY){ start(); return; }
+    dragging = true;
+    cv.setPointerCapture(e.pointerId);
+    cart.x = pointerX(e);
+    e.preventDefault();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const nx = pointerX(e);
+    cart.vx = (nx - cart.x) * 8;
+    cart.x = nx;
+    e.preventDefault();
+  });
+  function endDrag(e){
+    if (!dragging) return;
+    dragging = false;
+    try { cv.releasePointerCapture(e.pointerId); } catch(err){}
+  }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+})();
+</script>
+</body>
+</html>
