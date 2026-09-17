@@ -474,8 +474,12 @@
   #fullscreen-btn:hover{ border-color:#eae6ff; }
   body.game-playing #fullscreen-btn{ top:244px; opacity:.22; }
   body.game-playing #fullscreen-btn:hover{ opacity:1; }
-  /* while fullscreen the button hides itself; Esc or F11 brings it back */
-  body.is-fullscreen #fullscreen-btn{ display:none !important; }
+  /* while fullscreen the button hides itself; Esc or F11 brings it back.
+     Mobile has no such key, so on a touch device the button stays put and
+     relabels itself as an exit control instead (see .is-exit below). */
+  body.is-fullscreen:not(.mobile-mode) #fullscreen-btn{ display:none !important; }
+  #fullscreen-btn.is-exit{ color:#ff6a6a; border-color:#ff6a6a; }
+  #fullscreen-btn.is-exit:hover{ border-color:#ff9a9a; }
 
   /* ---------- embedded-copy notice ---------- */
   #embed-banner{
@@ -506,6 +510,55 @@
     #embed-banner{ max-width:78vw; padding:7px 9px; }
     #embed-banner .embed-text{ font-size:9px; }
     #embed-banner a{ font-size:8px; }
+  }
+
+  /* ---------- cabinet switch: nav buttons + swoop transition fx ---------- */
+  .cab-nav-btn{
+    position:fixed; top:50%; transform:translateY(-50%); z-index:41;
+    display:none; align-items:center; gap:9px;
+    font-family:'Press Start 2P', monospace; font-size:.4rem; color:var(--nav-accent,#eae6ff);
+    background:rgba(10,6,18,.58); border:2px solid var(--nav-accent,#7a6aa8); border-radius:7px;
+    padding:13px 11px; cursor:pointer; letter-spacing:.02em; line-height:1.5;
+    box-shadow:0 0 14px rgba(0,0,0,.5);
+    transition:opacity .2s, background .2s, transform .15s;
+    opacity:.5;
+  }
+  .cab-nav-btn:hover{ opacity:1; background:rgba(22,11,32,.82); }
+  .cab-nav-btn:active{ transform:translateY(-50%) scale(.93); }
+  #cab-prev-btn{ left:14px; }
+  #cab-next-btn{ right:14px; flex-direction:row-reverse; }
+  .cab-nav-arrow{ font-size:.95rem; flex-shrink:0; }
+  .cab-nav-label{ max-width:104px; text-align:left; }
+  #cab-next-btn .cab-nav-label{ text-align:right; }
+  body.game-playing .cab-nav-btn{ display:none !important; }
+  @media(max-width:640px){
+    .cab-nav-btn{ font-size:.34rem; padding:11px 9px; gap:6px; }
+    .cab-nav-label{ max-width:64px; }
+  }
+
+  #switch-flash{
+    position:fixed; inset:-25% -25%; z-index:45; pointer-events:none;
+    background:repeating-linear-gradient(100deg,
+      rgba(255,255,255,0) 0px, rgba(255,255,255,0) 24px,
+      rgba(255,255,255,.5) 25px, rgba(255,255,255,0) 28px);
+    opacity:0; mix-blend-mode:screen;
+  }
+  #switch-flash.play{ animation:switchFlash .6s cubic-bezier(.2,.8,.2,1); }
+  @keyframes switchFlash{
+    0%{ opacity:0; transform:scaleX(2.4) skewX(-16deg) translateX(-10%); }
+    16%{ opacity:.9; }
+    55%{ opacity:.3; transform:scaleX(1.05) skewX(-16deg) translateX(4%); }
+    100%{ opacity:0; transform:scaleX(1) skewX(-16deg) translateX(10%); }
+  }
+  #switch-pulse{
+    position:fixed; inset:0; z-index:44; pointer-events:none; opacity:0;
+    background:radial-gradient(circle at 50% 55%, var(--pulse-color,#fff) 0%, transparent 60%);
+    mix-blend-mode:screen;
+  }
+  #switch-pulse.play{ animation:switchPulse .5s ease-out; }
+  @keyframes switchPulse{
+    0%{ opacity:.7; }
+    100%{ opacity:0; }
   }
 
 </style>
@@ -555,11 +608,24 @@
   <div id="room-prompt">CLICK THE ARCADE CABINET<br><span>or press ENTER</span></div>
 </div>
 
+<div id="switch-flash"></div>
+<div id="switch-pulse"></div>
+
+<button id="cab-prev-btn" class="cab-nav-btn" aria-label="previous cabinet">
+  <span class="cab-nav-arrow">&#10094;</span>
+  <span class="cab-nav-label" id="cab-prev-label">PREV</span>
+</button>
+<button id="cab-next-btn" class="cab-nav-btn" aria-label="next cabinet">
+  <span class="cab-nav-label" id="cab-next-label">NEXT</span>
+  <span class="cab-nav-arrow">&#10095;</span>
+</button>
+
 <div id="move-pad">
   <div id="move-pad-outer"><div id="move-pad-nub"></div></div>
 </div>
 <button id="jump-btn">JUMP</button>
 <button id="arcade-exit-btn">&uarr; EXIT</button>
+
 <div id="ticket-display">&#127883; 0</div>
 <button id="settings-btn">&#9881; SETTINGS</button>
 <button id="leaderboard-btn">&#127942; STATS</button>
@@ -773,27 +839,13 @@
         { title: "Gravity Simulator", file: "games/GravitySim.html" },
       ]
     },
-    {
-      id:'horror', title:'HORROR', tagline:'LIGHTS OUT',
-      accent:0xff1744, x:-5.3, z:-2.4, rotY:Math.PI/2, where:'LEFT WALL',
-      games:[
-        { title: "Buckshot Roulette", file: "https://ubghyper.github.io/GameList.github.io/Buckshot-Roulete/" },
-        { title: "MiSide",            file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
-        { title: "R.E.P.O.",          file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
-        { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" },
-      ]
-    },
-    {
-      id:'creative', title:'CREATIVE', tagline:'MAKE SOMETHING',
-      accent:0xffe600, x:-5.3, z:0.2, rotY:Math.PI/2, where:'LEFT WALL',
-      games:[
-        { title: "MS Paint",          file: "games/Paint.html" },
-        { title: "Piano",             file: "games/Piano.html" },
-        { title: "Music Player",      file: "games/MusicPlayer.html" },
-        { title: "Windows 95",        file: "games/Win95.html" },
-        { title: "Terminal",          file: "games/Terminal.html" },
-      ]
-    },
+    // The next four machines are ordered to walk the room's perimeter —
+    // right wall back-to-front, then a single hop across the open front of
+    // the room, then left wall front-to-back — rather than jumping corner to
+    // corner. Cycling with the nav buttons / arrow keys / joystick swipe
+    // follows this exact array order, so this is also what fixes the
+    // zig-zag switching used to do (it used to visit both walls in the
+    // wrong sequence, crossing the whole floor three times instead of once).
     {
       id:'toybox', title:'TOY BOX', tagline:'ODDS AND ENDS',
       accent:0xb060e0, x:5.3, z:-2.4, rotY:-Math.PI/2, where:'RIGHT WALL',
@@ -812,6 +864,27 @@
         { title: "Quenq",             file: "https://quenq.com" },
         { title: "VIP Site",          file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
         { title: "Credits",           file: "games/Credits.html", pinBottom: true },
+      ]
+    },
+    {
+      id:'creative', title:'CREATIVE', tagline:'MAKE SOMETHING',
+      accent:0xffe600, x:-5.3, z:0.2, rotY:Math.PI/2, where:'LEFT WALL',
+      games:[
+        { title: "MS Paint",          file: "games/Paint.html" },
+        { title: "Piano",             file: "games/Piano.html" },
+        { title: "Music Player",      file: "games/MusicPlayer.html" },
+        { title: "Windows 95",        file: "games/Win95.html" },
+        { title: "Terminal",          file: "games/Terminal.html" },
+      ]
+    },
+    {
+      id:'horror', title:'HORROR', tagline:'LIGHTS OUT',
+      accent:0xff1744, x:-5.3, z:-2.4, rotY:Math.PI/2, where:'LEFT WALL',
+      games:[
+        { title: "Buckshot Roulette", file: "https://ubghyper.github.io/GameList.github.io/Buckshot-Roulete/" },
+        { title: "MiSide",            file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
+        { title: "R.E.P.O.",          file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
+        { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" },
       ]
     },
   ];
@@ -895,6 +968,8 @@
     if(!isMobile) resetPadIfNeeded();
     document.getElementById('crosshair-hint').innerHTML =
       phase === PHASE_ROOM ? roomHintText() : arcadeHintText();
+    document.body.classList.toggle('mobile-mode', isMobile);
+    if (typeof refreshFullscreenBtn === 'function') refreshFullscreenBtn();
   }
 
   // =====================================================================
@@ -967,6 +1042,15 @@
     function click(){ tone(880, 0.05, 'square', sfxGain, 0.18, 0); }
     function launchSfx(){ tone(523.25, 0.1, 'square', sfxGain, 0.28, 0); tone(783.99, 0.14, 'square', sfxGain, 0.28, 0.09); }
     function whoosh(){ noiseBurst(0.35, 700, sfxGain, 0.14); }
+    // a quick rising three-note sweep plus a short bright noise tail — used
+    // when swooping from one cabinet to the next, so it reads as "zipping
+    // past" rather than the plainer whoosh used for sitting down/standing up
+    function dash(){
+      tone(300, 0.09, 'square', sfxGain, 0.22, 0);
+      tone(480, 0.09, 'square', sfxGain, 0.24, 0.06);
+      tone(720, 0.12, 'square', sfxGain, 0.22, 0.12);
+      noiseBurst(0.3, 950, sfxGain, 0.1);
+    }
     function powerOn(){
       if (!ctx) return;
       const t0 = ctx.currentTime;
@@ -1064,7 +1148,7 @@
       startMusic();
     }
 
-    return { footstep, jump: jumpSfx, land, click, launch: launchSfx, whoosh, powerOn, error: errorSfx, setMood,
+    return { footstep, jump: jumpSfx, land, click, launch: launchSfx, whoosh, dash, powerOn, error: errorSfx, setMood,
              setMuted, isMuted, setVolume, getVolume, unlock };
   })();
 
@@ -2062,6 +2146,13 @@
     let padTouchId = null;
     const PAD_RADIUS = 46;
     const PAD_DEADZONE = 12;
+    // arcade mode uses the same pad for a discrete left/right swipe instead
+    // of continuous movement: cross this threshold to fire one switch, then
+    // the pad has to come back near center before it can fire again — a
+    // deliberate "flick" rather than movement that never stops
+    const SWIPE_THRESHOLD = 34;
+    const SWIPE_REARM = 10;
+    let padSwipeFired = false;
 
     function setPadDirection(dx, dy){
       moveKeys.d = dx > PAD_DEADZONE;
@@ -2073,10 +2164,12 @@
       moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
       movePadNub.style.transform = 'translate(0px,0px)';
       padTouchId = null;
+      padSwipeFired = false;
     }
 
     movePadOuter.addEventListener('pointerdown', e => {
       padTouchId = e.pointerId;
+      padSwipeFired = false;
       movePadOuter.setPointerCapture(e.pointerId);
       e.preventDefault();
     });
@@ -2087,8 +2180,18 @@
       let dx = e.clientX - cx, dy = e.clientY - cy;
       const dist = Math.hypot(dx, dy);
       if (dist > PAD_RADIUS) { dx = dx / dist * PAD_RADIUS; dy = dy / dist * PAD_RADIUS; }
-      movePadNub.style.transform = `translate(${dx}px,${dy}px)`;
-      setPadDirection(dx, dy);
+
+      if (phase === PHASE_ARCADE) {
+        // horizontal-only nub feedback here, so the pad visually hints
+        // "left/right only" while you're sitting at a cabinet
+        movePadNub.style.transform = `translate(${dx}px,0px)`;
+        if (Math.abs(dx) < SWIPE_REARM) padSwipeFired = false;
+        if (!padSwipeFired && dx > SWIPE_THRESHOLD) { padSwipeFired = true; switchCabinet(1); }
+        else if (!padSwipeFired && dx < -SWIPE_THRESHOLD) { padSwipeFired = true; switchCabinet(-1); }
+      } else {
+        movePadNub.style.transform = `translate(${dx}px,${dy}px)`;
+        setPadDirection(dx, dy);
+      }
       e.preventDefault();
     });
     movePadOuter.addEventListener('pointerup', e => {
@@ -2115,14 +2218,21 @@
   // resetPadIfNeeded() unconditionally, which in computer mode — where
   // `inRoom` is always false — zeroed the WASD keys on every single frame and
   // made walking feel broken.
-  let padShown = null, exitShown = null;
+  let padShown = null, jumpShown = null, exitShown = null;
   function updateMobileControlsVisibility(){
     const inRoom = isMobile && phase === PHASE_ROOM && !gameOpen && !cameraAnimating;
-    if (inRoom !== padShown) {
-      padShown = inRoom;
-      movePad.style.display = inRoom ? 'block' : 'none';
+    // the pad also does double duty as the left/right cabinet swipe while
+    // sitting at a machine, so it stays up through arcade mode too
+    const inArcadeIdle = isMobile && phase === PHASE_ARCADE && !!activeCab && !gameOpen && !cameraAnimating;
+    const showPad = inRoom || inArcadeIdle;
+    if (showPad !== padShown) {
+      padShown = showPad;
+      movePad.style.display = showPad ? 'block' : 'none';
+      if (!showPad) resetPadIfNeeded();
+    }
+    if (inRoom !== jumpShown) {
+      jumpShown = inRoom;
       jumpBtn.style.display = inRoom ? 'block' : 'none';
-      if (!inRoom && isMobile) resetPadIfNeeded();
     }
 
     const inArcade = isMobile && phase === PHASE_ARCADE && !gameOpen && !cameraAnimating;
@@ -2130,6 +2240,8 @@
       exitShown = inArcade;
       document.getElementById('arcade-exit-btn').style.display = inArcade ? 'block' : 'none';
     }
+
+    updateCabNavButtons();
   }
   function resetPadIfNeeded(){
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
@@ -2289,6 +2401,124 @@
     });
     saveSession({phase:PHASE_ROOM, cabinetId:null});
   }
+
+  // =====================================================================
+  // Cabinet switching — a Splatoon-shop-style swoop between machines
+  // instead of an instant cut. The camera pulls back off the current
+  // screen, arcs up over the room on a bezier curve, and dives into the
+  // next cabinet's screen, with a quick FOV punch and a screen-space
+  // flash/pulse timed to the launch. Triggered by the on-screen nav
+  // buttons, the left/right arrow keys, or a left/right swipe on the
+  // mobile movement pad while sitting at a cabinet.
+  // =====================================================================
+  const cabPrevBtn = document.getElementById('cab-prev-btn');
+  const cabNextBtn = document.getElementById('cab-next-btn');
+  const cabPrevLabel = document.getElementById('cab-prev-label');
+  const cabNextLabel = document.getElementById('cab-next-label');
+  const switchFlashEl = document.getElementById('switch-flash');
+  const switchPulseEl = document.getElementById('switch-pulse');
+
+  function switchCabinet(dir){
+    if (phase !== PHASE_ARCADE || !activeCab || gameOpen || cameraAnimating) return;
+    if (cabinets.length < 2) return;
+    const i = cabinets.indexOf(activeCab);
+    const toCab = cabinets[(i + dir + cabinets.length) % cabinets.length];
+    cabinetSwoopTo(toCab);
+  }
+
+  function triggerSwitchFlash(accent){
+    switchFlashEl.classList.remove('play'); void switchFlashEl.offsetWidth; // restart the CSS animation
+    switchFlashEl.classList.add('play');
+    switchPulseEl.style.setProperty('--pulse-color', hexStr(accent));
+    switchPulseEl.classList.remove('play'); void switchPulseEl.offsetWidth;
+    switchPulseEl.classList.add('play');
+  }
+
+  function cabinetSwoopTo(toCab){
+    const fromCab = activeCab;
+    const startPos = camera.position.clone();
+    const startTarget = controls.target.clone();
+
+    toCab.screenMesh.getWorldPosition(_worldPos);
+    toCab.screenMesh.getWorldQuaternion(_worldQuat);
+    const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
+    const endPos = _worldPos.clone().addScaledVector(forward, 1.65).add(new THREE.Vector3(0, -0.18, 0));
+    const endTarget = _worldPos.clone();
+
+    // one elevated waypoint, roughly above the midpoint between the two
+    // machines, is enough to turn a straight cut into a proper aerial swoop
+    const mid = fromCab.group.position.clone().lerp(toCab.group.position, 0.5);
+    const viaPos = mid.clone().add(new THREE.Vector3(0, 3.1, 1.6));
+    const viaTarget = mid.clone().add(new THREE.Vector3(0, 1.0, 0));
+
+    activeCab = toCab;
+    AudioEngine.setMood(toCab.id);
+    AudioEngine.dash();
+    document.getElementById('crosshair-hint').innerHTML = arcadeHintText();
+    triggerSwitchFlash(toCab.accent);
+    saveSession({phase:PHASE_ARCADE, cabinetId:toCab.id});
+
+    cameraAnimating = true;
+    controls.enabled = false;
+    const baseFov = camera.fov;
+    const duration = 780;
+    const startTime = performance.now();
+
+    function step(now){
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // easeInOutQuad
+      const u = 1 - ease;
+      // quadratic bezier through the elevated waypoint — position and lookAt
+      // both ride the same curve so the view stays coherent mid-flight
+      camera.position.set(
+        u*u*startPos.x + 2*u*ease*viaPos.x + ease*ease*endPos.x,
+        u*u*startPos.y + 2*u*ease*viaPos.y + ease*ease*endPos.y,
+        u*u*startPos.z + 2*u*ease*viaPos.z + ease*ease*endPos.z
+      );
+      controls.target.set(
+        u*u*startTarget.x + 2*u*ease*viaTarget.x + ease*ease*endTarget.x,
+        u*u*startTarget.y + 2*u*ease*viaTarget.y + ease*ease*endTarget.y,
+        u*u*startTarget.z + 2*u*ease*viaTarget.z + ease*ease*endTarget.z
+      );
+      // a brief FOV widen sells the sense of speed through the middle of the arc
+      camera.fov = baseFov + Math.sin(t * Math.PI) * 13;
+      camera.updateProjectionMatrix();
+      controls.update();
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        camera.fov = baseFov;
+        camera.updateProjectionMatrix();
+        cameraAnimating = false;
+        controls.enabled = true;
+        controls.enableZoom = false;
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // keeps the two nav buttons' labels/colors in sync with whichever cabinet
+  // is active, and shows/hides them as arcade state changes. Cheap to call
+  // every frame since it bails out immediately when nothing has changed.
+  let cabNavKey = null;
+  function updateCabNavButtons(){
+    const show = phase === PHASE_ARCADE && !!activeCab && !gameOpen && !cameraAnimating && cabinets.length > 1;
+    const key = show ? activeCab.id : 'hidden';
+    if (key === cabNavKey) return;
+    cabNavKey = key;
+    cabPrevBtn.style.display = show ? 'flex' : 'none';
+    cabNextBtn.style.display = show ? 'flex' : 'none';
+    if (!show) return;
+    const i = cabinets.indexOf(activeCab);
+    const prev = cabinets[(i - 1 + cabinets.length) % cabinets.length];
+    const next = cabinets[(i + 1) % cabinets.length];
+    cabPrevLabel.textContent = prev.title;
+    cabNextLabel.textContent = next.title;
+    cabPrevBtn.style.setProperty('--nav-accent', hexStr(prev.accent));
+    cabNextBtn.style.setProperty('--nav-accent', hexStr(next.accent));
+  }
+  cabPrevBtn.addEventListener('click', () => switchCabinet(-1));
+  cabNextBtn.addEventListener('click', () => switchCabinet(1));
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -2540,12 +2770,11 @@
         drawMenu(activeCab);
         saveSession({phase:PHASE_ARCADE});
         e.preventDefault();
-      } else if (k === 'ArrowLeft' || k === 'ArrowRight') {
-        // hop to the neighbouring cabinet without standing up
-        const i = cabinets.indexOf(activeCab);
-        const next = cabinets[(i + (k === 'ArrowRight' ? 1 : cabinets.length - 1)) % cabinets.length];
-        AudioEngine.whoosh();
-        enterArcadeView(next);
+      } else if (k === 'ArrowLeft') {
+        switchCabinet(-1);
+        e.preventDefault();
+      } else if (k === 'ArrowRight') {
+        switchCabinet(1);
         e.preventDefault();
       } else if (k === 'Enter' || k === ' ') {
         launchGame(activeCab, activeCab.selected);
@@ -2965,12 +3194,14 @@
     if (AudioEngine.isMuted()) { AudioEngine.setMuted(false); refreshMuteBtn(); }
   });
 
-  // ---- fullscreen. The button removes itself once you're fullscreen (Esc or
-  // F11 is the way out) and reappears the moment you leave, including when
-  // the browser exits fullscreen on its own. Inside an iframe without the
-  // `allowfullscreen` attribute the request is refused, so we hide the button
-  // rather than leave a control that does nothing.
+  // ---- fullscreen. On desktop the button removes itself once you're
+  // fullscreen (Esc or F11 is the way out) and reappears the moment you
+  // leave. Phones have no Esc key, so on a touch device the button instead
+  // stays put and relabels itself into an explicit exit control. Inside an
+  // iframe without the `allowfullscreen` attribute the request is refused,
+  // so the button hides entirely rather than sitting there doing nothing.
   const fullscreenBtn = document.getElementById('fullscreen-btn');
+  document.body.classList.toggle('mobile-mode', isMobile);
   function fullscreenElement(){
     return document.fullscreenElement || document.webkitFullscreenElement ||
            document.mozFullScreenElement || document.msFullscreenElement || null;
@@ -2986,7 +3217,20 @@
   function refreshFullscreenBtn(){
     const on = !!fullscreenElement();
     document.body.classList.toggle('is-fullscreen', on);
-    fullscreenBtn.style.display = (on || !fullscreenSupported()) ? 'none' : 'block';
+    if (!fullscreenSupported()) {
+      fullscreenBtn.style.display = 'none';
+      return;
+    }
+    if (isMobile) {
+      // no reliable hardware/gesture way out on a phone, so keep a visible exit control
+      fullscreenBtn.style.display = 'block';
+      fullscreenBtn.innerHTML = on ? '&#10005; EXIT FULLSCREEN' : '&#9974; FULLSCREEN';
+      fullscreenBtn.classList.toggle('is-exit', on);
+    } else {
+      fullscreenBtn.style.display = on ? 'none' : 'block';
+      fullscreenBtn.innerHTML = '&#9974; FULLSCREEN';
+      fullscreenBtn.classList.remove('is-exit');
+    }
   }
   function enterFullscreen(){
     const el = document.documentElement;
@@ -2998,9 +3242,19 @@
       if (r && r.catch) r.catch(() => { refreshFullscreenBtn(); });
     } catch(e) { refreshFullscreenBtn(); }
   }
+  function exitFullscreen(){
+    const exit = document.exitFullscreen || document.webkitExitFullscreen ||
+                 document.mozCancelFullScreen || document.msExitFullscreen;
+    if (!exit) return;
+    try {
+      const r = exit.call(document);
+      if (r && r.catch) r.catch(() => { refreshFullscreenBtn(); });
+    } catch(e) { refreshFullscreenBtn(); }
+  }
   fullscreenBtn.addEventListener('click', () => {
     AudioEngine.click();
-    if (!fullscreenElement()) enterFullscreen();
+    if (fullscreenElement()) exitFullscreen();
+    else enterFullscreen();
     refreshFullscreenBtn();
   });
   ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
@@ -3008,6 +3262,7 @@
   // some browsers exit fullscreen without firing a change event we catch first
   window.addEventListener('resize', refreshFullscreenBtn);
   refreshFullscreenBtn();
+
 
   function reveal(){
     document.getElementById('fallback').style.display = 'none';
@@ -3034,4 +3289,4 @@
 })();
 </script>
 </body>
-  </html>
+</html>
