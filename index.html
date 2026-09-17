@@ -463,6 +463,51 @@
   .map-row .map-where{font:10px monospace;color:#6f668c;flex-shrink:0;min-width:74px;text-align:right;}
   #map-close-btn{display:block;margin:0 auto;font-family:'Press Start 2P',monospace;font-size:.5rem;padding:10px 18px;background:#00e5a0;color:#050505;border:none;border-radius:4px;cursor:pointer;}
 
+  /* ---------- fullscreen ---------- */
+  #fullscreen-btn{
+    position:fixed; right:14px; top:198px; z-index:52;
+    font-family:'Press Start 2P', monospace; font-size:.5rem;
+    color:#eae6ff; background:rgba(10,6,18,.78); border:2px solid #7a6aa8;
+    border-radius:4px; padding:8px 10px; cursor:pointer;
+    transition:opacity .25s, top .25s;
+  }
+  #fullscreen-btn:hover{ border-color:#eae6ff; }
+  body.game-playing #fullscreen-btn{ top:244px; opacity:.22; }
+  body.game-playing #fullscreen-btn:hover{ opacity:1; }
+  /* while fullscreen the button hides itself; Esc or F11 brings it back */
+  body.is-fullscreen #fullscreen-btn{ display:none !important; }
+
+  /* ---------- embedded-copy notice ---------- */
+  #embed-banner{
+    position:fixed; left:14px; top:14px; z-index:55;
+    display:none; align-items:center; gap:10px; max-width:min(420px,72vw);
+    padding:9px 11px; border:2px solid #ffe600; border-radius:4px;
+    background:rgba(10,6,18,.9); box-shadow:0 0 14px rgba(255,230,0,.25);
+  }
+  body.embedded #embed-banner{ display:flex; }
+  #embed-banner .embed-text{
+    font:10px/1.5 monospace; color:#8a7fb0;
+  }
+  #embed-banner a{
+    font:9px 'Press Start 2P', monospace; color:#ffe600; text-decoration:none;
+    display:block; margin-top:5px; line-height:1.5;
+  }
+  #embed-banner a:hover{ text-decoration:underline; }
+  #embed-dismiss{
+    flex-shrink:0; align-self:flex-start; cursor:pointer;
+    font:11px monospace; color:#8a7fb0; background:none; border:0; padding:2px 4px;
+  }
+  #embed-dismiss:hover{ color:#eae6ff; }
+  /* keep the mobile arcade exit button clear of the banner */
+  body.embedded #arcade-exit-btn{ top:78px; }
+  /* a game overlay puts its own BACK button top-left, so stand the banner down */
+  body.embedded.game-playing #embed-banner{ display:none; }
+  @media (max-width:600px){
+    #embed-banner{ max-width:78vw; padding:7px 9px; }
+    #embed-banner .embed-text{ font-size:9px; }
+    #embed-banner a{ font-size:8px; }
+  }
+
 </style>
 </head>
 <body>
@@ -520,6 +565,47 @@
 <button id="leaderboard-btn">&#127942; STATS</button>
 <button id="feedback-btn">&#128172; FEEDBACK</button>
 <button id="map-btn">&#128506; FLOOR</button>
+<button id="fullscreen-btn">&#9974; FULLSCREEN</button>
+
+<div id="embed-banner">
+  <div class="embed-text">
+    This arcade is embedded in another page.
+    <a href="https://syntax-error-games.github.io/Arcade-Cabinet/" target="_blank" rel="noopener">OPEN THE REAL ARCADE &nearr;</a>
+  </div>
+  <button id="embed-dismiss" title="hide this notice" aria-label="hide this notice">&#10005;</button>
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Embedded-copy check. Framing this page is allowed — nothing here breaks
+// out of the frame or redirects. It just adds a small banner pointing at
+// the canonical site, since an embed usually strips the URL bar and some
+// browser features (fullscreen, saved sessions) behave differently inside
+// a frame. This lives outside the main script so it still appears if the
+// 3D scene or three.js itself fails to load.
+// ---------------------------------------------------------------------
+(function(){
+  var embedded = false;
+  try { embedded = (window.self !== window.top); }
+  catch (e) { embedded = true; } // cross-origin parent: the check itself throws
+  if (!embedded) return;
+
+  document.body.classList.add('embedded');
+
+  var dismiss = document.getElementById('embed-dismiss');
+  if (dismiss) {
+    dismiss.addEventListener('click', function(){
+      document.body.classList.remove('embedded');
+      try { sessionStorage.setItem('neonArcade.embedNoticeHidden', '1'); } catch (e) {}
+    });
+  }
+  try {
+    if (sessionStorage.getItem('neonArcade.embedNoticeHidden') === '1') {
+      document.body.classList.remove('embedded');
+    }
+  } catch (e) {}
+})();
+</script>
 
 <div id="map-overlay">
   <div class="panel">
@@ -2024,14 +2110,26 @@
     });
   }
 
+  // This runs every frame, so it must only touch the DOM (and only clear the
+  // movement pad) when something actually changed. It used to call
+  // resetPadIfNeeded() unconditionally, which in computer mode — where
+  // `inRoom` is always false — zeroed the WASD keys on every single frame and
+  // made walking feel broken.
+  let padShown = null, exitShown = null;
   function updateMobileControlsVisibility(){
     const inRoom = isMobile && phase === PHASE_ROOM && !gameOpen && !cameraAnimating;
-    movePad.style.display = inRoom ? 'block' : 'none';
-    jumpBtn.style.display = inRoom ? 'block' : 'none';
-    if (!inRoom) resetPadIfNeeded();
+    if (inRoom !== padShown) {
+      padShown = inRoom;
+      movePad.style.display = inRoom ? 'block' : 'none';
+      jumpBtn.style.display = inRoom ? 'block' : 'none';
+      if (!inRoom && isMobile) resetPadIfNeeded();
+    }
 
     const inArcade = isMobile && phase === PHASE_ARCADE && !gameOpen && !cameraAnimating;
-    document.getElementById('arcade-exit-btn').style.display = inArcade ? 'block' : 'none';
+    if (inArcade !== exitShown) {
+      exitShown = inArcade;
+      document.getElementById('arcade-exit-btn').style.display = inArcade ? 'block' : 'none';
+    }
   }
   function resetPadIfNeeded(){
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
@@ -2867,6 +2965,50 @@
     if (AudioEngine.isMuted()) { AudioEngine.setMuted(false); refreshMuteBtn(); }
   });
 
+  // ---- fullscreen. The button removes itself once you're fullscreen (Esc or
+  // F11 is the way out) and reappears the moment you leave, including when
+  // the browser exits fullscreen on its own. Inside an iframe without the
+  // `allowfullscreen` attribute the request is refused, so we hide the button
+  // rather than leave a control that does nothing.
+  const fullscreenBtn = document.getElementById('fullscreen-btn');
+  function fullscreenElement(){
+    return document.fullscreenElement || document.webkitFullscreenElement ||
+           document.mozFullScreenElement || document.msFullscreenElement || null;
+  }
+  function fullscreenSupported(){
+    const el = document.documentElement;
+    const has = !!(el.requestFullscreen || el.webkitRequestFullscreen ||
+                   el.mozRequestFullScreen || el.msRequestFullscreen);
+    // document.fullscreenEnabled is false when a parent frame withholds permission
+    const allowed = (document.fullscreenEnabled !== false) && (document.webkitFullscreenEnabled !== false);
+    return has && allowed;
+  }
+  function refreshFullscreenBtn(){
+    const on = !!fullscreenElement();
+    document.body.classList.toggle('is-fullscreen', on);
+    fullscreenBtn.style.display = (on || !fullscreenSupported()) ? 'none' : 'block';
+  }
+  function enterFullscreen(){
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen ||
+                el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (!req) return;
+    try {
+      const r = req.call(el);
+      if (r && r.catch) r.catch(() => { refreshFullscreenBtn(); });
+    } catch(e) { refreshFullscreenBtn(); }
+  }
+  fullscreenBtn.addEventListener('click', () => {
+    AudioEngine.click();
+    if (!fullscreenElement()) enterFullscreen();
+    refreshFullscreenBtn();
+  });
+  ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
+    .forEach(ev => document.addEventListener(ev, refreshFullscreenBtn));
+  // some browsers exit fullscreen without firing a change event we catch first
+  window.addEventListener('resize', refreshFullscreenBtn);
+  refreshFullscreenBtn();
+
   function reveal(){
     document.getElementById('fallback').style.display = 'none';
     appEl.style.display = 'block';
@@ -2892,4 +3034,4 @@
 })();
 </script>
 </body>
-</html>
+  </html>
