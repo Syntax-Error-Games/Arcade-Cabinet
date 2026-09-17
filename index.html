@@ -32,6 +32,8 @@
     justify-content:center;
     align-items:center;
     background:radial-gradient(ellipse at center, #1a0e2e 0%, #0a0612 70%);
+    overflow:auto;
+    padding:24px 12px;
   }
   #fallback .panel{
     text-align:center;
@@ -40,7 +42,8 @@
     background:#140a24;
     border:2px solid var(--magenta);
     box-shadow:0 0 25px rgba(255,43,214,.4), inset 0 0 20px rgba(34,224,255,.08);
-    width:320px;
+    width:340px;
+    margin:auto;
   }
   #fallback h1{
     margin:0 0 24px;
@@ -50,20 +53,30 @@
   }
   #fallback ul{list-style:none;padding:0;margin:0;}
   #fallback li{margin:12px 0;}
+  #fallback .fb-group{margin:0 0 22px;}
+  #fallback .fb-group-name{
+    font-size:.55rem;
+    letter-spacing:.06em;
+    margin:0 0 10px;
+    padding-bottom:7px;
+    border-bottom:1px solid rgba(255,255,255,.12);
+    color:var(--fb-accent,#22e0ff);
+    text-shadow:0 0 8px var(--fb-accent,#22e0ff);
+  }
   #fallback .game-link{
     text-decoration:none;
     color:#0a0612;
-    background:var(--magenta);
+    background:var(--fb-accent,var(--magenta));
     padding:12px 14px;
     border-radius:4px;
     display:block;
     font-family:'Press Start 2P', monospace;
     font-size:.6rem;
     line-height:1.4;
-    transition:background .2s, transform .2s;
+    transition:filter .2s, transform .2s;
   }
   #fallback .game-link:hover{
-    background:var(--cyan);
+    filter:brightness(1.35);
     transform:translateY(-2px);
   }
   #fallback .hint{
@@ -174,6 +187,22 @@
     line-height:1.7;
     text-align:center;
     text-shadow:0 0 8px #39ff14;
+    pointer-events:none;
+  }
+  #floor-guide{
+    position:fixed;
+    left:50%;
+    bottom:150px;
+    transform:translateX(-50%);
+    z-index:19;
+    display:none;
+    padding:8px 14px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(6,3,12,.66);
+    color:#8a7fb0;
+    font-size:.42rem;
+    line-height:1.7;
+    text-align:center;
     pointer-events:none;
   }
   #session-restore{
@@ -294,17 +323,17 @@
   }
   #leaderboard-overlay .panel{
     background:#0a0612; border:2px solid #ffe600; box-shadow:0 0 30px rgba(255,230,0,.35);
-    padding:24px; max-width:420px; width:90vw;
+    padding:24px; max-width:420px; width:90vw; max-height:88vh; overflow:auto;
   }
   #leaderboard-overlay h2{ margin:0 0 6px; color:#ffe600; font-size:.75rem; text-align:center; text-shadow:0 0 8px #ffe600; }
   #leaderboard-overlay .sub{ text-align:center; color:#8a7fb0; font-size:.4rem; margin-bottom:16px; }
   #leaderboard-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
   .stat-row{
-    display:flex; justify-content:space-between; align-items:center;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
     background:#140a24; border:2px solid #3a2860; border-radius:6px; padding:10px 14px;
     font-family:'Press Start 2P', monospace; font-size:.42rem; color:#eae6ff;
   }
-  .stat-row .stat-value{ color:#ffe600; }
+  .stat-row .stat-value{ color:#ffe600; flex-shrink:0; }
   #leaderboard-close-btn{
     display:block; margin:0 auto; font-family:'Press Start 2P', monospace; font-size:.5rem;
     padding:10px 18px; background:#ffe600; color:#050505; border:none; border-radius:4px; cursor:pointer;
@@ -409,6 +438,31 @@
     padding:10px 18px; background:var(--magenta); color:#050505; border:none; border-radius:4px; cursor:pointer;
   }
 
+  /* ---------- floor map (shows where each cabinet is) ---------- */
+  #map-btn{
+    position:fixed; right:14px; top:152px; z-index:52;
+    font-family:'Press Start 2P', monospace; font-size:.5rem;
+    color:#00e5a0; background:rgba(10,6,18,.78); border:2px solid #00e5a0;
+    border-radius:4px; padding:8px 10px; cursor:pointer;
+    transition:opacity .25s, top .25s;
+  }
+  body.game-playing #map-btn{top:198px;opacity:.22;}
+  body.game-playing #map-btn:hover{opacity:1;}
+  #map-overlay{position:fixed;inset:0;z-index:62;display:none;align-items:center;justify-content:center;background:rgba(2,2,4,.92);}
+  #map-overlay .panel{background:#0a0612;border:2px solid #00e5a0;box-shadow:0 0 30px rgba(0,229,160,.3);padding:22px;max-width:520px;width:92vw;max-height:88vh;overflow:auto;}
+  #map-overlay h2{margin:0 0 6px;color:#00e5a0;font-size:.75rem;text-align:center;text-shadow:0 0 8px #00e5a0;}
+  #map-overlay .sub{text-align:center;color:#8a7fb0;font-size:.4rem;margin-bottom:16px;line-height:1.6;}
+  #map-list{display:flex;flex-direction:column;gap:9px;margin-bottom:16px;}
+  .map-row{
+    display:flex;align-items:center;gap:11px;
+    background:#140a24;border:1px solid #3a2860;border-left:4px solid var(--row-accent,#888);
+    border-radius:5px;padding:11px 13px;
+  }
+  .map-row .map-name{font:.45rem 'Press Start 2P',monospace;color:var(--row-accent,#eae6ff);flex:1;}
+  .map-row .map-count{font:10px monospace;color:#8a7fb0;flex-shrink:0;}
+  .map-row .map-where{font:10px monospace;color:#6f668c;flex-shrink:0;min-width:74px;text-align:right;}
+  #map-close-btn{display:block;margin:0 auto;font-family:'Press Start 2P',monospace;font-size:.5rem;padding:10px 18px;background:#00e5a0;color:#050505;border:none;border-radius:4px;cursor:pointer;}
+
 </style>
 </head>
 <body>
@@ -417,31 +471,42 @@
   =====================================================================
   HOW TO ADD MORE GAMES
   =====================================================================
-  Scroll down to the "GAMES" array near the top of the <script> block
-  below and add one line per game, e.g.:
+  Scroll down to the "CABINETS" array near the top of the <script> block
+  below. The arcade is now a room of separate genre cabinets, and each
+  entry in CABINETS is one physical machine:
 
-      { title: "My New Game", file: "games/MyNewGame.html" },
+      {
+        id:'racing', title:'RACING', tagline:'WHEELS & SPEED',
+        accent:0xff2bd6, x:-1.15, z:-5.2, rotY:0,
+        games:[
+          { title:"My New Racer", file:"games/MyNewRacer.html" },
+        ]
+      },
 
-  Add `pinBottom: true` to an entry (like Credits) to keep it glued to
-  the end of the list no matter where you insert it above.
+  To add a game, drop one line into the `games` list of whichever
+  cabinet it belongs to. To add a whole new genre, copy a cabinet block,
+  give it a fresh id/title/accent and a free x/z slot on the floor.
 
-  That's it — the arcade-cabinet screen AND the plain-text fallback
-  list both read from this single array, so nothing else needs to
-  change and the page can never "run out of room" (the CRT menu
-  scrolls automatically once there are more games than fit on screen).
+  Add `pinBottom: true` to a game (like Credits) to keep it glued to the
+  end of its own cabinet's list no matter where you insert it.
+
+  The 3D room, the floor map, and the plain-text fallback list all read
+  from this single array, so nothing else needs to change, and each CRT
+  menu scrolls automatically once a cabinet holds more games than fit.
   =====================================================================
 -->
 
 <div id="fallback">
   <div class="panel">
     <h1>My Games</h1>
-    <ul id="fallback-list"></ul>
+    <div id="fallback-list"></div>
     <div class="hint">loading 3d arcade&hellip;</div>
   </div>
 </div>
 
 <div id="app">
-  <div id="crosshair-hint">WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk to the arcade cabinet</div>
+  <div id="crosshair-hint">WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk up to any cabinet</div>
+  <div id="floor-guide"></div>
   <div id="room-prompt">CLICK THE ARCADE CABINET<br><span>or press ENTER</span></div>
 </div>
 
@@ -454,6 +519,16 @@
 <button id="settings-btn">&#9881; SETTINGS</button>
 <button id="leaderboard-btn">&#127942; STATS</button>
 <button id="feedback-btn">&#128172; FEEDBACK</button>
+<button id="map-btn">&#128506; FLOOR</button>
+
+<div id="map-overlay">
+  <div class="panel">
+    <h2>ARCADE FLOOR</h2>
+    <div class="sub">EIGHT CABINETS &bull; ONE GENRE EACH<br>WALK UP TO ONE TO PLAY ITS LINEUP</div>
+    <div id="map-list"></div>
+    <button id="map-close-btn">CLOSE</button>
+  </div>
+</div>
 
 <div id="settings-overlay">
   <div class="panel">
@@ -558,70 +633,144 @@
 (function(){
 
   // =====================================================================
-  // GAMES — add / remove entries here. Everything else adapts automatically.
+  // CABINETS — one physical machine per genre. Add / remove games inside
+  // a cabinet's `games` list, or copy a whole block to add a new genre.
+  // Everything else (3D room, floor map, fallback menu) adapts automatically.
+  //
+  //   x / z  = where the cabinet stands on the floor
+  //   rotY   = which way it faces (0 = toward you, +PI/2 = toward +x)
+  //   accent = its trim, marquee and CRT text color
   // =====================================================================
-  const GAMES = [
-    { title: "Open in About Blank", file: "games/AboutBlank.html" },
-    { title: "Terminal",          file: "games/Terminal.html" },
-    { title: "Jetpack Joyride",   file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
-    { title: "Polytrack",   file: "https://ubghyper.github.io/GameList.github.io/Polytrack-New/" },
-    { title: "Gravity Simulator", file: "games/GravitySim.html" },
-    { title: "Neon Chamber",      file: "games/NeonChamber.html" },
-    { title: "Buckshot Roulette", file: "https://ubghyper.github.io/GameList.github.io/Buckshot-Roulete/" },
-    { title: "Pokemon Clone",     file: "https://syntax-error-games.github.io/2026Q1_Fakemon/" },
-    { title: "Drive Mad",         file: "https://ubghyper.github.io/GameList.github.io/Drive-Mad/" },
-    { title: "Terraria",          file: "https://ubghyper.github.io/GameList.github.io/Terraria/" },
-    { title: "Hollow Knight",     file: "https://ubghyper.github.io/GameList.github.io/hollowknight/" },
-    { title: "Sandvoxels",        file: "https://freeonlinewebtools.github.io/UnblockedGamesUltra.github.io/" },
-    { title: "MiSide",            file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
-    { title: "Level Devil",       file: "https://ubghyper.github.io/GameList.github.io/Level-Devil/" },
-    { title: "Stickman Hook",     file: "https://ubghyper.github.io/GameList.github.io/Stickman-Hook/" },
-    { title: "Drift Boss",        file: "https://ubghyper.github.io/GameList.github.io/Drift-Boss/" },
-    { title: "MotoX3M",           file: "https://ubghyper.github.io/GameList.github.io/Moto3XM/" },
-    { title: "Ultrakill",         file: "https://ubghyper.github.io/GameList.github.io/Ultrakill/" },
-    { title: "Minecraft",       file: "https://ubghyper.github.io/GameList.github.io/Eaglercraft/" },
-    { title: "R.E.P.O.",          file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
-    { title: "Townscaper",        file: "https://ubghyper.github.io/GameList.github.io/Townscaper/" },
-    { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" },
-    { title: "Jelly Drift",       file: "https://ubghyper.github.io/GameList.github.io/Jelly-Drift/" },
-    { title: "Tomb of the Mask",  file: "https://ubghyper.github.io/GameList.github.io/Tomb-of-the-Mask/" },
-    { title: "Mario Kart",        file: "https://ubghyper.github.io/GameList.github.io/MarioKart/" },
-    { title: "Windows 95",        file: "games/Win95.html"      },
-    { title: "Piano",             file: "games/Piano.html"      },
-    { title: "Platformer",        file: "games/Platformer.html" },
-    { title: "Clicker Game",      file: "games/ClickerGame.html" },
-    { title: "MS Paint",          file: "games/Paint.html"        },
-    { title: "Name Generator",    file: "games/NameGenerator.html" },
-    { title: "Die Roller",        file: "games/DiceRoller.html" },
-    { title: "Shooter Game",      file: "games/ShooterGame.html" },
-    { title: "Music Player",      file: "games/MusicPlayer.html" },
-    { title: "Good Games",        file: "https://ubghyper.github.io/index.html" },
-    { title: "Quenq",             file: "https://quenq.com" },
-    { title: "VIP Site",          file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
-    { title: "Credits",           file: "games/Credits.html", pinBottom: true },
+  const CABINETS = [
+    {
+      id:'action', title:'ACTION', tagline:'RUN AND GUN',
+      accent:0xff5a1f, x:-3.45, z:-5.2, rotY:0, where:'BACK WALL',
+      games:[
+        { title: "Ultrakill",         file: "https://ubghyper.github.io/GameList.github.io/Ultrakill/" },
+        { title: "Jetpack Joyride",   file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
+        { title: "Neon Chamber",      file: "games/NeonChamber.html" },
+        { title: "Shooter Game",      file: "games/ShooterGame.html" },
+        { title: "Tomb of the Mask",  file: "https://ubghyper.github.io/GameList.github.io/Tomb-of-the-Mask/" },
+        { title: "Stickman Hook",     file: "https://ubghyper.github.io/GameList.github.io/Stickman-Hook/" },
+      ]
+    },
+    {
+      id:'racing', title:'RACING', tagline:'WHEELS AND SPEED',
+      accent:0xff2bd6, x:-1.15, z:-5.2, rotY:0, where:'BACK WALL',
+      games:[
+        { title: "Mario Kart",        file: "https://ubghyper.github.io/GameList.github.io/MarioKart/" },
+        { title: "Polytrack",         file: "https://ubghyper.github.io/GameList.github.io/Polytrack-New/" },
+        { title: "Drive Mad",         file: "https://ubghyper.github.io/GameList.github.io/Drive-Mad/" },
+        { title: "Drift Boss",        file: "https://ubghyper.github.io/GameList.github.io/Drift-Boss/" },
+        { title: "MotoX3M",           file: "https://ubghyper.github.io/GameList.github.io/Moto3XM/" },
+        { title: "Jelly Drift",       file: "https://ubghyper.github.io/GameList.github.io/Jelly-Drift/" },
+      ]
+    },
+    {
+      id:'adventure', title:'ADVENTURE', tagline:'JUMP AND EXPLORE',
+      accent:0x39ff14, x:1.15, z:-5.2, rotY:0, where:'BACK WALL',
+      games:[
+        { title: "Hollow Knight",     file: "https://ubghyper.github.io/GameList.github.io/hollowknight/" },
+        { title: "Pokemon Clone",     file: "https://syntax-error-games.github.io/2026Q1_Fakemon/" },
+        { title: "Level Devil",       file: "https://ubghyper.github.io/GameList.github.io/Level-Devil/" },
+        { title: "Platformer",        file: "games/Platformer.html" },
+      ]
+    },
+    {
+      id:'sandbox', title:'SANDBOX', tagline:'BUILD ANYTHING',
+      accent:0x22e0ff, x:3.45, z:-5.2, rotY:0, where:'BACK WALL',
+      games:[
+        { title: "Minecraft",         file: "https://ubghyper.github.io/GameList.github.io/Eaglercraft/" },
+        { title: "Terraria",          file: "https://ubghyper.github.io/GameList.github.io/Terraria/" },
+        { title: "Sandvoxels",        file: "https://freeonlinewebtools.github.io/UnblockedGamesUltra.github.io/" },
+        { title: "Townscaper",        file: "https://ubghyper.github.io/GameList.github.io/Townscaper/" },
+        { title: "Gravity Simulator", file: "games/GravitySim.html" },
+      ]
+    },
+    {
+      id:'horror', title:'HORROR', tagline:'LIGHTS OUT',
+      accent:0xff1744, x:-5.3, z:-2.4, rotY:Math.PI/2, where:'LEFT WALL',
+      games:[
+        { title: "Buckshot Roulette", file: "https://ubghyper.github.io/GameList.github.io/Buckshot-Roulete/" },
+        { title: "MiSide",            file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
+        { title: "R.E.P.O.",          file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
+        { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" },
+      ]
+    },
+    {
+      id:'creative', title:'CREATIVE', tagline:'MAKE SOMETHING',
+      accent:0xffe600, x:-5.3, z:0.2, rotY:Math.PI/2, where:'LEFT WALL',
+      games:[
+        { title: "MS Paint",          file: "games/Paint.html" },
+        { title: "Piano",             file: "games/Piano.html" },
+        { title: "Music Player",      file: "games/MusicPlayer.html" },
+        { title: "Windows 95",        file: "games/Win95.html" },
+        { title: "Terminal",          file: "games/Terminal.html" },
+      ]
+    },
+    {
+      id:'toybox', title:'TOY BOX', tagline:'ODDS AND ENDS',
+      accent:0xb060e0, x:5.3, z:-2.4, rotY:-Math.PI/2, where:'RIGHT WALL',
+      games:[
+        { title: "Clicker Game",      file: "games/ClickerGame.html" },
+        { title: "Name Generator",    file: "games/NameGenerator.html" },
+        { title: "Die Roller",        file: "games/DiceRoller.html" },
+        { title: "Open in About Blank", file: "games/AboutBlank.html" },
+      ]
+    },
+    {
+      id:'portals', title:'PORTALS', tagline:'LINKS OUT',
+      accent:0x00e5a0, x:5.3, z:0.2, rotY:-Math.PI/2, where:'RIGHT WALL',
+      games:[
+        { title: "Good Games",        file: "https://ubghyper.github.io/index.html" },
+        { title: "Quenq",             file: "https://quenq.com" },
+        { title: "VIP Site",          file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
+        { title: "Credits",           file: "games/Credits.html", pinBottom: true },
+      ]
+    },
   ];
 
-  // entries with pinBottom:true always sort to the very end, no matter
-  // where you insert them above — so "Credits" (or anything else you flag
-  // the same way) never has to be the last line in this list to stay last.
-  (function pinBottomEntries(){
+  // Games flagged pinBottom:true always sort to the very end of their own
+  // cabinet, no matter where you insert them above — so "Credits" (or
+  // anything else you flag the same way) never has to be typed last to stay last.
+  CABINETS.forEach(def => {
     const pinned = [];
-    for (let i = GAMES.length - 1; i >= 0; i--) {
-      if (GAMES[i].pinBottom) pinned.unshift(GAMES.splice(i, 1)[0]);
+    for (let i = def.games.length - 1; i >= 0; i--) {
+      if (def.games[i].pinBottom) pinned.unshift(def.games.splice(i, 1)[0]);
     }
-    GAMES.push(...pinned);
-  })();
+    def.games.push(...pinned);
+  });
 
-  // ---- always populate the plain-HTML fallback list, no matter what ----
+  function hexStr(c){ return '#' + c.toString(16).padStart(6,'0'); }
+  function mixHex(c, f){
+    const r = Math.round(((c >> 16) & 255) * f);
+    const g = Math.round(((c >> 8) & 255) * f);
+    const b = Math.round((c & 255) * f);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // ---- always populate the plain-HTML fallback list, grouped by cabinet ----
   const fallbackList = document.getElementById('fallback-list');
-  GAMES.forEach(g => {
-    const li = document.createElement('li');
-    const a = document.createElement('a');
-    a.className = 'game-link';
-    a.href = g.file;
-    a.textContent = g.title;
-    li.appendChild(a);
-    fallbackList.appendChild(li);
+  CABINETS.forEach(def => {
+    const group = document.createElement('div');
+    group.className = 'fb-group';
+    group.style.setProperty('--fb-accent', hexStr(def.accent));
+    const name = document.createElement('div');
+    name.className = 'fb-group-name';
+    name.textContent = def.title;
+    group.appendChild(name);
+    const ul = document.createElement('ul');
+    def.games.forEach(g => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.className = 'game-link';
+      a.href = g.file;
+      a.textContent = g.title;
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+    group.appendChild(ul);
+    fallbackList.appendChild(group);
   });
 
   // ---- bail out gracefully to the fallback if three.js / WebGL is unavailable ----
@@ -633,7 +782,7 @@
   }
   if (typeof THREE === 'undefined' || !webglAvailable() || typeof THREE.OrbitControls === 'undefined') {
     document.querySelector('#fallback .hint').textContent =
-      typeof THREE.OrbitControls === 'undefined'
+      (typeof THREE !== 'undefined' && typeof THREE.OrbitControls === 'undefined')
         ? '3d controls could not load — check your internet connection and reload'
         : '3d view unavailable — enjoy the classic menu';
     return;
@@ -658,7 +807,8 @@
     updateControlModeUI();
     updateMobileControlsVisibility();
     if(!isMobile) resetPadIfNeeded();
-    if(typeof updateInputHints === 'function') updateInputHints();
+    document.getElementById('crosshair-hint').innerHTML =
+      phase === PHASE_ROOM ? roomHintText() : arcadeHintText();
   }
 
   // =====================================================================
@@ -747,20 +897,37 @@
     }
     function errorSfx(){ tone(180, 0.14, 'sawtooth', sfxGain, 0.22, 0); tone(120, 0.18, 'sawtooth', sfxGain, 0.2, 0.06); }
 
-    // ---- background music: an actual little composed loop (melody + bass),
-    // not just a scale run — one mellow pattern for the room, one brighter
-    // one for the arcade, each 16 steps with rests for real rhythm/shape ----
-    const N = { A2:110.00, C3:130.81, D3:146.83, E3:164.81, F3:174.61, G3:196.00,
-                A3:220.00, B3:246.94, C4:261.63, D4:293.66, E4:329.63, F4:349.23,
-                G4:392.00, A4:440.00, B4:493.88, C5:523.25, D5:587.33, E5:659.25 };
+    // ---- background music: an actual little composed loop (melody + bass).
+    // The room has one mellow pattern; each cabinet gets its own key and
+    // rhythm so sitting down at HORROR sounds different from sitting down
+    // at RACING. Every pattern is 16 steps with rests for real shape. ----
+    const N = { A2:110.00, B2:123.47, C3:130.81, D3:146.83, Eb3:155.56, E3:164.81, F3:174.61, Gb3:185.00, G3:196.00,
+                Ab3:207.65, A3:220.00, Bb3:233.08, B3:246.94, C4:261.63, Db4:277.18, D4:293.66, Eb4:311.13, E4:329.63, F4:349.23,
+                Gb4:369.99, G4:392.00, Ab4:415.30, A4:440.00, Bb4:466.16, B4:493.88, C5:523.25, D5:587.33, E5:659.25 };
 
-    const melodyRoom = [N.A3,null,N.C4,N.E4, N.D4,null,N.C4,N.A3, N.G3,null,N.A3,N.C4, N.B3,N.A3,null,null];
-    const bassRoom   = [N.A2,null,null,null, N.F3,null,null,null, N.G3,null,null,null, N.A2,null,null,null];
-    const melodyArcade = [N.E4,N.G4,N.A4,N.G4, N.E4,null,N.C4,N.D4, N.E4,N.D4,N.C4,null, N.A3,N.C4,N.E4,null];
-    const bassArcade   = [N.A2,null,null,null, N.C3,null,null,null, N.A2,null,null,null, N.E3,null,null,null];
+    const PATTERNS = {
+      room:      { m:[N.A3,null,N.C4,N.E4, N.D4,null,N.C4,N.A3, N.G3,null,N.A3,N.C4, N.B3,N.A3,null,null],
+                   b:[N.A2,null,null,null, N.F3,null,null,null, N.G3,null,null,null, N.A2,null,null,null] },
+      action:    { m:[N.E4,N.E4,N.G4,N.A4, N.G4,N.E4,null,N.D4, N.E4,N.G4,N.B4,N.A4, N.G4,null,N.E4,null],
+                   b:[N.A2,N.A2,null,N.A2, N.G3,null,null,null, N.A2,N.A2,null,N.A2, N.E3,null,N.G3,null] },
+      racing:    { m:[N.D4,N.F4,N.A4,N.G4, N.F4,N.D4,N.F4,null, N.C4,N.E4,N.G4,N.F4, N.E4,N.C4,null,null],
+                   b:[N.D3,null,N.D3,null, N.A2,null,N.A2,null, N.C3,null,N.C3,null, N.G3,null,null,null] },
+      adventure: { m:[N.C4,N.E4,N.G4,N.C5, N.B4,N.G4,null,N.A4, N.G4,N.E4,N.C4,N.E4, N.D4,null,null,null],
+                   b:[N.C3,null,null,null, N.G3,null,null,null, N.A2,null,null,null, N.F3,null,null,null] },
+      sandbox:   { m:[N.G4,null,N.E4,null, N.C4,null,N.E4,null, N.F4,null,N.D4,null, N.C4,null,null,null],
+                   b:[N.C3,null,null,null, N.C3,null,null,null, N.F3,null,null,null, N.G3,null,null,null] },
+      horror:    { m:[N.A3,null,null,N.Bb3, N.A3,null,null,null, N.Eb4,null,N.D4,null, N.Db4,null,null,null],
+                   b:[N.A2,null,null,null, N.A2,null,null,null, N.Eb3,null,null,null, N.A2,null,null,null] },
+      creative:  { m:[N.F4,N.A4,N.C5,N.A4, N.Bb4,N.G4,null,N.F4, N.E4,N.G4,N.Bb4,N.A4, N.F4,null,null,null],
+                   b:[N.F3,null,null,null, N.Bb3,null,null,null, N.C3,null,null,null, N.F3,null,null,null] },
+      toybox:    { m:[N.C5,N.B4,N.A4,N.G4, N.A4,N.B4,N.C5,null, N.G4,N.A4,N.B4,N.C5, N.B4,N.G4,null,null],
+                   b:[N.C3,null,N.G3,null, N.C3,null,N.G3,null, N.E3,null,N.G3,null, N.C3,null,null,null] },
+      portals:   { m:[N.E4,N.B4,N.A4,N.B4, N.E4,null,N.G4,null, N.A4,N.G4,N.E4,null, N.B3,N.E4,null,null],
+                   b:[N.E3,null,null,null, N.B2,null,null,null, N.A2,null,null,null, N.E3,null,null,null] },
+    };
 
     const STEP_SEC = 0.28;
-    let currentMelody = melodyRoom, currentBass = bassRoom;
+    let currentMelody = PATTERNS.room.m, currentBass = PATTERNS.room.b;
     let stepIndex = 0;
     let musicStarted = false;
     let musicTimer = null;
@@ -780,9 +947,11 @@
       musicStarted = true;
       scheduleStep();
     }
+    // mood is either 'room' or a cabinet id, so each machine has its own theme
     function setMood(mood){
-      currentMelody = mood === 'arcade' ? melodyArcade : melodyRoom;
-      currentBass = mood === 'arcade' ? bassArcade : bassRoom;
+      const p = PATTERNS[mood] || PATTERNS.room;
+      if (p.m === currentMelody) return; // already playing this theme
+      currentMelody = p.m; currentBass = p.b;
       stepIndex = 0; // restart the pattern cleanly on a mood change
     }
 
@@ -826,7 +995,7 @@
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0a0612);
-  scene.fog = new THREE.FogExp2(0x0a0612, 0.06);
+  scene.fog = new THREE.FogExp2(0x0a0612, 0.045);
 
   const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 1.65, 4.8);
@@ -843,24 +1012,27 @@
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
   controls.minDistance = 1.05;
   controls.maxDistance = 6.0;
-  controls.minPolarAngle = Math.PI / 2 - 0.95; // was -0.48: too tight to look up far enough to see the marquee up close
+  controls.minPolarAngle = Math.PI / 2 - 0.95;
   controls.maxPolarAngle = Math.PI / 2 + 0.28;
-  controls.minAzimuthAngle = -Math.PI / 2.2;
-  controls.maxAzimuthAngle = Math.PI / 2.2;
+  // cabinets now stand on three walls, so the camera has to be able to turn
+  // all the way around — the old +/-82deg azimuth clamp made the side
+  // machines impossible to face
+  controls.minAzimuthAngle = -Infinity;
+  controls.maxAzimuthAngle = Infinity;
   controls.rotateSpeed = 0.55;
   controls.update();
 
   // =====================================================================
   // Lighting
   // =====================================================================
-  const ambientLight = new THREE.AmbientLight(0x171421,0.20);
+  const ambientLight = new THREE.AmbientLight(0x171421,0.22);
   scene.add(ambientLight);
-  const keyLight = new THREE.PointLight(0x777788,0.18,10);
-  keyLight.position.set(0,3,3); scene.add(keyLight);
-  const magentaLight = new THREE.PointLight(0xff2bd6,0,6);
-  magentaLight.position.set(-2,1.4,1.5); scene.add(magentaLight);
-  const cyanLight = new THREE.PointLight(0x22e0ff,0,6);
-  cyanLight.position.set(2,1.4,1.5); scene.add(cyanLight);
+  const keyLight = new THREE.PointLight(0x777788,0.18,14);
+  keyLight.position.set(0,4,1); scene.add(keyLight);
+  const magentaLight = new THREE.PointLight(0xff2bd6,0,9);
+  magentaLight.position.set(-3.6,2.2,-1.5); scene.add(magentaLight);
+  const cyanLight = new THREE.PointLight(0x22e0ff,0,9);
+  cyanLight.position.set(3.6,2.2,-1.5); scene.add(cyanLight);
 
   // =====================================================================
   // Room: floor (neon grid), walls, ceiling
@@ -890,7 +1062,7 @@
     new THREE.MeshStandardMaterial({ map: gridTexture, roughness: 0.6, metalness: 0.2 })
   );
   floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -0.02; // nudge below y=0 so it isn't coplanar with the cabinet base or the room's bottom face (was causing z-fighting flicker)
+  floor.position.y = -0.02; // nudge below y=0 so it isn't coplanar with the cabinet bases or the room's bottom face
   scene.add(floor);
 
   const wallCanvas = document.createElement('canvas');
@@ -907,8 +1079,10 @@
   const wallTexture = new THREE.CanvasTexture(wallCanvas);
   const wallMat = new THREE.MeshStandardMaterial({ map: wallTexture, roughness: 0.9, side: THREE.BackSide });
 
-  const room = new THREE.Mesh(new THREE.BoxGeometry(24, 8.3, 24), wallMat);
-  room.position.y = 3.9; // bottom sits slightly below the floor, top unchanged
+  // The room is now a proper arcade hall rather than a huge empty box, so
+  // the cabinets on the left and right actually read as standing against walls.
+  const room = new THREE.Mesh(new THREE.BoxGeometry(13, 8.3, 15), wallMat);
+  room.position.y = 3.9;
   scene.add(room);
 
   // Nondescript player — plain head, no face.
@@ -927,14 +1101,14 @@
   const legGeo = new THREE.BoxGeometry(.105,.48,.13);
   legGeo.translate(0,-.24,0); // origin -> top of the box (the hip)
   const legL = new THREE.Mesh(legGeo, playerMat);
-  legL.position.set(-.078,.86,0); player.add(legL); // .86 = old center(.62) + half-height(.24)
+  legL.position.set(-.078,.86,0); player.add(legL);
   const legR = new THREE.Mesh(legGeo.clone(), playerMat);
   legR.position.set(.078,.86,0); player.add(legR);
 
   const armGeo = new THREE.BoxGeometry(.09,.40,.12);
   armGeo.translate(0,-.20,0); // origin -> top of the box (the shoulder)
   const armL = new THREE.Mesh(armGeo, playerMat);
-  armL.position.set(-.205,1.33,0); player.add(armL); // 1.33 = old center(1.13) + half-height(.20)
+  armL.position.set(-.205,1.33,0); player.add(armL);
   const armR = new THREE.Mesh(armGeo.clone(), playerMat);
   armR.position.set(.205,1.33,0); player.add(armR);
 
@@ -952,128 +1126,220 @@
   const JUMP_SPEED=5.4;
   const FLOOR_Y=-0.38;
 
-  // A few dark wall/floor details make the starting room feel larger.
-  const roomGlow = new THREE.PointLight(0x22e0ff, 0, 8);
-  roomGlow.position.set(0, 2.5, -4.8);
+  const roomGlow = new THREE.PointLight(0x22e0ff, 0, 12);
+  roomGlow.position.set(0, 3.0, -3.0);
   scene.add(roomGlow);
 
-  // thin neon strips along the back wall for atmosphere
+  // thin neon strips along the walls for atmosphere
   const stripGeo = new THREE.BoxGeometry(0.06, 5, 0.06);
-  [-4, -2.6, 2.6, 4].forEach((x, i) => {
+  function addStrip(x, z, colorIndex){
     const stripMat = new THREE.MeshStandardMaterial({
-      color: i % 2 ? 0x22e0ff : 0xff2bd6,
-      emissive: i % 2 ? 0x22e0ff : 0xff2bd6,
+      color: colorIndex % 2 ? 0x22e0ff : 0xff2bd6,
+      emissive: colorIndex % 2 ? 0x22e0ff : 0xff2bd6,
       emissiveIntensity: 0
     });
     const strip = new THREE.Mesh(stripGeo, stripMat);
     strip.userData.arcadeStrip = true;
-    strip.position.set(x, 2.5, -6);
+    strip.position.set(x, 2.6, z);
     scene.add(strip);
-  });
-
-  // =====================================================================
-  // Arcade cabinet
-  // =====================================================================
-  const cabinet = new THREE.Group();
-  scene.add(cabinet);
-
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x140a24, roughness: 0.5, metalness: 0.3 });
-  const trimMat = new THREE.MeshStandardMaterial({ color: 0xff2bd6, emissive: 0xff2bd6, emissiveIntensity: 0.5, roughness: 0.4 });
-
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 1.05), bodyMat);
-  base.position.y = 0.15;
-  cabinet.add(base);
-
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.5, 0.9), bodyMat);
-  body.position.y = 1.05;
-  cabinet.add(body);
-
-  // trim edges
-  [[-0.66, 1.05, 0], [0.66, 1.05, 0]].forEach(p => {
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.5, 0.92), trimMat);
-    edge.position.set(p[0], p[1], p[2]);
-    cabinet.add(edge);
-  });
-
-  // marquee
-  const marqueeCanvas = document.createElement('canvas');
-  marqueeCanvas.width = 512; marqueeCanvas.height = 128;
-  const marqueeCtx = marqueeCanvas.getContext('2d');
-  function drawMarqueeTexture(){
-    marqueeCtx.fillStyle = '#0a0612';
-    marqueeCtx.fillRect(0, 0, 512, 128);
-    marqueeCtx.textAlign = 'center';
-    marqueeCtx.textBaseline = 'middle';
-    marqueeCtx.font = "48px 'Press Start 2P', monospace";
-    marqueeCtx.fillStyle = '#22e0ff';
-    marqueeCtx.shadowColor = '#22e0ff';
-    marqueeCtx.shadowBlur = 24;
-    marqueeCtx.fillText('ARCADE', 256, 68);
   }
-  drawMarqueeTexture();
-  const marqueeTexture = new THREE.CanvasTexture(marqueeCanvas);
-  const marqueeMaterial = new THREE.MeshBasicMaterial({ map: marqueeTexture, transparent:true, opacity:1 });
-  const marquee = new THREE.Mesh(
-    new THREE.BoxGeometry(1.35, 0.34, 0.16),
-    marqueeMaterial
-  );
-  marquee.position.set(0, 1.98, 0.02);
-  marquee.rotation.x = -0.12;
-  cabinet.add(marquee);
-
-  // screen bezel
-  const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.82, 0.1), new THREE.MeshStandardMaterial({ color: 0x050208, roughness: 0.6 }));
-  bezel.position.set(0, 1.48, 0.42);
-  bezel.rotation.x = -0.06;
-  cabinet.add(bezel);
+  [-4.7, -2.3, 2.3, 4.7].forEach((x, i) => addStrip(x, -7.35, i));
+  [-5.0, -1.0, 3.0, 6.4].forEach((z, i) => { addStrip(-6.35, z, i); addStrip(6.35, z, i + 1); });
 
   // =====================================================================
-  // CRT screen — canvas texture menu
+  // Arcade cabinets — one per genre, built from the CABINETS array above
   // =====================================================================
   const SCREEN_W = 512, SCREEN_H = 384;
   const ROWS_VISIBLE = 6;
-  const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = SCREEN_W; screenCanvas.height = SCREEN_H;
-  const sctx = screenCanvas.getContext('2d');
-  const screenTexture = new THREE.CanvasTexture(screenCanvas);
-
-  let selected = 0;
-  let scrollOffset = 0;
-  let hoverRow = -1;
+  const cabinets = [];
+  const cabinetGroups = [];
+  const interactiveObjects = [];
   let blinkOn = true;
 
-  function drawMenu(){
+  function buildCabinet(def){
+    const group = new THREE.Group();
+    group.position.set(def.x, 0, def.z);
+    group.rotation.y = def.rotY || 0;
+    scene.add(group);
+
+    const accent = def.accent;
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x140a24, roughness: 0.5, metalness: 0.3 });
+    const trimMat = new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.55, roughness: 0.4 });
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.3, 1.05), bodyMat);
+    base.position.y = 0.15;
+    group.add(base);
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.5, 0.9), bodyMat);
+    body.position.y = 1.05;
+    group.add(body);
+
+    // trim edges
+    [[-0.66, 1.05, 0], [0.66, 1.05, 0]].forEach(p => {
+      const edge = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.5, 0.92), trimMat);
+      edge.position.set(p[0], p[1], p[2]);
+      group.add(edge);
+    });
+
+    // ---- marquee: each cabinet wears its own genre name ----
+    const marqueeCanvas = document.createElement('canvas');
+    marqueeCanvas.width = 512; marqueeCanvas.height = 128;
+    const mctx = marqueeCanvas.getContext('2d');
+    function drawMarqueeTexture(){
+      mctx.fillStyle = '#0a0612';
+      mctx.fillRect(0, 0, 512, 128);
+      mctx.textAlign = 'center';
+      mctx.textBaseline = 'middle';
+      const size = Math.min(44, Math.floor(470 / Math.max(1, def.title.length)));
+      mctx.font = size + "px 'Press Start 2P', monospace";
+      mctx.fillStyle = hexStr(accent);
+      mctx.shadowColor = hexStr(accent);
+      mctx.shadowBlur = 24;
+      mctx.fillText(def.title, 256, 56);
+      mctx.shadowBlur = 8;
+      mctx.font = "13px 'Press Start 2P', monospace";
+      mctx.fillStyle = mixHex(accent, 0.62);
+      mctx.fillText(def.tagline, 256, 98);
+    }
+    drawMarqueeTexture();
+    const marqueeTexture = new THREE.CanvasTexture(marqueeCanvas);
+    const marquee = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 0.34, 0.16),
+      new THREE.MeshBasicMaterial({ map: marqueeTexture, transparent:true, opacity:1 })
+    );
+    marquee.position.set(0, 1.98, 0.02);
+    marquee.rotation.x = -0.12;
+    group.add(marquee);
+
+    // screen bezel
+    const bezel = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.82, 0.1), new THREE.MeshStandardMaterial({ color: 0x050208, roughness: 0.6 }));
+    bezel.position.set(0, 1.48, 0.42);
+    bezel.rotation.x = -0.06;
+    group.add(bezel);
+
+    // ---- CRT screen — canvas texture menu, one per cabinet ----
+    const screenCanvas = document.createElement('canvas');
+    screenCanvas.width = SCREEN_W; screenCanvas.height = SCREEN_H;
+    const sctx = screenCanvas.getContext('2d');
+    const screenTexture = new THREE.CanvasTexture(screenCanvas);
+
+    const screenMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.88, 0.66),
+      new THREE.MeshBasicMaterial({ map: screenTexture })
+    );
+    screenMesh.position.set(0, 1.49, 0.475);
+    screenMesh.rotation.x = -0.06;
+    group.add(screenMesh);
+
+    const screenGlow = new THREE.PointLight(accent, 0.55, 3.0);
+    screenGlow.position.set(0, 1.49, 0.9);
+    group.add(screenGlow);
+
+    // ---- control panel: a tilted shelf whose whole surface faces the
+    // player, carrying a draggable joystick (drag up/down = browse) and
+    // buttons (click = play). Everything is a child of controlGroup so
+    // rotating that one group orients the whole panel correctly.
+    const controlGroup = new THREE.Group();
+    controlGroup.position.set(0, 0.92, 0.55);
+    controlGroup.rotation.x = 0.5;
+    group.add(controlGroup);
+
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.5), bodyMat);
+    controlGroup.add(panel);
+
+    const joystickGroup = new THREE.Group();
+    joystickGroup.position.set(-0.35, 0.04, 0.02);
+    controlGroup.add(joystickGroup);
+
+    const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.045, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+    stickBase.position.set(0, 0.02, 0);
+    joystickGroup.add(stickBase);
+
+    const stickTilt = new THREE.Group(); // pivots to simulate the stick being pushed
+    stickTilt.position.set(0, 0.045, 0);
+    joystickGroup.add(stickTilt);
+
+    const stickShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    stickShaft.position.set(0, 0.1, 0);
+    stickTilt.add(stickShaft);
+    const stickBall = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.45 }));
+    stickBall.position.set(0, 0.2, 0);
+    stickTilt.add(stickBall);
+    // larger invisible sphere so the joystick is easy to grab with the mouse/finger
+    const stickGrabZone = new THREE.Mesh(new THREE.SphereGeometry(isMobile ? 0.19 : 0.12, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+    stickGrabZone.position.set(0, 0.15, 0);
+    joystickGroup.add(stickGrabZone);
+
+    const buttons = [];
+    const btnColors = [0x39ff14, 0xffe600, 0x22e0ff, 0xff2bd6];
+    btnColors.forEach((col, i) => {
+      const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.4 }));
+      btn.position.set(0.05 + i * 0.12, 0.055, -0.02);
+      controlGroup.add(btn);
+      buttons.push(btn);
+    });
+
+    const cab = {
+      def, id:def.id, title:def.title, accent, group, games:def.games,
+      selected:0, scrollOffset:0,
+      screenCanvas, sctx, screenTexture, screenMesh, screenGlow,
+      marqueeTexture, drawMarqueeTexture,
+      stickTilt, stickGrabZone, buttons, trimMat
+    };
+
+    // tag every piece so a raycast hit can say which machine it belongs to
+    screenMesh.userData.cab = cab;
+    stickGrabZone.userData.cab = cab;
+    buttons.forEach(b => b.userData.cab = cab);
+    group.traverse(o => { o.userData.cabRef = cab; });
+
+    cabinets.push(cab);
+    cabinetGroups.push(group);
+    interactiveObjects.push(screenMesh, stickGrabZone, ...buttons);
+    drawMenu(cab);
+    return cab;
+  }
+
+  function drawMenu(cab){
+    const sctx = cab.sctx;
+    const bright = hexStr(cab.accent);
+    const dim = mixHex(cab.accent, 0.32);
+
     sctx.fillStyle = '#020402';
     sctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
 
     sctx.textAlign = 'center';
-    sctx.fillStyle = '#39ff14';
-    sctx.shadowColor = '#39ff14';
+    sctx.fillStyle = bright;
+    sctx.shadowColor = bright;
     sctx.shadowBlur = 10;
     sctx.font = "20px 'Press Start 2P', monospace";
-    sctx.fillText('SELECT YOUR GAME', SCREEN_W / 2, 42);
+    sctx.fillText(cab.title, SCREEN_W / 2, 36);
+    sctx.shadowBlur = 0;
+    sctx.font = "10px 'Press Start 2P', monospace";
+    sctx.fillStyle = dim;
+    sctx.fillText(cab.games.length + ' GAMES', SCREEN_W / 2, 56);
 
-    const listTop = 70;
+    const listTop = 84;
     const rowH = 40;
     sctx.font = "14px 'Press Start 2P', monospace";
     sctx.textAlign = 'left';
 
-    if (selected < scrollOffset) scrollOffset = selected;
-    if (selected >= scrollOffset + ROWS_VISIBLE) scrollOffset = selected - ROWS_VISIBLE + 1;
+    if (cab.selected < cab.scrollOffset) cab.scrollOffset = cab.selected;
+    if (cab.selected >= cab.scrollOffset + ROWS_VISIBLE) cab.scrollOffset = cab.selected - ROWS_VISIBLE + 1;
 
-    const visible = GAMES.slice(scrollOffset, scrollOffset + ROWS_VISIBLE);
+    const visible = cab.games.slice(cab.scrollOffset, cab.scrollOffset + ROWS_VISIBLE);
     visible.forEach((g, i) => {
-      const idx = scrollOffset + i;
+      const idx = cab.scrollOffset + i;
       const y = listTop + i * rowH;
-      const isSelected = idx === selected;
-      const isHover = idx === hoverRow;
+      const isSelected = idx === cab.selected;
+      const isHover = (cab === hoverCab) && idx === hoverRow;
 
       if (isSelected) {
         sctx.shadowBlur = 0;
-        sctx.fillStyle = 'rgba(57,255,20,0.18)';
+        sctx.fillStyle = mixHex(cab.accent, 0.18);
         sctx.fillRect(24, y - 24, SCREEN_W - 48, 32);
       }
-      sctx.fillStyle = (isSelected || isHover) ? '#39ff14' : '#1c8a0c';
+      sctx.fillStyle = (isSelected || isHover) ? bright : dim;
       sctx.shadowBlur = (isSelected || isHover) ? 10 : 0;
       const cursor = isSelected ? '> ' : '  ';
       let label = cursor + g.title;
@@ -1081,22 +1347,22 @@
       sctx.fillText(label, 40, y);
     });
 
-    if (scrollOffset > 0) {
+    if (cab.scrollOffset > 0) {
       sctx.textAlign = 'center';
-      sctx.fillStyle = '#39ff14';
+      sctx.fillStyle = bright;
       sctx.fillText('^', SCREEN_W / 2, listTop - 22);
     }
-    if (scrollOffset + ROWS_VISIBLE < GAMES.length) {
+    if (cab.scrollOffset + ROWS_VISIBLE < cab.games.length) {
       sctx.textAlign = 'center';
-      sctx.fillStyle = '#39ff14';
-      sctx.fillText('v', SCREEN_W / 2, listTop + ROWS_VISIBLE * rowH + 4);
+      sctx.fillStyle = bright;
+      sctx.fillText('v', SCREEN_W / 2, listTop + ROWS_VISIBLE * rowH + 2);
     }
 
     sctx.textAlign = 'center';
     sctx.shadowBlur = blinkOn ? 10 : 0;
-    sctx.fillStyle = blinkOn ? '#39ff14' : '#0d3a06';
+    sctx.fillStyle = blinkOn ? bright : mixHex(cab.accent, 0.2);
     sctx.font = "13px 'Press Start 2P', monospace";
-    sctx.fillText('PRESS ENTER TO PLAY', SCREEN_W / 2, SCREEN_H - 22);
+    sctx.fillText('PRESS ENTER TO PLAY', SCREEN_W / 2, SCREEN_H - 18);
 
     // scanlines
     sctx.shadowBlur = 0;
@@ -1110,94 +1376,46 @@
     sctx.fillStyle = vg;
     sctx.fillRect(0, 0, SCREEN_W, SCREEN_H);
 
-    screenTexture.needsUpdate = true;
+    cab.screenTexture.needsUpdate = true;
   }
-  drawMenu();
-
-  const screenMesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.88, 0.66),
-    new THREE.MeshBasicMaterial({ map: screenTexture })
-  );
-  screenMesh.position.set(0, 1.49, 0.475);
-  screenMesh.rotation.x = -0.06;
-  cabinet.add(screenMesh);
-
-  const screenGlow = new THREE.PointLight(0x39ff14, 0, 2.5);
-  screenGlow.position.set(0, 1.49, 0.9);
-  cabinet.add(screenGlow);
-
-  // ---- control panel: a tilted shelf whose whole surface faces the
-  // player, carrying a draggable joystick (drag up/down = browse) and
-  // buttons (click = play). Everything is a child of controlGroup so
-  // rotating that one group orients the whole panel correctly.
-  const controlGroup = new THREE.Group();
-  controlGroup.position.set(0, 0.92, 0.55);
-  controlGroup.rotation.x = 0.5; // tilt the shelf up & toward the camera
-  cabinet.add(controlGroup);
-
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.08, 0.5), bodyMat);
-  controlGroup.add(panel);
-
-  const joystickGroup = new THREE.Group();
-  joystickGroup.position.set(-0.35, 0.04, 0.02);
-  controlGroup.add(joystickGroup);
-
-  const stickBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.045, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-  stickBase.position.set(0, 0.02, 0);
-  joystickGroup.add(stickBase);
-
-  const stickTilt = new THREE.Group(); // pivots to simulate the stick being pushed
-  stickTilt.position.set(0, 0.045, 0);
-  joystickGroup.add(stickTilt);
-
-  const stickShaft = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x333333 }));
-  stickShaft.position.set(0, 0.1, 0);
-  stickTilt.add(stickShaft);
-  const stickBall = new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff2bd6, emissive: 0xff2bd6, emissiveIntensity: 0.45 }));
-  stickBall.position.set(0, 0.2, 0);
-  stickTilt.add(stickBall);
-  // larger invisible sphere so the joystick is easy to grab with the mouse/finger
-  const stickGrabZone = new THREE.Mesh(new THREE.SphereGeometry(isMobile ? 0.19 : 0.12, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
-  stickGrabZone.position.set(0, 0.15, 0);
-  joystickGroup.add(stickGrabZone);
-
-  const buttons = [];
-  const btnColors = [0x39ff14, 0xffe600, 0x22e0ff, 0xff2bd6];
-  btnColors.forEach((col, i) => {
-    const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 16), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.4 }));
-    btn.position.set(0.05 + i * 0.12, 0.055, -0.02);
-    controlGroup.add(btn);
-    buttons.push(btn);
-  });
-
-  cabinet.position.set(0, 0, -2.8);
+  function drawAllMenus(){ cabinets.forEach(drawMenu); }
 
   // =====================================================================
   // Interaction / room state / persistent session
   // =====================================================================
-  const STORAGE_KEY = 'arcadeHubSessionV2';
+  const STORAGE_KEY = 'arcadeHubSessionV3';
   const PHASE_ROOM = 'room';
   const PHASE_ARCADE = 'arcade';
   const PHASE_GAME = 'game';
 
   let phase = PHASE_ROOM;
   let arcadePowered = false;
-  let playerNearCabinet = false;
+  let nearCab = null;       // the machine you're standing next to, in room mode
+  let activeCab = null;     // the machine you're sitting at, in arcade mode
+  let hoverCab = null;
+  let hoverRow = -1;
   let preArcadeCameraPos = null;
   let preArcadeCameraTarget = null;
   let playerVelocity = new THREE.Vector3();
+
   function roomHintText(){
     return isMobile
-      ? 'drag the left pad to move &nbsp;&bull;&nbsp; JUMP to jump<br>tap the arcade cabinet to sit down'
-      : 'WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk to the arcade cabinet';
+      ? 'drag the left pad to move &nbsp;&bull;&nbsp; JUMP to jump<br>walk up to any cabinet and tap it'
+      : 'WASD &bull; move &nbsp;&bull;&nbsp; mouse &bull; look around<br>walk up to any cabinet to play its genre';
   }
   function arcadeHintText(){
+    const name = activeCab ? activeCab.title : 'ARCADE';
     return isMobile
-      ? 'ARCADE MODE &bull; buttons: PLAY / RANDOM / PREV / NEXT<br>drag the joystick or tap a button &bull; tap a game to play &bull; STAND UP to return'
-      : 'ARCADE MODE &bull; buttons: PLAY / RANDOM / PREV / NEXT<br>arrow keys / scroll / joystick &bull; click a game to play &bull; ESC to return';
+      ? name + ' CABINET &bull; buttons: PLAY / RANDOM / PREV / NEXT<br>drag the joystick &bull; tap a game to play &bull; STAND UP to return'
+      : name + ' CABINET &bull; buttons: PLAY / RANDOM / PREV / NEXT<br>arrow keys / scroll / joystick &bull; click a game to play &bull; ESC to return';
   }
 
   const moveKeys = {w:false,a:false,s:false,d:false};
+
+  // Now that cabinets line three walls, the walkable floor is the open
+  // middle of the hall. These bounds keep you about a metre clear of every
+  // machine — close enough to trigger it, never clipping into it.
+  const BOUNDS = { minX:-4.2, maxX:4.2, minZ:-4.2, maxZ:6.4 };
 
   // =====================================================================
   // Tickets + character customization
@@ -1350,27 +1568,29 @@
 
   // Personal leaderboard: everything stays local in this browser.
   let gameStats = {};
+  let cabinetStats = {};
   let totalLaunches = 0;
   let totalPlaySeconds = 0;
   try { gameStats = JSON.parse(localStorage.getItem('neonArcade.gameStats') || '{}'); } catch(e){}
+  try { cabinetStats = JSON.parse(localStorage.getItem('neonArcade.cabinetStats') || '{}'); } catch(e){}
   try { totalLaunches = Number(localStorage.getItem('neonArcade.totalLaunches')) || 0; } catch(e){}
   try { totalPlaySeconds = Number(localStorage.getItem('neonArcade.totalPlaySeconds')) || 0; } catch(e){}
   let playStartedAt = null;
-  let currentGameIndex = -1;
+  let currentGame = null;
 
   function saveLeaderboardData(){
     try {
       localStorage.setItem('neonArcade.gameStats', JSON.stringify(gameStats));
+      localStorage.setItem('neonArcade.cabinetStats', JSON.stringify(cabinetStats));
       localStorage.setItem('neonArcade.totalLaunches', String(totalLaunches));
       localStorage.setItem('neonArcade.totalPlaySeconds', String(totalPlaySeconds));
     } catch(e){}
   }
 
-  function recordGamePlayed(index){
-    const game = GAMES[index];
+  function recordGamePlayed(cab, game){
     if (!game) return;
-    gameStats[game.title] = Number(gameStats[game.title]) || 0;
-    gameStats[game.title]++;
+    gameStats[game.title] = (Number(gameStats[game.title]) || 0) + 1;
+    cabinetStats[cab.title] = (Number(cabinetStats[cab.title]) || 0) + 1;
     totalLaunches++;
     saveLeaderboardData();
     if (playedGames.indexOf(game.title) !== -1) return;
@@ -1463,6 +1683,40 @@
     settingsOverlay.style.display = 'none';
   });
 
+  // ---------------------------------------------------------------------
+  // Floor map: which cabinet holds what, and where it stands.
+  // ---------------------------------------------------------------------
+  const mapOverlay = document.getElementById('map-overlay');
+  const mapList = document.getElementById('map-list');
+  function renderFloorMap(){
+    mapList.innerHTML = '';
+    cabinets.forEach(cab => {
+      const row = document.createElement('div');
+      row.className = 'map-row';
+      row.style.setProperty('--row-accent', hexStr(cab.accent));
+      row.innerHTML = `<span class="map-name">${cab.title}</span>` +
+                      `<span class="map-count">${cab.games.length} games</span>` +
+                      `<span class="map-where">${cab.def.where}</span>`;
+      mapList.appendChild(row);
+    });
+  }
+  document.getElementById('map-btn').addEventListener('click', () => {
+    renderFloorMap();
+    mapOverlay.style.display = 'flex';
+    AudioEngine.click();
+  });
+  document.getElementById('map-close-btn').addEventListener('click', () => { mapOverlay.style.display = 'none'; });
+  mapOverlay.addEventListener('click', e => { if (e.target === mapOverlay) mapOverlay.style.display = 'none'; });
+
+  // small transient message, used by the admin export button
+  function showToast(msg){
+    const el = document.createElement('div');
+    el.textContent = msg;
+    el.style.cssText = "position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:90;" +
+      "font:10px 'Press Start 2P',monospace;color:#050505;background:#39ff14;padding:11px 15px;border-radius:4px;";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1800);
+  }
 
   // ---------------------------------------------------------------------
   // Feedback form. A static site cannot secretly deliver mail by itself, so
@@ -1514,6 +1768,7 @@
   feedbackInboxOverlay.addEventListener('click',e=>{if(e.target===feedbackInboxOverlay)closeFeedbackInbox();});
   document.getElementById('feedback-export-btn').addEventListener('click',async()=>{const text=readFeedbackInbox().map((x,i)=>`--- FEEDBACK ${i+1} ---\nType: ${x.type||'Other'}\nMessage: ${x.message||''}\nContact: ${x.contact||'(none)'}\nPage: ${x.page||'(unknown)'}\nTime: ${x.time||'(unknown)'}`).join('\n\n');if(!text)return;try{await navigator.clipboard.writeText(text);showToast('FEEDBACK COPIED');}catch(e){showToast('COPY FAILED');}});
   document.getElementById('feedback-clear-btn').addEventListener('click',()=>{if(adminMode&&confirm('Delete all saved feedback from this browser?')){try{localStorage.removeItem('neonArcade.feedbackInbox');}catch(e){}renderFeedbackInbox();}});
+
   // ---------------------------------------------------------------------
   // Operator/admin mode. This is intentionally unobtrusive, but because this
   // is a client-side HTML file it is NOT a secure authentication system.
@@ -1552,7 +1807,6 @@
     }
     devControlsEnabled=false;
     try{localStorage.setItem('neonArcade.devControls','0');}catch(e){}
-    // Turning controls off also ends the active admin session.
     if(adminMode) setAdminMode(false);
     refreshDevControlsUI(); AudioEngine.click();
   });
@@ -1584,12 +1838,9 @@
   }
 
   // Mobile-friendly hidden entry: press and hold the ticket counter for 1.6s.
-  // This mirrors the desktop shortcut without adding an obvious admin button.
   let adminHoldTimer=null;
   let adminHoldTriggered=false;
   function startAdminHold(e){
-    // The hidden PIN entry remains available even when developer controls are
-    // disabled; the PIN is the only way to turn them back on.
     if(e && e.pointerType && e.pointerType!=='touch') return;
     adminHoldTriggered=false;
     clearTimeout(adminHoldTimer);
@@ -1668,9 +1919,8 @@
   const leaderboardList = document.getElementById('leaderboard-list');
 
   function renderLeaderboard(){
-    const ranked = Object.entries(gameStats)
-      .sort((a,b) => b[1] - a[1])
-      .slice(0,8);
+    const rankedGames = Object.entries(gameStats).sort((a,b) => b[1] - a[1]).slice(0,6);
+    const rankedCabs = Object.entries(cabinetStats).sort((a,b) => b[1] - a[1]).slice(0,4);
 
     const playTime = totalPlaySeconds + (playStartedAt ? (Date.now() - playStartedAt) / 1000 : 0);
     const minutes = Math.floor(playTime / 60);
@@ -1678,8 +1928,12 @@
       <div class="stat-row"><span>GAMES PLAYED</span><span class="stat-value">${totalLaunches}</span></div>
       <div class="stat-row"><span>ARCADE TIME</span><span class="stat-value">${minutes}M</span></div>
       <div class="stat-row"><span>TICKETS</span><span class="stat-value">${tickets}</span></div>
+      <div class="settings-section-title" style="margin-top:14px">FAVOURITE CABINETS</div>
+      ${rankedCabs.length ? rankedCabs.map((x,i) =>
+        `<div class="stat-row"><span>${i+1}. ${x[0]}</span><span class="stat-value">${x[1]}X</span></div>`
+      ).join('') : '<div class="sub" style="text-align:center">NO CABINET VISITS YET</div>'}
       <div class="settings-section-title" style="margin-top:14px">MOST PLAYED</div>
-      ${ranked.length ? ranked.map((x,i) =>
+      ${rankedGames.length ? rankedGames.map((x,i) =>
         `<div class="stat-row"><span>${i+1}. ${x[0]}</span><span class="stat-value">${x[1]}X</span></div>`
       ).join('') : '<div class="sub" style="text-align:center">PLAY A GAME TO START YOUR LEADERBOARD</div>'}
     `;
@@ -1700,6 +1954,12 @@
     leaderboardOverlay.style.display = 'none';
     feedbackOverlay.style.display = 'none';
     adminOverlay.style.display = 'none';
+    mapOverlay.style.display = 'none';
+  }
+  function anyMenuOpen(){
+    return settingsOverlay.style.display === 'flex' || leaderboardOverlay.style.display === 'flex' ||
+           feedbackOverlay.style.display === 'flex' || adminOverlay.style.display === 'flex' ||
+           mapOverlay.style.display === 'flex';
   }
 
   function tryJump(){
@@ -1707,8 +1967,6 @@
   }
 
   // ---- mobile: a virtual movement pad (replaces WASD) and a jump button.
-  // Shown only on touch devices, and only in room mode (arcade mode is
-  // browsed with the in-scene joystick/buttons/tap, same as on desktop).
   const movePad = document.getElementById('move-pad');
   const movePadOuter = document.getElementById('move-pad-outer');
   const movePadNub = document.getElementById('move-pad-nub');
@@ -1716,8 +1974,8 @@
 
   {
     let padTouchId = null;
-    const PAD_RADIUS = 46; // px the nub can travel from center before clamping
-    const PAD_DEADZONE = 12; // px before a direction registers, avoids jitter
+    const PAD_RADIUS = 46;
+    const PAD_DEADZONE = 12;
 
     function setPadDirection(dx, dy){
       moveKeys.d = dx > PAD_DEADZONE;
@@ -1780,13 +2038,17 @@
     movePadNub.style.transform = 'translate(0px,0px)';
   }
   const roomPrompt = document.getElementById('room-prompt');
+  const floorGuide = document.getElementById('floor-guide');
   const restoreScreen = document.getElementById('session-restore');
 
   function saveSession(extra = {}) {
     try {
+      const selectedByCabinet = {};
+      cabinets.forEach(c => { selectedByCabinet[c.id] = c.selected; });
       const data = {
         phase: extra.phase || phase,
-        selected,
+        cabinetId: (extra.cabinetId !== undefined) ? extra.cabinetId : (activeCab ? activeCab.id : null),
+        selectedByCabinet,
         player: {x:player.position.x, y:player.position.y, z:player.position.z},
         camera: {x:camera.position.x, y:camera.position.y, z:camera.position.z},
         target: {x:controls.target.x, y:controls.target.y, z:controls.target.z},
@@ -1805,12 +2067,12 @@
   }
 
   function setRoomLighting(on){
-    ambientLight.intensity=on?1.0:0.20;
+    ambientLight.intensity=on?0.95:0.22;
     keyLight.intensity=on?0.5:0.18;
     magentaLight.intensity=on?2.2:0;
     cyanLight.intensity=on?2.2:0;
     roomGlow.intensity=on?0.65:0;
-    screenGlow.intensity=on?1.2:0;
+    cabinets.forEach(c => { c.screenGlow.intensity = on ? 1.2 : 0.55; });
     scene.traverse(obj => {
       if (obj.userData && obj.userData.arcadeStrip && obj.material) {
         obj.material.emissiveIntensity=on?0.8:0;
@@ -1823,48 +2085,76 @@
     arcadePowered = true;
     setRoomLighting(true);
     AudioEngine.powerOn();
-    // (the "ARCADE" sign itself is always fully visible now — see
-    // marqueeMaterial's creation — only the room's lights power on here)
   }
 
-  function cabinetWorldPosition() {
-    return cabinet.position.clone().add(new THREE.Vector3(0, 0, 0));
+  // which machine you're standing closest to (and close enough to use)
+  const NEAR_DISTANCE = 2.6;
+  function findNearestCabinet(){
+    let best = null, bestDist = Infinity;
+    for (const c of cabinets) {
+      const dx = player.position.x - c.group.position.x;
+      const dz = player.position.z - c.group.position.z;
+      const d = Math.hypot(dx, dz);
+      if (d < bestDist) { bestDist = d; best = c; }
+    }
+    return bestDist < NEAR_DISTANCE ? best : null;
   }
 
   function updateRoomProximity() {
     if (phase !== PHASE_ROOM) {
       roomPrompt.style.display = 'none';
+      floorGuide.style.display = 'none';
       return;
     }
-    const dist = player.position.distanceTo(cabinetWorldPosition());
-    playerNearCabinet = dist < 2.75;
-    if (playerNearCabinet) {
+    const found = findNearestCabinet();
+    if (found !== nearCab) {
+      nearCab = found;
+      if (nearCab) {
+        roomPrompt.style.color = hexStr(nearCab.accent);
+        roomPrompt.style.textShadow = '0 0 8px ' + hexStr(nearCab.accent);
+        roomPrompt.style.borderColor = mixHex(nearCab.accent, 0.55);
+        roomPrompt.innerHTML = 'PLAY THE ' + nearCab.title + ' CABINET<br><span>click it or press ENTER &bull; ' + nearCab.games.length + ' games</span>';
+      }
+    }
+    if (nearCab) {
       powerOnArcade();
       roomPrompt.style.display = 'block';
+      floorGuide.style.display = 'none';
     } else {
       roomPrompt.style.display = 'none';
+      floorGuide.style.display = 'block';
     }
   }
+  // the standing list of machines, written once rather than every frame
+  function buildFloorGuide(){
+    floorGuide.innerHTML = cabinets.map(c =>
+      '<span style="color:' + hexStr(c.accent) + '">' + c.title + '</span>'
+    ).join(' &nbsp;&bull;&nbsp; ');
+  }
 
-  function enterArcadeView(fromRestore = false) {
+  function enterArcadeView(cab, fromRestore = false) {
+    if (!cab) return;
+    // remember this BEFORE changing phase: hopping straight from one cabinet
+    // to its neighbour must not overwrite the room camera we'll return to
+    const cameFromRoom = (phase === PHASE_ROOM);
+    activeCab = cab;
     phase = PHASE_ARCADE;
     player.visible = false;
     controls.enableZoom = false;
     powerOnArcade();
     roomPrompt.style.display = 'none';
+    floorGuide.style.display = 'none';
     document.getElementById('crosshair-hint').innerHTML = arcadeHintText();
     if (!fromRestore) AudioEngine.whoosh();
-    AudioEngine.setMood('arcade');
-    // (skipped when restoring a saved session — that path fills these in
-    // from storage instead, below in restoreSavedSession)
-    if (!fromRestore) {
+    AudioEngine.setMood(cab.id);
+    if (!fromRestore && cameFromRoom) {
       preArcadeCameraPos = camera.position.clone();
       preArcadeCameraTarget = controls.target.clone();
     }
-    saveSession({phase:PHASE_ARCADE});
+    saveSession({phase:PHASE_ARCADE, cabinetId:cab.id});
 
-    screenMesh.getWorldPosition(_worldPos);
-    screenMesh.getWorldQuaternion(_worldQuat);
+    cab.screenMesh.getWorldPosition(_worldPos);
+    cab.screenMesh.getWorldQuaternion(_worldQuat);
     const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
     const zoomPos = _worldPos.clone()
       .addScaledVector(forward, 1.65)
@@ -1882,9 +2172,10 @@
     document.getElementById('crosshair-hint').innerHTML = roomHintText();
     AudioEngine.whoosh();
     AudioEngine.setMood('room');
+    activeCab = null;
+    nearCab = null;
 
-    // ease back to exactly how the camera was framed before you sat down,
-    // instead of snapping or guessing at a generic offset
+    // ease back to exactly how the camera was framed before you sat down
     controls.enabled = false;
     const targetCamPos = preArcadeCameraPos
       ? preArcadeCameraPos.clone()
@@ -1898,74 +2189,83 @@
       controls.minDistance = 1.05;
       controls.maxDistance = 6.0;
     });
-    saveSession({phase:PHASE_ROOM});
+    saveSession({phase:PHASE_ROOM, cabinetId:null});
   }
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  const interactiveObjects = [cabinet, screenMesh, stickGrabZone, ...buttons];
 
-  let overScreen = false;
   let hoveredButton = -1;
 
-  function updateHoverFromEvent(clientX, clientY){
+  function setPointerFromEvent(clientX, clientY){
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(interactiveObjects)[0];
+  }
+
+  function updateHoverFromEvent(clientX, clientY){
+    setPointerFromEvent(clientX, clientY);
 
     hoverRow = -1;
-    overScreen = false;
+    hoverCab = null;
     hoveredButton = -1;
     let cursor = 'grab';
 
-    if (hit && (phase === PHASE_ARCADE)) {
-      if (hit.object === screenMesh) {
-        overScreen = true;
-        const u = hit.uv.x, v = hit.uv.y;
-        const canvasY = (1 - v) * SCREEN_H;
-        const canvasX = u * SCREEN_W;
-        const listTop = 70, rowH = 40;
-        const row = Math.floor((canvasY - (listTop - 24)) / rowH);
-        if (canvasX > 20 && row >= 0 && row < ROWS_VISIBLE && (scrollOffset + row) < GAMES.length) {
-          hoverRow = scrollOffset + row;
+    if (phase === PHASE_ARCADE && activeCab) {
+      // only the machine you're actually sitting at is interactive
+      const targets = [activeCab.screenMesh, activeCab.stickGrabZone, ...activeCab.buttons];
+      const hit = raycaster.intersectObjects(targets)[0];
+      if (hit) {
+        if (hit.object === activeCab.screenMesh) {
+          const u = hit.uv.x, v = hit.uv.y;
+          const canvasY = (1 - v) * SCREEN_H;
+          const canvasX = u * SCREEN_W;
+          const listTop = 84, rowH = 40;
+          const row = Math.floor((canvasY - (listTop - 24)) / rowH);
+          if (canvasX > 20 && row >= 0 && row < ROWS_VISIBLE && (activeCab.scrollOffset + row) < activeCab.games.length) {
+            hoverCab = activeCab;
+            hoverRow = activeCab.scrollOffset + row;
+            cursor = 'pointer';
+          }
+        } else if (hit.object === activeCab.stickGrabZone) {
+          cursor = joystickDragging ? 'grabbing' : 'grab';
+        } else if (activeCab.buttons.includes(hit.object)) {
+          hoveredButton = activeCab.buttons.indexOf(hit.object);
           cursor = 'pointer';
         }
-      } else if (hit.object === stickGrabZone) {
-        cursor = joystickDragging ? 'grabbing' : 'grab';
-      } else if (buttons.includes(hit.object)) {
-        hoveredButton = buttons.indexOf(hit.object);
-        cursor = 'pointer';
       }
+    } else if (phase === PHASE_ROOM && nearCab) {
+      const hit = raycaster.intersectObject(nearCab.group, true)[0];
+      if (hit) cursor = 'pointer';
     }
 
     // camera-zoom-on-wheel is only ever appropriate in room mode; in arcade
-    // mode the wheel should always browse the game list instead (handled by
-    // the wheel listener below), never dolly the camera, on-screen or off
+    // mode the wheel should always browse the game list instead
     controls.enableZoom = (phase === PHASE_ROOM);
     renderer.domElement.style.cursor = cursor;
   }
 
   // Pointer Events (not mouse events) throughout: OrbitControls calls
-  // preventDefault() on touchstart for its own touch-orbit handling, and
-  // per spec that suppresses the browser's synthetic mouse events
-  // (mousedown/mousemove/click) for that touch — so mouse-event-based
-  // logic here would simply never fire on a touchscreen. Pointer Events
-  // aren't affected by that and work uniformly for mouse, touch, and pen.
-  renderer.domElement.addEventListener('pointermove', e => { if(!joystickDragging) updateHoverFromEvent(e.clientX, e.clientY); drawMenu(); });
+  // preventDefault() on touchstart for its own touch-orbit handling, which
+  // per spec suppresses the browser's synthetic mouse events for that touch.
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (joystickDragging) return;
+    updateHoverFromEvent(e.clientX, e.clientY);
+    if (activeCab) drawMenu(activeCab);
+  });
 
   // track drag distance so releasing after orbiting the camera doesn't
   // also register as a tap/click on whatever's under the cursor
   let dragStartPos = null;
 
   renderer.domElement.addEventListener('wheel', e => {
-    if (phase !== PHASE_ARCADE || gameOpen || cameraAnimating) return;
+    if (phase !== PHASE_ARCADE || !activeCab || gameOpen || cameraAnimating) return;
     e.preventDefault();
-    if (e.deltaY > 0) selected = Math.min(selected + 1, GAMES.length - 1);
-    else selected = Math.max(selected - 1, 0);
+    if (e.deltaY > 0) activeCab.selected = Math.min(activeCab.selected + 1, activeCab.games.length - 1);
+    else activeCab.selected = Math.max(activeCab.selected - 1, 0);
     AudioEngine.click();
-    drawMenu();
+    drawMenu(activeCab);
     saveSession({phase:PHASE_ARCADE});
   }, { passive: false });
 
@@ -1978,37 +2278,40 @@
   let joystickRepeatTimer = null;
 
   function joystickStep(){
-    if (joystickNorm > 0.65) { selected = Math.min(selected + 1, GAMES.length - 1); AudioEngine.click(); drawMenu(); saveSession({phase:PHASE_ARCADE}); }
-    else if (joystickNorm < -0.65) { selected = Math.max(selected - 1, 0); AudioEngine.click(); drawMenu(); saveSession({phase:PHASE_ARCADE}); }
+    if (!activeCab) return;
+    if (joystickNorm > 0.65) { activeCab.selected = Math.min(activeCab.selected + 1, activeCab.games.length - 1); AudioEngine.click(); drawMenu(activeCab); saveSession({phase:PHASE_ARCADE}); }
+    else if (joystickNorm < -0.65) { activeCab.selected = Math.max(activeCab.selected - 1, 0); AudioEngine.click(); drawMenu(activeCab); saveSession({phase:PHASE_ARCADE}); }
   }
 
   // The cabinet's 4 physical buttons, left to right: PLAY (green),
   // RANDOM/"surprise me" (yellow), PREV (cyan), NEXT (magenta).
   function pressCabinetButton(index){
+    if (!activeCab) return;
+    const cab = activeCab;
     switch (index) {
       case 0: // PLAY
-        launchGame(selected);
+        launchGame(cab, cab.selected);
         break;
-      case 1: // RANDOM
-        if (GAMES.length > 1) {
+      case 1: // RANDOM — anything from this cabinet's genre
+        if (cab.games.length > 1) {
           let next;
-          do { next = Math.floor(Math.random() * GAMES.length); } while (next === selected);
-          selected = next;
+          do { next = Math.floor(Math.random() * cab.games.length); } while (next === cab.selected);
+          cab.selected = next;
         }
         AudioEngine.click();
-        drawMenu();
-        launchGame(selected);
+        drawMenu(cab);
+        launchGame(cab, cab.selected);
         break;
       case 2: // PREV
-        selected = Math.max(selected - 1, 0);
+        cab.selected = Math.max(cab.selected - 1, 0);
         AudioEngine.click();
-        drawMenu();
+        drawMenu(cab);
         saveSession({phase:PHASE_ARCADE});
         break;
       case 3: // NEXT
-        selected = Math.min(selected + 1, GAMES.length - 1);
+        cab.selected = Math.min(cab.selected + 1, cab.games.length - 1);
         AudioEngine.click();
-        drawMenu();
+        drawMenu(cab);
         saveSession({phase:PHASE_ARCADE});
         break;
     }
@@ -2018,11 +2321,9 @@
     dragStartPos = { x: e.clientX, y: e.clientY };
     if (gameOpen || cameraAnimating) return;
     updateHoverFromEvent(e.clientX, e.clientY);
-    const rect = renderer.domElement.getBoundingClientRect();
-    pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, camera);
-    const hit = phase === PHASE_ARCADE ? raycaster.intersectObject(stickGrabZone)[0] : null;
+    if (phase !== PHASE_ARCADE || !activeCab) return;
+    setPointerFromEvent(e.clientX, e.clientY);
+    const hit = raycaster.intersectObject(activeCab.stickGrabZone)[0];
     if (hit) {
       joystickDragging = true;
       joystickStartY = e.clientY;
@@ -2030,15 +2331,15 @@
       controls.enabled = false;
       renderer.domElement.setPointerCapture(e.pointerId);
       clearInterval(joystickRepeatTimer);
-      joystickStep(); // immediate feedback if already past threshold
+      joystickStep();
       joystickRepeatTimer = setInterval(joystickStep, 220);
     }
   });
   renderer.domElement.addEventListener('pointermove', e => {
-    if (!joystickDragging) return;
+    if (!joystickDragging || !activeCab) return;
     const dy = e.clientY - joystickStartY;
     joystickNorm = Math.max(-1, Math.min(1, dy / 55));
-    stickTilt.rotation.x = joystickNorm * 0.5;
+    activeCab.stickTilt.rotation.x = joystickNorm * 0.5;
   });
   function releaseJoystick(e){
     if (!joystickDragging) return;
@@ -2053,9 +2354,9 @@
   }
 
   renderer.domElement.addEventListener('pointerup', e => {
-    const wasJoystickDrag = joystickDragging; // read before releaseJoystick clears it
+    const wasJoystickDrag = joystickDragging;
     releaseJoystick(e);
-    if (wasJoystickDrag) return; // this pointer was working the joystick, not tapping
+    if (wasJoystickDrag) return;
 
     if (gameOpen || cameraAnimating) return;
     if (dragStartPos) {
@@ -2064,20 +2365,18 @@
       if (dragDist > 6) return; // was a camera-orbit drag/swipe, not a tap
     }
     updateHoverFromEvent(e.clientX, e.clientY);
-    if (phase === PHASE_ARCADE) {
+    if (phase === PHASE_ARCADE && activeCab) {
       if (hoverRow >= 0) {
-        selected = hoverRow;
-        launchGame(selected);
+        activeCab.selected = hoverRow;
+        launchGame(activeCab, hoverRow);
       } else if (hoveredButton >= 0) {
         pressCabinetButton(hoveredButton);
       }
-    } else if (phase === PHASE_ROOM && playerNearCabinet) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(pointer, camera);
-      const cabinetHit = raycaster.intersectObject(cabinet, true)[0];
-      if (cabinetHit) enterArcadeView();
+    } else if (phase === PHASE_ROOM && nearCab) {
+      setPointerFromEvent(e.clientX, e.clientY);
+      // clicking any part of a nearby cabinet sits you down at THAT machine
+      const hit = raycaster.intersectObjects(cabinetGroups, true)[0];
+      if (hit && hit.object.userData.cabRef === nearCab) enterArcadeView(nearCab);
     }
   });
   renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
@@ -2095,7 +2394,7 @@
     if (e.ctrlKey && e.shiftKey && e.altKey && lower === 'a') { e.preventDefault(); openAdmin(); return; }
 
     if (k === 'Escape') {
-      if (settingsOverlay.style.display === 'flex' || leaderboardOverlay.style.display === 'flex' || feedbackOverlay.style.display === 'flex' || adminOverlay.style.display === 'flex') {
+      if (anyMenuOpen()) {
         closeMenus();
         e.preventDefault();
         return;
@@ -2118,33 +2417,40 @@
         moveKeys[movementKey] = true;
         e.preventDefault();
       }
-      if (k === 'Enter' && playerNearCabinet) {
-        enterArcadeView();
+      if (k === 'Enter' && nearCab) {
+        enterArcadeView(nearCab);
         e.preventDefault();
       }
       return;
     }
 
-    if (phase === PHASE_ARCADE) {
+    if (phase === PHASE_ARCADE && activeCab) {
       if (k === 'Escape') {
         leaveArcadeView();
         e.preventDefault();
         return;
       }
       if (k === 'ArrowDown') {
-        selected = Math.min(selected + 1, GAMES.length - 1);
+        activeCab.selected = Math.min(activeCab.selected + 1, activeCab.games.length - 1);
         AudioEngine.click();
-        drawMenu();
+        drawMenu(activeCab);
         saveSession({phase:PHASE_ARCADE});
         e.preventDefault();
       } else if (k === 'ArrowUp') {
-        selected = Math.max(selected - 1, 0);
+        activeCab.selected = Math.max(activeCab.selected - 1, 0);
         AudioEngine.click();
-        drawMenu();
+        drawMenu(activeCab);
         saveSession({phase:PHASE_ARCADE});
         e.preventDefault();
+      } else if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        // hop to the neighbouring cabinet without standing up
+        const i = cabinets.indexOf(activeCab);
+        const next = cabinets[(i + (k === 'ArrowRight' ? 1 : cabinets.length - 1)) % cabinets.length];
+        AudioEngine.whoosh();
+        enterArcadeView(next);
+        e.preventDefault();
       } else if (k === 'Enter' || k === ' ') {
-        launchGame(selected);
+        launchGame(activeCab, activeCab.selected);
         e.preventDefault();
       }
     }
@@ -2163,7 +2469,12 @@
     moveKeys.w = moveKeys.a = moveKeys.s = moveKeys.d = false;
   });
 
-  setInterval(() => { blinkOn = !blinkOn; if(!gameOpen) drawMenu(); }, 500);
+  setInterval(() => {
+    blinkOn = !blinkOn;
+    if (gameOpen) return;
+    if (phase === PHASE_ARCADE && activeCab) drawMenu(activeCab);
+    else drawAllMenus();
+  }, 500);
 
   // =====================================================================
   // Game overlay + camera zoom transition
@@ -2182,8 +2493,7 @@
   const _worldQuat = new THREE.Quaternion();
 
   // eases the camera from where it is now to a target position/lookAt over
-  // `duration` ms, then calls onComplete. Used for the zoom-into-the-CRT
-  // effect on launch, and to zoom back out on close.
+  // `duration` ms, then calls onComplete.
   function animateCameraTo(targetPos, targetLookAt, duration, onComplete){
     cameraAnimating = true;
     controls.enabled = false;
@@ -2207,18 +2517,20 @@
     requestAnimationFrame(step);
   }
 
-  function launchGame(index){
-    const game = GAMES[index];
+  function launchGame(cab, index){
+    if (!cab) return;
+    const game = cab.games[index];
     if (!game || gameOpen || cameraAnimating) return;
     gameOpen = true;
     phase = PHASE_GAME;
-    currentGameIndex = index;
+    activeCab = cab;
+    currentGame = game;
     playStartedAt = Date.now();
     document.body.classList.add('game-playing');
     closeMenus();
-    saveSession({phase:PHASE_GAME, gameIndex:index});
+    saveSession({phase:PHASE_GAME, cabinetId:cab.id});
     AudioEngine.launch();
-    recordGamePlayed(index);
+    recordGamePlayed(cab, game);
 
     savedCameraPos = camera.position.clone();
     savedTarget = controls.target.clone();
@@ -2226,10 +2538,9 @@
     // start loading the real file from the repo (e.g. "games/Terminal.html")
     // right away so it's ready by the time the zoom-in finishes
     frame.src = game.file;
-    saveSession({phase:PHASE_GAME, gameIndex:index});
 
-    screenMesh.getWorldPosition(_worldPos);
-    screenMesh.getWorldQuaternion(_worldQuat);
+    cab.screenMesh.getWorldPosition(_worldPos);
+    cab.screenMesh.getWorldQuaternion(_worldQuat);
     const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
     const zoomPos = _worldPos.clone().addScaledVector(forward, 0.72);
 
@@ -2254,7 +2565,7 @@
       playStartedAt = null;
       saveLeaderboardData();
     }
-    currentGameIndex = -1;
+    currentGame = null;
     document.body.classList.remove('game-playing');
     overlay.style.display = 'none';
     frame.src = 'about:blank';
@@ -2265,7 +2576,7 @@
       gameOpen = false;
       phase = PHASE_ARCADE;
       document.getElementById('crosshair-hint').innerHTML = arcadeHintText();
-      saveSession({phase:PHASE_ARCADE, gameIndex:selected});
+      saveSession({phase:PHASE_ARCADE});
       renderer.domElement.focus();
     });
   }
@@ -2276,12 +2587,10 @@
   // parent.postMessage({type:'arcadeScore', game:'Terminal', score:1234}, '*');
   window.addEventListener('message', e => {
     const d = e.data || {};
-    if (d.type !== 'arcadeScore' || !gameOpen) return;
-    const game = GAMES[currentGameIndex];
-    if (!game) return;
+    if (d.type !== 'arcadeScore' || !gameOpen || !currentGame) return;
     const score = Number(d.score);
     if (!Number.isFinite(score)) return;
-    const key = game.title + '.__score';
+    const key = currentGame.title + '.__score';
     const best = Number(localStorage.getItem('neonArcade.' + key)) || 0;
     if (score > best) {
       try { localStorage.setItem('neonArcade.' + key, String(score)); } catch(err){}
@@ -2294,21 +2603,20 @@
       playStartedAt = null;
       saveLeaderboardData();
     }
-    saveSession({phase: gameOpen ? PHASE_GAME : phase, gameIndex:selected});
+    saveSession({phase: gameOpen ? PHASE_GAME : phase});
   });
 
   // =====================================================================
   // Texture self-healing: some browsers (notably mobile Safari) silently
   // discard the pixel data of off-screen canvases that aren't attached to
-  // the page, and a backgrounded tab can also lose its WebGL context —
-  // both would otherwise leave the floor/wall/marquee blank. Redraw them
-  // whenever that's likely to have happened.
+  // the page, and a backgrounded tab can also lose its WebGL context.
+  // Redraw everything whenever that's likely to have happened.
   // =====================================================================
   function refreshStaticTextures(){
     drawGridTexture();    gridTexture.needsUpdate = true;
     drawWallTexture();    wallTexture.needsUpdate = true;
-    drawMarqueeTexture(); marqueeTexture.needsUpdate = true;
-    screenTexture.needsUpdate = true;
+    cabinets.forEach(c => { c.drawMarqueeTexture(); c.marqueeTexture.needsUpdate = true; });
+    drawAllMenus();
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -2384,28 +2692,33 @@
       player.position.y=FLOOR_Y;
       jumpVelocity=0;
     }
-    if(wasAirborne && !isAirborne) { landingBounce = 1; AudioEngine.land(); } // just touched down
+    if(wasAirborne && !isAirborne) { landingBounce = 1; AudioEngine.land(); }
     wasAirborne = isAirborne;
     landingBounce = Math.max(0, landingBounce - dt*6);
     player.scale.set(1 + landingBounce*0.10, 1 - landingBounce*0.14, 1 + landingBounce*0.10);
 
-    player.position.x=THREE.MathUtils.clamp(player.position.x,-5.2,5.2);
-    player.position.z=THREE.MathUtils.clamp(player.position.z,-1.8,5.3);
+    player.position.x=THREE.MathUtils.clamp(player.position.x,BOUNDS.minX,BOUNDS.maxX);
+    player.position.z=THREE.MathUtils.clamp(player.position.z,BOUNDS.minZ,BOUNDS.maxZ);
 
-    const cab=cabinetWorldPosition();
-    const dx=player.position.x-cab.x, dz=player.position.z-cab.z, d=Math.hypot(dx,dz);
-    if(d<0.72 && d>0.001){
-      player.position.x=cab.x+(dx/d)*0.72;
-      player.position.z=cab.z+(dz/d)*0.72;
+    // never walk through a machine, whichever one it is
+    for (const c of cabinets) {
+      const dx=player.position.x-c.group.position.x, dz=player.position.z-c.group.position.z;
+      const d=Math.hypot(dx,dz);
+      if(d<0.85 && d>0.001){
+        player.position.x=c.group.position.x+(dx/d)*0.85;
+        player.position.z=c.group.position.z+(dz/d)*0.85;
+      }
     }
 
     // Translate camera + target together. This follows the player but preserves
     // the user's current orbit angle and zoom distance exactly. The look
-    // target also rises as you approach the cabinet, so the marquee stays
-    // in the default frame instead of requiring you to manually drag upward
-    // to see it (that's what was making it seem to "disappear" up close).
-    const distToCabinet = player.position.distanceTo(cab);
-    const proximityT = THREE.MathUtils.clamp((4.2 - distToCabinet) / 3.2, 0, 1);
+    // target also rises as you approach a cabinet so its marquee stays in frame.
+    let nearestDist = Infinity;
+    for (const c of cabinets) {
+      const d = Math.hypot(player.position.x - c.group.position.x, player.position.z - c.group.position.z);
+      if (d < nearestDist) nearestDist = d;
+    }
+    const proximityT = THREE.MathUtils.clamp((4.2 - nearestDist) / 3.2, 0, 1);
     const desiredTarget=player.position.clone().add(new THREE.Vector3(0,1.12 + proximityT*0.85,0));
     const deltaTarget=desiredTarget.clone().sub(controls.target);
     controls.target.add(deltaTarget);
@@ -2413,8 +2726,7 @@
     controls.update();
 
     if(isAirborne){
-      // jump pose: knees tuck up, arms rise, torso lifts slightly — eases
-      // in/out rather than snapping so takeoff and landing both read clearly
+      // jump pose: knees tuck up, arms rise, torso lifts slightly
       const k=Math.min(1,dt*12);
       legL.rotation.x=THREE.MathUtils.lerp(legL.rotation.x,0.55,k);
       legR.rotation.x=THREE.MathUtils.lerp(legR.rotation.x,0.55,k);
@@ -2430,7 +2742,6 @@
       legL.rotation.x=swing; legR.rotation.x=-swing;
       armL.rotation.x=-swing*.45; armR.rotation.x=swing*.45;
       torso.position.y=1.12+Math.abs(Math.sin(walkTime*2))*.012;
-      // a slight forward lean that grows with speed, for a more natural gait
       const speed=Math.hypot(playerVelocity.x,playerVelocity.z);
       torso.rotation.x=THREE.MathUtils.lerp(torso.rotation.x, Math.min(0.12,speed*0.045), Math.min(1,dt*8));
     }else{
@@ -2452,8 +2763,13 @@
     controls.update();
     updateMobileControlsVisibility();
 
-    if (!joystickDragging) stickTilt.rotation.x *= 0.82;
-    screenGlow.intensity = 1.2 + Math.sin(Date.now() * 0.004) * 0.2;
+    const pulse = Math.sin(now * 0.004) * 0.2;
+    cabinets.forEach(c => {
+      if (!(joystickDragging && c === activeCab)) c.stickTilt.rotation.x *= 0.82;
+      const base = (c === activeCab) ? 1.2 : (arcadePowered ? 1.0 : 0.55);
+      c.screenGlow.intensity = base + pulse * (c === activeCab ? 1 : 0.4);
+    });
+
     if(equippedSkin==='gold'){ const shimmer=.11+Math.sin(now*.003)*.045; playerMat.emissiveIntensity=shimmer; }
     updateRoomProximity();
 
@@ -2477,20 +2793,27 @@
     renderer.render(scene, camera);
   }
 
-  // wait for the pixel font so the CRT text doesn't redraw mid-flicker, then go
+  // build every machine now that all the helpers it needs exist
+  CABINETS.forEach(buildCabinet);
+  buildFloorGuide();
+
   function restoreSavedSession(){
     const saved = readSession();
     if (!saved) return false;
 
-    if (saved.selected != null) {
-      selected = Math.max(0, Math.min(Number(saved.selected) || 0, GAMES.length - 1));
-      drawMenu();
+    if (saved.selectedByCabinet) {
+      cabinets.forEach(c => {
+        const s = Number(saved.selectedByCabinet[c.id]);
+        if (Number.isFinite(s)) c.selected = Math.max(0, Math.min(s, c.games.length - 1));
+      });
+      drawAllMenus();
     }
 
-    // The requested behavior: reopening the site returns to the screen/buttons,
-    // never to the very beginning, once a session has reached the arcade.
+    // Reopening the site returns you to the machine you were last sitting at,
+    // never all the way back to the middle of an empty room.
     if (saved.phase === PHASE_ARCADE || saved.phase === PHASE_GAME) {
-      if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || 0, saved.player.z || 3.8);
+      const cab = cabinets.find(c => c.id === saved.cabinetId) || cabinets[0];
+      if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || FLOOR_Y, saved.player.z || 3.8);
       if (saved.preArcadeCamera && saved.preArcadeTarget) {
         preArcadeCameraPos = new THREE.Vector3(saved.preArcadeCamera.x, saved.preArcadeCamera.y, saved.preArcadeCamera.z);
         preArcadeCameraTarget = new THREE.Vector3(saved.preArcadeTarget.x, saved.preArcadeTarget.y, saved.preArcadeTarget.z);
@@ -2501,12 +2824,12 @@
       powerOnArcade();
       setTimeout(() => {
         restoreScreen.classList.remove('show');
-        enterArcadeView(true);
+        enterArcadeView(cab, true);
       }, 550);
       return true;
     }
 
-    if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || 0, saved.player.z || 3.8);
+    if (saved.player) player.position.set(saved.player.x || 0, saved.player.y || FLOOR_Y, saved.player.z || 3.8);
     if (saved.camera && saved.target) {
       camera.position.set(saved.camera.x, saved.camera.y, saved.camera.z);
       controls.target.set(saved.target.x, saved.target.y, saved.target.z);
@@ -2514,14 +2837,6 @@
     }
     return false;
   }
-
-  // Clicking the canvas in room mode should only activate the arcade when
-  // the player is actually close enough to it.
-  renderer.domElement.addEventListener('pointermove', e => {
-    if (phase === PHASE_ROOM) {
-      updateRoomProximity();
-    }
-  });
 
   // ---- audio unlock + mute button. Browsers block audio until a real user
   // gesture happens, so the very first click/tap/keypress anywhere on the
@@ -2549,13 +2864,13 @@
   });
   volumeSlider.addEventListener('input', () => {
     AudioEngine.setVolume(volumeSlider.value / 100);
-    if (AudioEngine.isMuted()) { AudioEngine.setMuted(false); refreshMuteBtn(); } // dragging the slider un-mutes, same as most volume UIs
+    if (AudioEngine.isMuted()) { AudioEngine.setMuted(false); refreshMuteBtn(); }
   });
 
   function reveal(){
     document.getElementById('fallback').style.display = 'none';
     appEl.style.display = 'block';
-    drawMenu();
+    drawAllMenus();
     const restored = restoreSavedSession();
     if (!restored) {
       phase = PHASE_ROOM;
