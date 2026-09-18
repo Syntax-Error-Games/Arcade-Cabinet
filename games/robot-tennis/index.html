@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robo Tennis</title>
+<style>
+  :root { --ink:#3a2f4a; --paper:rgba(255,250,246,.92); }
+  html,body{margin:0;height:100%;overflow:hidden;background:#cfe6ff;font-family:"Avenir Next","Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);user-select:none;-webkit-user-select:none}
+  canvas{display:block}
+  #ui{position:fixed;inset:0;pointer-events:none}
+  #scoreboard{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--paper);border-radius:14px;padding:8px 14px;box-shadow:0 6px 18px rgba(60,40,80,.18);min-width:250px}
+  #scoreboard table{border-collapse:collapse;font-size:15px}
+  #scoreboard td{padding:2px 7px;text-align:center;font-variant-numeric:tabular-nums}
+  #scoreboard td.name{text-align:left;font-weight:700;letter-spacing:.04em;min-width:60px}
+  #scoreboard td.srv{width:12px;color:#f4a33d;font-size:12px}
+  #scoreboard td.set{color:#7a6c8c}
+  #scoreboard td.set.cur{color:var(--ink);font-weight:700}
+  #scoreboard td.pts{font-weight:800;font-size:17px;min-width:36px;border-left:2px solid #eadfe8;color:#e0644c}
+  #scoreboard .title{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#a093b0;text-align:center;margin-bottom:2px}
+  #call{position:absolute;top:36%;left:50%;transform:translate(-50%,-50%);text-align:center;opacity:0}
+  #call .big{font-size:min(12vw,84px);font-weight:900;letter-spacing:.06em;color:#fff;-webkit-text-stroke:3px rgba(58,47,74,.55);paint-order:stroke fill;text-shadow:0 4px 0 #e0644c,0 12px 30px rgba(58,47,74,.6)}
+  #call .sub{font-size:min(4.5vw,24px);font-weight:700;color:var(--ink);background:var(--paper);display:inline-block;padding:4px 16px;border-radius:999px;margin-top:8px;box-shadow:0 4px 12px rgba(60,40,80,.18)}
+  #call.show{animation:pop .55s cubic-bezier(.2,1.4,.3,1) forwards}
+  #call.hide{animation:fade .35s ease-out forwards}
+  @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  @keyframes fade{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(1.05)}}
+  #hint{position:absolute;left:14px;bottom:14px;background:var(--paper);border-radius:12px;padding:8px 12px;font-size:12px;line-height:1.55;box-shadow:0 6px 18px rgba(60,40,80,.18);max-width:290px}
+  #hint b{display:inline-block;background:#eee6f2;border-radius:5px;padding:0 6px;margin-right:3px;font-weight:700;color:#5c4b70;font-family:ui-monospace,Menlo,monospace;font-size:11px}
+  #prompt{position:absolute;bottom:60px;left:50%;transform:translateX(-50%);background:var(--paper);border-radius:999px;padding:8px 18px;font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(60,40,80,.18);transition:opacity .3s;opacity:0}
+  #prompt.on{opacity:1;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
+  #fps{position:absolute;right:12px;top:12px;font-size:11px;color:rgba(58,47,74,.55);background:var(--paper);padding:3px 8px;border-radius:8px}
+  #fps span{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="scoreboard">
+    <div class="title">Pastel Open · Best of 3</div>
+    <table><tbody id="sb"></tbody></table>
+  </div>
+  <div id="call"><div class="big"></div><div class="sub"></div></div>
+  <div id="prompt"></div>
+  <div id="hint"><b>WASD</b> move &nbsp;<b>Shift</b> sprint &nbsp;<b>Space</b>/<b>Click</b> swing<br>Hold a direction while swinging to aim: <b>A</b>/<b>D</b> place, <b>W</b> flat &amp; hard, <b>S</b> soft lob<br><b>M</b> sound &nbsp;<b>R</b> new match</div>
+  <div id="fps"><span id="fpsv">60</span> fps</div>
+</div>
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- constants ----------
+const G = 9.81;
+const BALL_R = 0.065;
+const COURT = { halfL: 11.885, halfW: 4.115, dblW: 5.485, service: 6.4, netH: 0.914, netHPost: 1.07, postX: 5.9 };
+const PHYS_DT = 1 / 120;
+const PARAMS = new URLSearchParams(location.search);
+const AUTO = PARAMS.has('auto');
+
+const rand = (a, b) => a + Math.random() * (b - a);
+const gauss = () => { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (t) => t * t * (3 - 2 * t);
+const damp = (cur, target, k, dt) => lerp(cur, target, 1 - Math.exp(-k * dt));
+const netHeightAt = (x) => COURT.netH + (COURT.netHPost - COURT.netH) * clamp(Math.abs(x) / COURT.postX, 0, 1);
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbfe0ff);
+scene.fog = new THREE.Fog(0xbfe0ff, 70, 160);
+
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 300);
+camera.position.set(0, 6, 22);
+
+const hemi = new THREE.HemisphereLight(0xdcefff, 0xffd6bd, 1.15);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff3dc, 2.3);
+sun.position.set(14, 26, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -26; sun.shadow.camera.right = 26;
+sun.shadow.camera.top = 26; sun.shadow.camera.bottom = -26;
+sun.shadow.camera.near = 5; sun.shadow.camera.far = 80;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+
+const MAT = {};
+const mat = (hex, extra = {}) => new THREE.MeshStandardMaterial({ color: hex, flatShading: true, roughness: 0.92, metalness: 0, ...extra });
+const box = (w, h, d, m, x = 0, y = 0, z = 0, shadow = true) => {
+  const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  g.position.set(x, y, z); g.castShadow = shadow; g.receiveShadow = true; return g;
+};
+
+// ---------- court & environment ----------
+function buildCourt() {
+  const world = new THREE.Group();
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), mat(0x9fd8b3));
+  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; ground.receiveShadow = true;
+  world.add(ground);
+  const apron = new THREE.Mesh(new THREE.BoxGeometry(36, 0.06, 54), mat(0xa8e6cf));
+  apron.position.y = -0.03; apron.receiveShadow = true; world.add(apron);
+  const surf = new THREE.Mesh(new THREE.BoxGeometry(COURT.dblW * 2 + 1.2, 0.04, COURT.halfL * 2 + 1.2), mat(0xf07f66));
+  surf.position.y = 0.0; surf.receiveShadow = true; world.add(surf);
+
+  // lines (slightly raised thin boxes)
+  const lineM = mat(0xfffaf3, { roughness: 0.7 });
+  const line = (w, d, x, z) => { const l = box(w, 0.012, d, lineM, x, 0.026, z, false); world.add(l); };
+  const L = 0.08, hl = COURT.halfL, hw = COURT.halfW, dw = COURT.dblW, sv = COURT.service;
+  line(dw * 2 + L, L, 0, hl); line(dw * 2 + L, L, 0, -hl);          // baselines
+  line(L, hl * 2, dw, 0); line(L, hl * 2, -dw, 0);                     // doubles sidelines
+  line(L, hl * 2, hw, 0); line(L, hl * 2, -hw, 0);                     // singles sidelines
+  line(hw * 2, L, 0, sv); line(hw * 2, L, 0, -sv);                     // service lines
+  line(L, sv * 2, 0, 0);                                               // center service line
+  line(L, 0.3, 0, hl - 0.15); line(L, 0.3, 0, -hl + 0.15);             // center marks
+
+  // net
+  const postM = mat(0xf5f1ea, { roughness: 0.6 });
+  for (const s of [-1, 1]) {
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, COURT.netHPost + 0.08, 8), postM);
+    p.position.set(s * COURT.postX, (COURT.netHPost + 0.08) / 2, 0); p.castShadow = true; world.add(p);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), mat(0xffd166)); cap.position.set(s * COURT.postX, COURT.netHPost + 0.12, 0); world.add(cap);
+  }
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 64;
+  const cx = cv.getContext('2d'); cx.clearRect(0, 0, 512, 64); cx.strokeStyle = 'rgba(255,255,255,0.85)'; cx.lineWidth = 1.5;
+  for (let i = 0; i <= 512; i += 8) { cx.beginPath(); cx.moveTo(i, 0); cx.lineTo(i, 64); cx.stroke(); }
+  for (let j = 0; j <= 64; j += 8) { cx.beginPath(); cx.moveTo(0, j); cx.lineTo(512, j); cx.stroke(); }
+  const netTex = new THREE.CanvasTexture(cv); netTex.wrapS = THREE.RepeatWrapping; netTex.repeat.set(3, 1);
+  const netMesh = new THREE.Mesh(new THREE.PlaneGeometry(COURT.postX * 2, COURT.netH, 24, 1),
+    new THREE.MeshStandardMaterial({ map: netTex, transparent: true, side: THREE.DoubleSide, roughness: 1, alphaTest: 0.2 }));
+  const pos = netMesh.geometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); const t = Math.abs(x) / COURT.postX; pos.setY(i, y + (y > 0 ? (COURT.netHPost - COURT.netH) * t : 0)); }
+  pos.needsUpdate = true; netMesh.position.y = COURT.netH / 2; netMesh.castShadow = true; world.add(netMesh);
+  const band = new THREE.Mesh(new THREE.PlaneGeometry(COURT.postX * 2, 0.07, 24, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.8 }));
+  const bp = band.geometry.attributes.position;
+  for (let i = 0; i < bp.count; i++) { const x = bp.getX(i), y = bp.getY(i); bp.setY(i, y + (COURT.netHPost - COURT.netH) * Math.abs(x) / COURT.postX); }
+  bp.needsUpdate = true; band.position.y = COURT.netH - 0.035; band.castShadow = true; world.add(band);
+
+  // bleachers: stepped rows on both long sides
+  const seatCols = [0xf7b2c4, 0xa9c9f5];
+  const crowdSpots = [];
+  for (const side of [-1, 1]) {
+    for (let r = 0; r < 5; r++) {
+      const m = mat(seatCols[(r + (side > 0 ? 1 : 0)) % 2]);
+      const w = 2.2, h = 0.75, d = 30;
+      const x = side * (12.5 + r * w), y = 0.35 + r * h;
+      const step = box(w, h + r * h, d, m, x, y - r * h / 2, 0); world.add(step);
+      for (let c = -6; c <= 6; c++) crowdSpots.push([x - side * 0.4, y + h / 2, c * 2.2 + (r % 2) * 0.9]);
+    }
+    const back = box(1.2, 5.2, 30, mat(0xf3d1dc), side * 24.2, 2.6, 0); world.add(back);
+  }
+  // short-end stands
+  for (const end of [-1, 1]) {
+    for (let r = 0; r < 3; r++) {
+      const m = mat(seatCols[r % 2]);
+      const step = box(22, 0.75 + r * 0.75, 2.0, m, 0, 0.35 + r * 0.75 - r * 0.375, end * (20 + r * 2.0)); world.add(step);
+      for (let c = -4; c <= 4; c++) crowdSpots.push([c * 2.4 + (r % 2) * 1.0, 0.35 + r * 0.75 + 0.375, end * (20 + r * 2.0) - end * 0.3]);
+    }
+  }
+  // crowd cubes (instanced)
+  const crowd = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.7, 0.5), mat(0xffffff), crowdSpots.length);
+  crowd.castShadow = true; crowd.receiveShadow = true;
+  const palette = [0xffd166, 0xef8a8a, 0x9be2c8, 0xb8a6ff, 0xffb1d8, 0xfff2b0, 0x8ed6ff];
+  const dummy = new THREE.Object3D(); const col = new THREE.Color();
+  crowdSpots.forEach((s, i) => {
+    dummy.position.set(s[0], s[1] + 0.35, s[2]); dummy.rotation.y = rand(-0.3, 0.3); dummy.updateMatrix();
+    crowd.setMatrixAt(i, dummy.matrix); crowd.setColorAt(i, col.setHex(palette[i % palette.length]));
+  });
+  crowd.instanceColor.needsUpdate = true; world.add(crowd);
+
+  // blocky trees around the arena
+  const trees = [];
+  const trunkM = mat(0xb08968), leafMs = [mat(0x8fd3a4), mat(0x6fc494), mat(0xa9e2b1)];
+  const treeSpots = [[-30, -8], [-31, 6], [30, -4], [31, 10], [-14, 30], [12, 32], [-8, 33], [19, 30], [-20, -32], [8, -34], [24, -31], [-30, 22], [32, -22]];
+  treeSpots.forEach(([x, z], i) => {
+    const t = new THREE.Group();
+    const s = rand(0.9, 1.4);
+    t.add(box(0.7 * s, 2.2 * s, 0.7 * s, trunkM, 0, 1.1 * s, 0));
+    const c1 = box(2.8 * s, 2.0 * s, 2.8 * s, leafMs[i % 3], 0, 3.0 * s, 0);
+    const c2 = box(2.0 * s, 1.6 * s, 2.0 * s, leafMs[(i + 1) % 3], 0, 4.6 * s, 0); c2.rotation.y = 0.5;
+    const c3 = box(1.1 * s, 1.0 * s, 1.1 * s, leafMs[(i + 2) % 3], 0, 5.8 * s, 0); c3.rotation.y = 0.9;
+    t.add(c1, c2, c3); t.position.set(x, 0, z); t.rotation.y = rand(0, 6.28);
+    t.userData.phase = rand(0, 6.28); world.add(t); trees.push(t);
+  });
+  // clouds
+  const clouds = [];
+  const cloudM = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 1 });
+  for (let i = 0; i < 9; i++) {
+    const c = new THREE.Group();
+    const n = 3 + (i % 3);
+    for (let k = 0; k < n; k++) { const b = box(rand(3, 6), rand(1.4, 2.4), rand(2.5, 4), cloudM, k * 2.6 - n * 1.3, rand(-0.4, 0.5), rand(-1, 1), false); b.receiveShadow = false; c.add(b); }
+    c.position.set(rand(-70, 70), rand(22, 34), rand(-80, 40)); c.userData.speed = rand(0.25, 0.6); world.add(c); clouds.push(c);
+  }
+  // umpire chair + bench + umbrella for flavour
+  const chair = new THREE.Group();
+  chair.add(box(0.9, 0.1, 0.9, mat(0xffffff), 0, 2.3, 0), box(0.9, 0.9, 0.12, mat(0xffffff), 0, 2.8, -0.4), box(0.12, 2.3, 0.12, trunkM, -0.38, 1.15, -0.38), box(0.12, 2.3, 0.12, trunkM, 0.38, 1.15, -0.38), box(0.12, 2.3, 0.12, trunkM, -0.38, 1.15, 0.38), box(0.12, 2.3, 0.12, trunkM, 0.38, 1.15, 0.38));
+  chair.position.set(-8.4, 0, 0); world.add(chair);
+  const umb = new THREE.Group();
+  umb.add(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.6, 6), postM));
+  const top = new THREE.Mesh(new THREE.ConeGeometry(1.6, 0.7, 8), mat(0xffb1d8)); top.position.y = 1.5; top.castShadow = true; umb.add(top);
+  umb.children[0].position.y = 1.2; umb.position.set(8.6, 0, 3.5); world.add(umb);
+  world.add(box(1.6, 0.4, 0.5, mat(0xffe0a3), 8.6, 0.4, 3.5));
+  scene.add(world);
+  return { trees, clouds, crowd, crowdSpots };
+}
+const ENV = buildCourt();
+
+// ---------- robot rig ----------
+// Local frame: forward = -z, right = +x, origin on the ground under the hips.
+const RIG = { hip: 0.78, shoulder: new THREE.Vector3(0.34, 1.26, 0), upper: 0.36, fore: 0.34, racketLen: 0.56, legUp: 0.36, legLo: 0.36 };
+
+class Robot {
+  constructor(colors, facing) {
+    this.root = new THREE.Group();
+    this.root.rotation.y = facing;           // 0 = faces -z (player), PI = faces +z (CPU)
+    this.facing = facing;
+    this.pos = new THREE.Vector3();
+    this.vel = new THREE.Vector3();
+    this.colors = colors;
+    this.swing = null;                        // {def, t}
+    this.lastHitTime = -9;
+    this.pose = { twist: 0, lean: 0, tilt: 0, crouch: 0, headYaw: 0, headPitch: 0, bob: 0 };
+    this.locoPhase = 0;
+    this.handR = new THREE.Vector3(0.36, 1.0, -0.36); this.dirR = new THREE.Vector3(-0.25, 0.55, -0.8).normalize(); this.normR = new THREE.Vector3(-1, 0, -0.2).normalize();
+    this.handL = new THREE.Vector3(-0.36, 1.0, -0.32);
+    this.antenna = { a: 0, v: 0 };
+    this.spring = 0; this.springV = 0;
+    this.build();
+  }
+  build() {
+    const c = this.colors;
+    const bodyM = mat(c.body), accM = mat(c.accent), darkM = mat(0x4a4258), whiteM = mat(0xfff8ef, { roughness: 0.5 });
+    this.hips = new THREE.Group(); this.hips.position.y = RIG.hip; this.root.add(this.hips);
+    this.torso = new THREE.Group(); this.hips.add(this.torso);
+    const t = box(0.62, 0.58, 0.44, bodyM, 0, 0.3, 0); t.geometry.translate(0, 0, 0); this.torso.add(t);
+    this.torso.add(box(0.66, 0.16, 0.48, accM, 0, 0.04, 0));   // belt
+    this.torso.add(box(0.28, 0.18, 0.05, darkM, 0, 0.36, -0.235)); // chest panel
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), new THREE.MeshStandardMaterial({ color: c.glow, emissive: c.glow, emissiveIntensity: 0.9 })); light.position.set(0, 0.36, -0.26); this.torso.add(light);
+    // head
+    this.neck = new THREE.Group(); this.neck.position.set(0, 0.62, 0); this.torso.add(this.neck);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.31, 10, 8), bodyM); head.position.y = 0.3; head.castShadow = true; this.neck.add(head);
+    const visor = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 6, Math.PI * 0.62, Math.PI * 0.76, Math.PI * 0.28, Math.PI * 0.42), darkM);
+    visor.position.y = 0.3; visor.scale.set(1.14, 1.06, 1.14); visor.rotation.y = Math.PI / 2; this.neck.add(visor);
+    for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.1, 0.05), new THREE.MeshStandardMaterial({ color: c.glow, emissive: c.glow, emissiveIntensity: 1.2 })); e.position.set(s * 0.11, 0.33, -0.285); this.neck.add(e); }
+    this.antennaG = new THREE.Group(); this.antennaG.position.set(0, 0.58, 0); this.neck.add(this.antennaG);
+    this.antennaG.add(box(0.05, 0.28, 0.05, darkM, 0, 0.14, 0));
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.075, 6, 5), accM); ball.position.y = 0.32; this.antennaG.add(ball);
+    for (const s of [-1, 1]) { const ear = box(0.1, 0.16, 0.16, accM, s * 0.33, 0.3, 0); this.neck.add(ear); }
+    // legs
+    this.legs = [];
+    for (const s of [-1, 1]) {
+      const hip = new THREE.Group(); hip.position.set(s * 0.17, 0, 0); this.hips.add(hip);
+      const up = box(0.2, RIG.legUp, 0.22, accM, 0, -RIG.legUp / 2, 0); hip.add(up);
+      const knee = new THREE.Group(); knee.position.y = -RIG.legUp; hip.add(knee);
+      const lo = box(0.17, RIG.legLo, 0.19, bodyM, 0, -RIG.legLo / 2, 0); knee.add(lo);
+      const foot = box(0.24, 0.12, 0.36, darkM, 0, -RIG.legLo - 0.02, -0.06); knee.add(foot);
+      this.legs.push({ hip, knee, s });
+    }
+    // arms: shoulder sphere, upper + fore segments oriented by IK
+    this.arms = {};
+    for (const s of [-1, 1]) {
+      const sh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 5), accM); sh.position.set(s * RIG.shoulder.x, RIG.shoulder.y - RIG.hip, 0); this.torso.add(sh);
+      const upper = new THREE.Group(); const um = box(0.16, RIG.upper, 0.16, bodyM, 0, RIG.upper / 2, 0); upper.add(um); this.torso.add(upper);
+      const fore = new THREE.Group(); const fm = box(0.14, RIG.fore, 0.14, accM, 0, RIG.fore / 2, 0); fore.add(fm); this.torso.add(fore);
+      const elbow = new THREE.Mesh(new THREE.SphereGeometry(0.085, 7, 5), darkM); this.torso.add(elbow);
+      const hand = new THREE.Group(); const hm = new THREE.Mesh(new THREE.SphereGeometry(0.1, 7, 5), whiteM); hm.castShadow = true; hand.add(hm); this.torso.add(hand);
+      this.arms[s > 0 ? 'R' : 'L'] = { upper, fore, elbow, hand };
+    }
+    // racket in right hand
+    this.racket = new THREE.Group();
+    this.racket.add(box(0.045, 0.34, 0.045, darkM, 0, 0.17, 0));
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.03, 6, 14), accM); hoop.position.y = 0.34 + 0.2; hoop.castShadow = true; this.racket.add(hoop);
+    const strings = new THREE.Mesh(new THREE.CircleGeometry(0.18, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, side: THREE.DoubleSide, roughness: 1 }));
+    strings.position.y = 0.54; this.racket.add(strings);
+    this.arms.R.hand.add(this.racket);
+    this.racketHeadLocal = new THREE.Vector3(0, 0.54, 0);
+    this.root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    scene.add(this.root);
+    // ball held in left hand (for serve)
+    this.racketHeadWorld = new THREE.Vector3();
+  }
+  // 2-bone IK: places upper/fore/hand objects (children of torso) so the hand reaches target (torso-local)
+  solveArm(side, target, pole) {
+    const a = this.arms[side];
+    const S = new THREE.Vector3(side === 'R' ? RIG.shoulder.x : -RIG.shoulder.x, RIG.shoulder.y - RIG.hip, 0);
+    const d = target.clone().sub(S); let len = d.length();
+    const maxL = RIG.upper + RIG.fore - 0.01; if (len > maxL) { d.multiplyScalar(maxL / len); len = maxL; }
+    if (len < 0.05) { d.set(0, -0.05, 0); len = 0.05; }
+    const dir = d.clone().normalize();
+    const cosA = clamp((RIG.upper * RIG.upper + len * len - RIG.fore * RIG.fore) / (2 * RIG.upper * len), -1, 1);
+    const ang = Math.acos(cosA);
+    let perp = pole.clone().sub(dir.clone().multiplyScalar(pole.dot(dir)));
+    if (perp.lengthSq() < 1e-6) perp = new THREE.Vector3(0, 0, 1).sub(dir.clone().multiplyScalar(dir.z));
+    perp.normalize();
+    const E = S.clone().add(dir.clone().multiplyScalar(Math.cos(ang) * RIG.upper)).add(perp.multiplyScalar(Math.sin(ang) * RIG.upper));
+    const H = S.clone().add(d);
+    const up = new THREE.Vector3(0, 1, 0);
+    a.upper.position.copy(S); a.upper.quaternion.setFromUnitVectors(up, E.clone().sub(S).normalize());
+    a.fore.position.copy(E); a.fore.quaternion.setFromUnitVectors(up, H.clone().sub(E).normalize());
+    a.elbow.position.copy(E); a.hand.position.copy(H);
+    return { E, H };
+  }
+}
+
+// ---------- swing definitions (root-local keyframes; channels interpolated with Catmull-Rom) ----------
+// key: [t, handR xyz, dirR xyz, normR xyz, handL xyz, twist, lean, crouch]
+const READY = [0.36, 1.0, -0.36, -0.25, 0.55, -0.8, -1, 0, -0.2, -0.3, 1.02, -0.34, 0, 0.05, 0];
+const K = (t, arr) => ({ t, v: arr });
+const SWINGS = {
+  forehand: { dur: 0.7, hitStart: 0.42, hitEnd: 0.62, contact: 0.5, keys: [
+    K(0, READY),
+    K(0.3, [0.72, 1.18, 0.42, 0.55, 0.55, 0.62, -0.75, 0, 0.66, 0.1, 1.15, -0.35, -0.6, 0.08, -0.06]),
+    K(0.5, [0.8, 0.95, -0.3, 0.9, 0.15, -0.42, -0.4, 0.1, -0.9, -0.35, 1.1, -0.2, 0.1, 0.1, -0.08]),
+    K(0.75, [-0.25, 1.35, -0.5, -0.65, 0.7, -0.3, -0.5, -0.2, -0.8, -0.45, 1.0, -0.3, 0.65, 0.05, -0.02]),
+    K(1, READY)] },
+  backhand: { dur: 0.7, hitStart: 0.42, hitEnd: 0.62, contact: 0.5, keys: [
+    K(0, READY),
+    K(0.3, [-0.25, 1.15, 0.3, -0.5, 0.55, 0.65, 0.7, 0, 0.55, -0.32, 1.1, 0.25, 0.85, 0.08, -0.06]),
+    K(0.5, [-0.3, 0.98, -0.5, -0.9, 0.1, -0.42, 0.4, 0.1, -0.9, -0.38, 0.98, -0.42, 0.55, 0.1, -0.08]),
+    K(0.75, [0.4, 1.4, -0.4, 0.6, 0.75, -0.25, 0.6, -0.3, -0.7, 0.25, 1.3, -0.35, -0.5, 0.05, -0.02]),
+    K(1, READY)] },
+  smash: { dur: 0.72, hitStart: 0.5, hitEnd: 0.7, contact: 0.58, keys: [
+    K(0, READY),
+    K(0.3, [0.42, 1.55, 0.3, 0.25, 0.35, 0.9, 0, 0.93, -0.36, -0.2, 1.75, -0.3, -0.45, -0.15, -0.05]),
+    K(0.58, [0.33, 1.8, -0.12, 0.15, 0.9, -0.4, 0, -0.4, -0.9, -0.35, 1.15, -0.3, 0.1, 0.15, -0.1]),
+    K(0.82, [0.1, 1.05, -0.6, -0.2, -0.5, -0.85, -0.9, 0.3, 0, -0.4, 0.95, -0.35, 0.35, 0.25, -0.12]),
+    K(1, READY)] },
+  serve: { dur: 1.45, hitStart: 0.62, hitEnd: 0.71, contact: 0.655, toss: 0.19, keys: [
+    K(0, [0.3, 0.95, -0.25, -0.3, 0.3, -0.9, -0.9, 0, 0.3, -0.15, 1.0, -0.3, 0, 0.1, 0]),
+    K(0.19, [0.55, 1.05, 0.35, 0.4, 0.4, 0.82, -0.6, -0.4, 0.5, -0.22, 1.72, -0.32, -0.3, -0.05, -0.02]),
+    K(0.42, [0.42, 1.6, 0.35, 0.2, 0.4, 0.9, 0, 0.9, -0.4, -0.25, 1.9, -0.3, -0.45, -0.18, -0.14]),
+    K(0.655, [0.33, 1.8, -0.12, 0.15, 0.9, -0.4, 0, -0.4, -0.9, -0.3, 1.2, -0.35, 0.05, 0.1, -0.02]),
+    K(0.85, [-0.1, 1.0, -0.6, -0.3, -0.5, -0.8, -0.9, 0.3, 0, -0.4, 0.95, -0.3, 0.45, 0.25, -0.1]),
+    K(1, READY)] },
+};
+// racket head offset along dir at contact, root-local: hand + dir*len
+function swingContactLocal(def) {
+  const k = def.keys.find(k => Math.abs(k.t - def.contact) < 1e-6).v;
+  const d = new THREE.Vector3(k[3], k[4], k[5]).normalize();
+  return new THREE.Vector3(k[0], k[1], k[2]).addScaledVector(d, RIG.racketLen);
+}
+function evalSwing(def, frac, out) {
+  const keys = def.keys; let i = 0;
+  while (i < keys.length - 2 && frac >= keys[i + 1].t) i++;
+  const k0 = keys[Math.max(0, i - 1)].v, k1 = keys[i].v, k2 = keys[i + 1].v, k3 = keys[Math.min(keys.length - 1, i + 2)].v;
+  const u = clamp((frac - keys[i].t) / (keys[i + 1].t - keys[i].t), 0, 1), u2 = u * u, u3 = u2 * u;
+  for (let c = 0; c < 15; c++) {
+    const p0 = k0[c], p1 = k1[c], p2 = k2[c], p3 = k3[c];
+    out[c] = 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u2 + (-p0 + 3 * p1 - 3 * p2 + p3) * u3);
+  }
+  return out;
+}
+
+// ---------- robot animation ----------
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _q1 = new THREE.Quaternion(), _m1 = new THREE.Matrix4();
+Object.assign(Robot.prototype, {
+  startSwing(name) { this.swing = { def: SWINGS[name], name, t: 0, hit: false, tossed: false }; },
+  swingFrac() { return this.swing ? this.swing.t / this.swing.def.dur : 0; },
+  inHitWindow() { const s = this.swing; if (!s || s.hit) return false; const f = s.t / s.def.dur; return f >= s.def.hitStart && f <= s.def.hitEnd; },
+  contactLocalWorld(name) { return this.root.localToWorld(swingContactLocal(SWINGS[name])); },
+  update(dt, time, lookAt) {
+    if (!this.ch) { this.ch = READY.slice(); this.tmp = new Array(15).fill(0); this.loco = READY.slice(); }
+    const speed = Math.hypot(this.vel.x, this.vel.z);
+    const moving = speed > 0.3;
+    this.locoPhase += (moving ? speed * 2.1 : 0) * dt;
+    // locomotion pose (ready stance + arm/torso motion while running)
+    const lp = this.loco; for (let c = 0; c < 15; c++) lp[c] = READY[c];
+    const fx = Math.cos(this.facing), fz = -Math.cos(this.facing); // local forward speed sign
+    const localVz = this.vel.z * fz, localVx = this.vel.x * fx;
+    const sw = Math.sin(this.locoPhase) * clamp(speed / 6, 0, 1);
+    lp[2] += sw * 0.14; lp[11] -= sw * 0.14;                          // hands pump
+    lp[12] = -localVx * 0.03 + sw * 0.05;                              // twist
+    lp[13] = 0.05 + clamp(localVz, -4, 8) * 0.03;                     // lean into forward run
+    lp[14] = moving ? -0.05 : -0.02 + Math.sin(time * 2.2) * 0.012;    // crouch / breathing
+    const tilt = localVx * 0.035;
+    // swing blend
+    let w = 0;
+    const s = this.swing;
+    if (s) {
+      s.t += dt;
+      if (s.t >= s.def.dur) { this.swing = null; w = 0; }
+      else {
+        evalSwing(s.def, s.t / s.def.dur, this.tmp);
+        w = Math.min(1, s.t / 0.1, (s.def.dur - s.t) / 0.14);
+        w = smooth(w);
+      }
+    }
+    const k = 1 - Math.exp(-(s ? 32 : 14) * dt);
+    for (let c = 0; c < 15; c++) { const target = s ? lerp(lp[c], this.tmp[c], w) : lp[c]; this.ch[c] += (target - this.ch[c]) * k; }
+    this.applyPose(dt, time, lookAt, tilt, moving, speed, s);
+  },
+  applyPose(dt, time, lookAt, tilt, moving, speed, s) {
+    const ch = this.ch;
+    this.pose.tilt = damp(this.pose.tilt, tilt, 10, dt);
+    this.pose.bob = damp(this.pose.bob, moving ? Math.abs(Math.sin(this.locoPhase)) * 0.045 * clamp(speed / 5, 0, 1) : 0, 12, dt);
+    // torso & hips
+    this.hips.position.y = RIG.hip + ch[14] + this.pose.bob;
+    this.torso.rotation.set(ch[13], ch[12], this.pose.tilt, 'YXZ');
+    // legs
+    for (const leg of this.legs) {
+      const ph = this.locoPhase + (leg.s > 0 ? 0 : Math.PI);
+      const amp = clamp(speed / 5, 0, 1) * 0.8;
+      const hipT = moving ? Math.sin(ph) * amp : (ch[14] < -0.05 ? -0.35 : -0.08) + leg.s * ch[12] * 0.15;
+      const kneeT = moving ? -Math.max(0, Math.sin(ph + 0.9)) * amp * 1.4 : (ch[14] < -0.05 ? 0.6 : 0.12);
+      leg.hip.rotation.x = damp(leg.hip.rotation.x, hipT, 16, dt);
+      leg.knee.rotation.x = damp(leg.knee.rotation.x, kneeT, 16, dt);
+      leg.hip.rotation.z = damp(leg.hip.rotation.z, -this.pose.tilt * 0.6, 10, dt);
+    }
+    // arms via IK in torso space
+    this.hips.updateMatrixWorld(true);
+    _m1.copy(this.torso.matrixWorld).invert();
+    const tR = _v1.set(ch[0], ch[1], ch[2]); this.root.localToWorld(tR); tR.applyMatrix4(_m1);
+    const tL = _v2.set(ch[9], ch[10], ch[11]); this.root.localToWorld(tL); tL.applyMatrix4(_m1);
+    const shY = RIG.shoulder.y - RIG.hip;
+    const hiR = clamp((tR.y - shY + 0.15) / 0.5, 0, 1), hiL = clamp((tL.y - shY + 0.15) / 0.5, 0, 1);
+    this.solveArm('R', tR, _v3.set(lerp(0.7, 1.0, hiR), lerp(-1.0, 0.45, hiR), lerp(0.5, 0.15, hiR)));
+    this.solveArm('L', tL, _v3.set(-lerp(0.7, 1.0, hiL), lerp(-1.0, 0.45, hiL), lerp(0.5, 0.15, hiL)));
+    // racket orientation: local y = dir, local z = normal (root-local) converted into torso space
+    const dir = _v1.set(ch[3], ch[4], ch[5]).normalize();
+    const nrm = _v2.set(ch[6], ch[7], ch[8]); nrm.addScaledVector(dir, -nrm.dot(dir)); if (nrm.lengthSq() < 1e-5) nrm.set(1, 0, 0); nrm.normalize();
+    const xax = _v3.crossVectors(dir, nrm).normalize();
+    _m1.makeBasis(xax, dir, nrm); _q1.setFromRotationMatrix(_m1);
+    const tq = this.torso.quaternion.clone().invert();
+    this.racket.quaternion.copy(tq.multiply(_q1));
+    // head look
+    if (lookAt) {
+      const l = this.root.worldToLocal(_v1.copy(lookAt));
+      const yaw = clamp(Math.atan2(-l.x, -l.z), -1.1, 1.1) - ch[12];
+      const pitch = clamp(-Math.atan2(l.y - 1.9, Math.hypot(l.x, l.z)), -0.5, 0.6);
+      this.neck.rotation.y = damp(this.neck.rotation.y, yaw, 8, dt);
+      this.neck.rotation.x = damp(this.neck.rotation.x, pitch, 8, dt);
+    }
+    // antenna spring reacts to acceleration
+    const acc = (speed - (this.prevSpeed || 0)) / Math.max(dt, 1e-3); this.prevSpeed = speed;
+    this.antenna.v += (-60 * this.antenna.a - 6 * this.antenna.v - acc * 0.02 + (s ? Math.sin(time * 40) * 0.6 : 0)) * dt;
+    this.antenna.a += this.antenna.v * dt;
+    this.antennaG.rotation.x = clamp(this.antenna.a, -0.6, 0.6);
+    this.root.position.copy(this.pos);
+    this.root.updateMatrixWorld(true);
+    this.prevHead = this.prevHead || this.racketHeadWorld.clone();
+    this.prevHead.copy(this.racketHeadWorld);
+    this.racket.localToWorld(this.racketHeadWorld.copy(this.racketHeadLocal));
+    this.arms.L.hand.getWorldPosition(this.handLWorld || (this.handLWorld = new THREE.Vector3()));
+  }
+});
+
+// ---------- ball & physics ----------
+const ballMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(BALL_R, 1), new THREE.MeshStandardMaterial({ color: 0xe8ff5a, flatShading: true, roughness: 0.7, emissive: 0x556600, emissiveIntensity: 0.25 }));
+ballMesh.castShadow = true; scene.add(ballMesh);
+const ball = { pos: new THREE.Vector3(0, 1, 0), vel: new THREE.Vector3(), held: null, prev: new THREE.Vector3(), spin: new THREE.Vector3() };
+
+// integrate one step; returns 0 none, 1 bounce, 2 net
+function integrate(p, v, dt, prevZ) {
+  v.y -= G * dt;
+  p.addScaledVector(v, dt);
+  let ev = 0;
+  if (p.y < BALL_R) {
+    p.y = BALL_R;
+    if (v.y < -0.4) { v.y = -v.y * 0.7; v.x *= 0.82; v.z *= 0.82; ev = 1; }
+    else { v.y = 0; v.x *= 0.985; v.z *= 0.985; if (Math.abs(v.x) + Math.abs(v.z) < 0.05) { v.x = v.z = 0; } }
+  }
+  if ((prevZ > 0) !== (p.z > 0) && Math.abs(p.x) < COURT.postX + 0.12) {
+    const f = prevZ / (prevZ - p.z);
+    const yCross = p.y - v.y * dt * (1 - f);       // approx height at crossing
+    const xCross = p.x - v.x * dt * (1 - f);
+    if (yCross < netHeightAt(xCross) + BALL_R) {
+      p.z = Math.sign(prevZ) * (BALL_R + 0.03);
+      v.z *= -0.22; v.x *= 0.5; v.y = Math.min(v.y, 0) * 0.3 - 0.5;
+      ev = 2;
+    }
+  }
+  return ev;
+}
+const _pp = new THREE.Vector3(), _pv = new THREE.Vector3();
+function predict(p0, v0, maxT, stopAtBounce) {
+  _pp.copy(p0); _pv.copy(v0);
+  const out = { samples: [], bounce: null, net: false };
+  let t = 0, bounces = 0;
+  while (t < maxT) {
+    const prevZ = _pp.z;
+    const ev = integrate(_pp, _pv, PHYS_DT, prevZ); t += PHYS_DT;
+    if (ev === 2) { out.net = true; out.netAt = { x: _pp.x, z: _pp.z, t }; break; }
+    if (ev === 1) { bounces++; if (!out.bounce) out.bounce = { x: _pp.x, z: _pp.z, t }; if (stopAtBounce) break; }
+    out.samples.push({ x: _pp.x, y: _pp.y, z: _pp.z, vy: _pv.y, vx: _pv.x, vz: _pv.z, t, bounces });
+  }
+  return out;
+}
+// velocity to reach target with horizontal speed vh
+function shotVelocity(from, target, vh) {
+  const dx = target.x - from.x, dz = target.z - from.z, dh = Math.hypot(dx, dz);
+  const T = Math.max(0.15, dh / vh);
+  const vy = (target.y - from.y) / T + 0.5 * G * T;
+  return new THREE.Vector3(dx / T, vy, dz / T);
+}
+
+// ---------- players ----------
+const player = new Robot({ body: 0xfff1c9, accent: 0x5ec8b7, glow: 0x2ee6c5 }, 0);
+const cpu = new Robot({ body: 0xd8c8ff, accent: 0xff8fb1, glow: 0xff5d8f }, Math.PI);
+player.side = 1; cpu.side = -1; player.id = 'P'; cpu.id = 'C'; player.name = 'YOU'; cpu.name = 'CPU';
+const robots = [player, cpu];
+const other = (r) => (r === player ? cpu : player);
+
+// ---------- game state & scoring ----------
+const game = {
+  state: 'serve_ready', stateT: 0, time: 0,
+  server: player, serveNum: 1, serveInPlay: false,
+  lastHitter: null, bounces: 0, rally: 0,
+  pts: [0, 0], games: [0, 0], sets: [], setsWon: [0, 0], tiebreak: false, tbFirstServer: null,
+  pointWinner: null, log: [],
+};
+const idx = (r) => (r === player ? 0 : 1);
+const isDeuceSide = () => ((game.pts[0] + game.pts[1]) % 2) === 0;
+function serveGeometry() {
+  const S = game.server.side, deuce = isDeuceSide();
+  const boxSign = deuce ? -S : S;              // x-sign of the target service box
+  return { S, deuce, boxSign, serverPos: new THREE.Vector3(deuce ? S * 1.1 : -S * 1.1, 0, S * (COURT.halfL + 0.55)), receiverPos: new THREE.Vector3(boxSign * 1.9, 0, -S * (COURT.halfL - 0.2)) };
+}
+function ptLabel(i) {
+  const a = game.pts[i], b = game.pts[1 - i];
+  if (game.tiebreak) return String(a);
+  if (a >= 3 && b >= 3) return a > b ? 'AD' : (a === b ? '40' : '40');
+  return ['0', '15', '30', '40'][Math.min(a, 3)];
+}
+function beginPoint() {
+  const g = serveGeometry();
+  const srv = game.server, rcv = other(srv);
+  srv.spot = g.serverPos; rcv.spot = g.receiverPos; srv.arrived = rcv.arrived = false;
+  srv.swing = null; rcv.swing = null; cpu.plan = null; player.plan = null;
+  ball.held = srv; ball.vel.set(0, 0, 0);
+  game.state = 'serve_ready'; game.stateT = 0; game.serveInPlay = false; game.lastHitter = null; game.bounces = 0; game.rally = 0; game.crossed = false;
+  cpu.speed = rand(5.0, 6.3); cpu.reaction = rand(0.1, 0.32); player.speed = rand(5.2, 6.2); player.reaction = rand(0.1, 0.25); cpu.reachStress = player.reachStress = 0; cpu.incomingSpeed = player.incomingSpeed = 0;
+  setPrompt(srv === player ? '' : 'CPU serving…');
+}
+function startServe(r) {
+  if (game.state !== 'serve_ready' || ball.held !== r || !r.arrived) return;
+  r.startSwing('serve'); game.state = 'serving'; game.stateT = 0; setPrompt('');
+}
+function onHit(r, head) {
+  const wasServe = game.state === 'serving';
+  let vel;
+  if (r === player && !AUTO) vel = playerShot(r, wasServe, head); else vel = aiShot(r, wasServe, head);
+  ball.vel.copy(vel); ball.held = null;
+  r.swing.hit = true; r.lastHitTime = game.time;
+  game.lastHitter = r; game.bounces = 0; game.crossed = false;
+  if (wasServe) { game.serveInPlay = true; game.rally = 0; } else game.rally++;
+  game.state = 'rally'; game.stateT = 0;
+  fx.hit(head, r.swing.name === 'smash' || wasServe);
+  if (r.swing.name === 'smash') fx.shake(0.35);
+  other(r).plan = makePlan(other(r));
+}
+function pointOver(winner, big, sub, fault) {
+  if (game.state === 'point_over') return;
+  game.state = 'point_over'; game.stateT = 0; game.pointWinner = winner; game.faultOnly = !!fault;
+  cpu.plan = null; player.plan = null;
+  showCall(big, sub);
+  game.log.push({ t: +game.time.toFixed(2), big, sub, winner: winner ? winner.id : null, rally: game.rally });
+  if (!fault) fx.cheer(winner === player ? 1.0 : 0.5);
+}
+function resolvePointOver() {
+  if (game.faultOnly) { game.serveNum = 2; beginPoint(); return; }
+  awardPoint(game.pointWinner);
+}
+function awardPoint(w) {
+  const i = idx(w), o = 1 - i;
+  game.pts[i]++; game.serveNum = 1;
+  const p = game.pts, msgs = [];
+  let gameWon = false;
+  if (game.tiebreak) { if (p[i] >= 7 && p[i] - p[o] >= 2) gameWon = true; }
+  else if (p[i] >= 4 && p[i] - p[o] >= 2) gameWon = true;
+  if (gameWon) {
+    game.games[i]++; game.pts = [0, 0];
+    const gm = game.games, wasTiebreak = game.tiebreak;
+    const setWon = wasTiebreak || (gm[i] >= 6 && gm[i] - gm[o] >= 2);
+    if (setWon) {
+      game.setsWon[i]++; game.sets.push([gm[0], gm[1]]); game.games = [0, 0]; game.tiebreak = false;
+      if (game.setsWon[i] >= 2) msgs.push(['MATCH', `${w.name === 'YOU' ? 'You win' : 'CPU wins'} the match · R to play again`]);
+      else msgs.push(['SET', `${w.name === 'YOU' ? 'You take' : 'CPU takes'} the set ${gm[i]}–${gm[o]}`]);
+      game.server = wasTiebreak ? other(game.tbFirstServer) : other(game.server);
+    } else {
+      msgs.push(['GAME', `${w.name === 'YOU' ? 'You' : 'CPU'} · games ${gm[0]}–${gm[1]}`]);
+      game.server = other(game.server);
+      if (gm[0] === 6 && gm[1] === 6) { game.tiebreak = true; game.tbFirstServer = game.server; }
+    }
+  } else if (game.tiebreak) {
+    const n = p[0] + p[1];
+    game.server = (Math.floor((n + 1) / 2) % 2 === 0) ? game.tbFirstServer : other(game.tbFirstServer);
+  }
+  updateScoreboard();
+  if (game.setsWon[0] >= 2 || game.setsWon[1] >= 2) { game.state = 'match_over'; showCall(msgs[0][0], msgs[0][1], 99); setPrompt('Press R for a new match'); return; }
+  if (msgs.length) { showCall(msgs[0][0], msgs[0][1]); game.state = 'between'; game.stateT = 0; }
+  else beginPoint();
+}
+function resetMatch() {
+  Object.assign(game, { pts: [0, 0], games: [0, 0], sets: [], setsWon: [0, 0], tiebreak: false, serveNum: 1, server: player, state: 'serve_ready' });
+  hideCall(); updateScoreboard(); beginPoint();
+}
+// in/out judgement for a bounce at (x,z)
+function judgeBounce(x, z) {
+  const hitter = game.lastHitter;
+  const onHitterSide = Math.sign(z) === hitter.side;
+  const serve = game.serveInPlay && game.rally === 0;
+  if (onHitterSide) return { winner: other(hitter), big: serve ? 'FAULT' : 'OUT', fault: serve };
+  const m = BALL_R;
+  if (game.bounces === 0) {
+    let inside;
+    if (serve) {
+      const g = serveGeometry();
+      inside = Math.sign(x) === g.boxSign && Math.abs(x) <= COURT.halfW + m && Math.abs(z) <= COURT.service + m;
+    } else inside = Math.abs(x) <= COURT.halfW + m && Math.abs(z) <= COURT.halfL + m;
+    if (!inside) return { winner: other(hitter), big: serve ? 'FAULT' : 'OUT', fault: serve };
+    return null;
+  }
+  return { winner: hitter, big: 'MISSED' };
+}
+function handleBallEvent(ev, x, z) {
+  if (game.state !== 'rally' && game.state !== 'serving') return;
+  const hitter = game.lastHitter;
+  if (!hitter) { // toss fell to the ground before a hit
+    if (ev === 1 && game.state === 'serving') endWithFault(other(game.server), 'FAULT');
+    return;
+  }
+  if (ev === 2) {
+    const serve = game.serveInPlay && game.rally === 0;
+    if (serve) endWithFault(other(hitter), 'FAULT', 'into the net'); else pointOver(other(hitter), 'INTO THE NET', `Point · ${other(hitter).name === 'YOU' ? 'You' : 'CPU'}`);
+    fx.net(); return;
+  }
+  if (ev === 1) {
+    fx.bounce(x, z);
+    const j = judgeBounce(x, z);
+    if (!j) { game.bounces++; return; }
+    if (j.fault) endWithFault(j.winner, j.big); else pointOver(j.winner, j.big, `Point · ${j.winner.name === 'YOU' ? 'You' : 'CPU'}`);
+  }
+}
+function endWithFault(receiver, big, why) {
+  if (game.serveNum === 1) pointOver(null, big, why ? `${why} · second serve` : 'second serve', true);
+  else pointOver(receiver, 'DOUBLE FAULT', `Point · ${receiver.name === 'YOU' ? 'You' : 'CPU'}`);
+}
+
+// ---------- shots ----------
+const keys = {};
+const aimInput = () => ({ x: (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0), z: (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) });
+function playerShot(r, serve, head) {
+  const aim = aimInput();
+  const d = ball.pos.distanceTo(head);                     // timing quality: distance from the sweet spot
+  const target = new THREE.Vector3(); let vh, sigma = 0.3 + d * 1.8, vyNoise = 0.05 + d * 0.35;
+  if (serve) {
+    const g = serveGeometry();
+    target.set(g.boxSign * 2.0 + aim.x * 1.4, BALL_R, -r.side * (4.8 + aim.z * 1.2));
+    vh = 24 + aim.z * 4; sigma = 0.35 + (aim.z > 0 ? 0.25 : 0); vyNoise = 0.06 + (aim.z > 0 ? 0.05 : 0);
+  } else if (r.swing.name === 'smash') {
+    target.set(aim.x * 3, BALL_R, -r.side * (6 + aim.z * 3)); vh = 26; sigma += 0.2;
+  } else {
+    target.set(aim.x * 3.2, BALL_R, -r.side * (7.8 + aim.z * 2.7)); vh = 17 + aim.z * 5; if (aim.z > 0) sigma += 0.25;
+  }
+  target.x += gauss() * sigma; target.z += gauss() * sigma;
+  const v = shotVelocity(ball.pos, target, vh);
+  v.y *= 1 + gauss() * vyNoise;
+  return v;
+}
+function aiShot(r, serve, head) {
+  const opp = other(r);
+  const target = new THREE.Vector3(); let vh, sigma, vyNoise = 0.06;
+  if (serve) {
+    const g = serveGeometry();
+    target.set(g.boxSign * (1.2 + Math.random() * 2.0), BALL_R, -r.side * rand(4.0, 5.8));
+    vh = game.serveNum === 1 ? rand(22, 26) : rand(18, 21); sigma = game.serveNum === 1 ? 0.6 : 0.4;
+  } else {
+    const away = Math.random() < 0.65 ? -Math.sign(opp.pos.x || 0.01) : (Math.random() < 0.5 ? -1 : 1);
+    const smash = r.swing.name === 'smash';
+    target.set(away * rand(0.8, 3.0), BALL_R, -r.side * (smash ? rand(4.5, 8.5) : rand(6.0, 10.3)));
+    vh = smash ? rand(23, 27) : rand(15.5, 20);
+    const difficulty = clamp(r.incomingSpeed / 26, 0, 1) * 0.5 + Math.min(game.rally, 12) * 0.03 + r.reachStress * 0.6;
+    sigma = 0.45 + difficulty * 0.7;
+    if (Math.random() < 0.13 + difficulty * 0.15) { sigma = 2.3; vyNoise = 0.3; }  // blunder
+  }
+  target.x += gauss() * sigma; target.z += gauss() * sigma;
+  const v = shotVelocity(ball.pos, target, vh);
+  v.y *= 1 + gauss() * vyNoise;
+  return v;
+}
+
+// ---------- AI (used by the CPU, and by the player in ?auto mode) ----------
+function measureContact(r, name) {
+  const def = SWINGS[name];
+  r.ch = new Array(15).fill(0); r.tmp = new Array(15).fill(0); r.loco = READY.slice();
+  evalSwing(def, def.contact, r.ch);
+  const savedPos = r.pos.clone(); r.pos.set(0, 0, 0);
+  r.applyPose(1, 0, null, 0, false, 0, null);
+  const local = r.root.worldToLocal(r.racketHeadWorld.clone());
+  r.pos.copy(savedPos); r.ch = READY.slice();
+  return local;
+}
+const CONTACT = { forehand: measureContact(player, 'forehand'), backhand: measureContact(player, 'backhand'), smash: measureContact(player, 'smash'), serve: measureContact(player, 'serve') };
+const standFor = (r, type, x, z) => { const c = CONTACT[type], S = r.side; return new THREE.Vector3(x - S * c.x, 0, z - S * c.z); };
+function makePlan(r) {
+  if (ball.held) return null;
+  const S = r.side;
+  const traj = predict(ball.pos, ball.vel, 3.2, false);
+  if (traj.net) return null;
+  const s = traj.samples;
+  // smash / volley: ball passes high through reach before its first bounce
+  for (const p of s) {
+    if (p.bounces > 0) break;
+    if (Math.sign(p.z) !== S || Math.abs(p.z) < 1) continue;
+    if (p.vy < 0 && Math.abs(p.y - CONTACT.smash.y) < 0.12 && Math.hypot(p.x - r.pos.x, p.z - r.pos.z) < 0.8 + p.t * 4) {
+      return { type: 'smash', t: game.time + p.t, x: p.x, z: p.z, stand: standFor(r, 'smash', p.x, p.z), startMove: game.time + r.reaction * 0.6 };
+    }
+  }
+  // groundstroke after first bounce on our side: take it near contact height on the way down (or at the apex)
+  const b = traj.bounce; if (!b || Math.sign(b.z) !== S) return null;
+  const margin = 0.35;
+  if (Math.abs(b.x) > COURT.halfW + margin || Math.abs(b.z) > COURT.halfL + margin) return null;   // let it go out
+  // find the apex after the bounce, then take the ball on the rise just below contact height (or at the apex)
+  let apexY = 0;
+  for (const p of s) { if (p.bounces < 1) continue; if (p.bounces > 1 || p.vy <= 0) { apexY = p.y; break; } }
+  const yC = Math.min(CONTACT.forehand.y - 0.05, apexY * 0.92);
+  let pick = null;
+  for (const p of s) { if (p.bounces < 1) continue; if (p.bounces > 1) break; if (p.y >= yC) { pick = p; break; } }
+  if (!pick) return null;
+  const fh = standFor(r, 'forehand', pick.x, pick.z), bh = standFor(r, 'backhand', pick.x, pick.z);
+  const useFH = Math.abs(fh.x - r.pos.x) <= Math.abs(bh.x - r.pos.x) + 0.6;
+  const stand = useFH ? fh : bh;
+  stand.z = S * Math.max(Math.abs(stand.z), 0.9);
+  return { type: useFH ? 'forehand' : 'backhand', t: game.time + pick.t, x: pick.x, z: pick.z, stand, startMove: game.time + r.reaction };
+}
+function aiControl(r, dt) {
+  const S = r.side;
+  const home = new THREE.Vector3(0, 0, S * (COURT.halfL + 0.6));
+  let goal = home, spd = 4.0;
+  const plan = r.plan;
+  if (plan && game.time >= plan.startMove) { goal = plan.stand; spd = r.speed; }
+  if (game.state === 'serve_ready') { goal = r.spot; spd = 4.6; if (!r.arrived && r.pos.distanceTo(r.spot) < 0.2) r.arrived = true; }
+  else if (game.state !== 'rally') goal = r.pos;
+  const d = goal.clone().sub(r.pos); d.y = 0; const dist = d.length();
+  const want = dist > 0.05 ? d.multiplyScalar(Math.min(spd, dist / Math.max(dt, 1e-3)) / dist) : new THREE.Vector3();
+  if (r.swing) want.multiplyScalar(0.3);
+  const k = 1 - Math.exp(-10 * dt);
+  r.vel.lerp(want, k);
+  r.pos.addScaledVector(r.vel, dt);
+  r.pos.x = clamp(r.pos.x, -9.5, 9.5); r.pos.z = S > 0 ? clamp(r.pos.z, 0.7, 17.5) : clamp(r.pos.z, -17.5, -0.7);
+  // swing timing
+  if (plan && !r.swing) {
+    const def = SWINGS[plan.type];
+    if (game.time >= plan.t - def.contact * def.dur) {
+      r.reachStress = clamp((Math.hypot(plan.stand.x - r.pos.x, plan.stand.z - r.pos.z) - 0.3) / 1.2, 0, 1);
+      r.incomingSpeed = ball.vel.length();
+      r.startSwing(plan.type); r.plan = null;
+    }
+  }
+  // serve
+  if (game.state === 'serve_ready' && game.server === r && ball.held === r && r.arrived && game.stateT > (r === cpu ? 1.1 : 0.8)) startServe(r);
+}
+function pickPlayerSwing() {
+  if (ball.held === player) return 'serve';
+  const traj = predict(ball.pos, ball.vel, 0.35, false);
+  const p = traj.samples[traj.samples.length - 1] || ball.pos;
+  const lx = (p.x - player.pos.x) * player.side, ly = p.y;
+  if (ly > 1.8 && Math.abs(lx) < 1.3) return 'smash';
+  return lx >= -0.2 ? 'forehand' : 'backhand';
+}
+function playerControl(dt) {
+  const locked = (game.state === 'serve_ready' || game.state === 'serving') && game.server === player || game.state === 'between' || game.state === 'match_over';
+  const a = aimInput();
+  const want = new THREE.Vector3(a.x, 0, -a.z);
+  if (want.lengthSq() > 0) want.normalize();
+  const sprint = keys.ShiftLeft || keys.ShiftRight;
+  want.multiplyScalar(locked ? 0 : (sprint ? 8.5 : 5.5) * (player.swing ? 0.35 : 1));
+  if (game.state === 'serve_ready' && !player.arrived) {
+    const d = player.spot.clone().sub(player.pos); d.y = 0; const dist = d.length();
+    if (dist < 0.2) { player.arrived = true; if (game.server === player) setPrompt(game.serveNum === 2 ? 'Second serve · SPACE to serve' : 'SPACE to serve'); }
+    else want.copy(d).multiplyScalar(Math.min(4.6, dist / Math.max(dt, 1e-3)) / dist);
+  }
+  const k = 1 - Math.exp(-12 * dt);
+  player.vel.lerp(want, k);
+  player.pos.addScaledVector(player.vel, dt);
+  player.pos.x = clamp(player.pos.x, -9.5, 9.5); player.pos.z = clamp(player.pos.z, 0.7, 16);
+  if (keys._swing) {
+    keys._swing = false;
+    if (game.state === 'serve_ready' && game.server === player) startServe(player);
+    else if (!player.swing && (game.state === 'rally' || game.state === 'serving' || game.state === 'serve_ready')) player.startSwing(pickPlayerSwing());
+  }
+}
+
+// ---------- effects ----------
+const ring = new THREE.Group();
+const ringM = new THREE.MeshBasicMaterial({ color: 0xfff3a0, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false });
+const r1 = new THREE.Mesh(new THREE.RingGeometry(0.36, 0.48, 28), ringM); r1.rotation.x = -Math.PI / 2;
+const r2 = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.16, 20), ringM); r2.rotation.x = -Math.PI / 2;
+ring.add(r1, r2); ring.position.y = 0.035; ring.visible = false; scene.add(ring);
+const blob = new THREE.Mesh(new THREE.CircleGeometry(0.16, 16), new THREE.MeshBasicMaterial({ color: 0x3a2f4a, transparent: true, opacity: 0.28, depthWrite: false }));
+blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; scene.add(blob);
+const trail = []; const trailM = new THREE.MeshBasicMaterial({ color: 0xf6ff9a, transparent: true, opacity: 0.5, depthWrite: false });
+for (let i = 0; i < 10; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(BALL_R * 0.8, 6, 5), trailM); m.visible = false; scene.add(m); trail.push({ m, p: new THREE.Vector3(), age: 9 }); }
+const puffs = []; const puffM = new THREE.MeshBasicMaterial({ color: 0xfff0e0, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.2, 14), puffM.clone()); m.rotation.x = -Math.PI / 2; m.position.y = 0.04; m.visible = false; scene.add(m); puffs.push({ m, age: 9 }); }
+const audio = { ctx: null, on: true };
+function beep(freq, dur, type = 'sine', gain = 0.2, slide = 0) {
+  if (!audio.on || !audio.ctx) return;
+  try {
+    const c = audio.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, c.currentTime); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), c.currentTime + dur);
+    g.gain.setValueAtTime(gain, c.currentTime); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+    o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + dur);
+  } catch (e) { }
+}
+const fx = {
+  shakeT: 0, cheerT: 0, cheerAmp: 0,
+  hit(p, hard) { beep(hard ? 190 : 260, 0.09, 'square', 0.12, -120); beep(hard ? 900 : 1200, 0.05, 'triangle', 0.08, -600); },
+  bounce(x, z) { const pf = puffs.find(p => p.age > 0.6) || puffs[0]; pf.m.position.set(x, 0.04, z); pf.age = 0; pf.m.visible = true; beep(140, 0.08, 'sine', 0.1, -60); },
+  net() { beep(90, 0.25, 'sawtooth', 0.08, -40); },
+  shake(a) { this.shakeT = a; },
+  cheer(a) { this.cheerT = 1.4; this.cheerAmp = a; beep(520, 0.12, 'triangle', 0.05, 200); },
+  update(dt, time) {
+    for (const t of trail) { t.age += dt; if (t.age > 0.3) t.m.visible = false; else { t.m.visible = true; const f = 1 - t.age / 0.3; t.m.scale.setScalar(f * 0.9 + 0.1); t.m.position.copy(t.p); } }
+    for (const p of puffs) { if (p.age > 1) continue; p.age += dt * 2.6; p.m.scale.setScalar(1 + p.age * 5); p.m.material.opacity = 0.55 * (1 - p.age); if (p.age >= 1) p.m.visible = false; }
+    if (this.shakeT > 0) this.shakeT = Math.max(0, this.shakeT - dt * 2.2);
+    if (this.cheerT > 0) {
+      this.cheerT -= dt;
+      const d = new THREE.Object3D();
+      ENV.crowdSpots.forEach((s, i) => {
+        const ph = i * 1.7; const jump = Math.max(0, Math.sin(time * 9 + ph)) * 0.35 * this.cheerAmp * Math.min(1, this.cheerT * 2);
+        d.position.set(s[0], s[1] + 0.35 + jump, s[2]); d.rotation.y = Math.sin(ph) * 0.3; d.updateMatrix(); ENV.crowd.setMatrixAt(i, d.matrix);
+      });
+      ENV.crowd.instanceMatrix.needsUpdate = true;
+    }
+    ENV.trees.forEach(t => { t.rotation.z = Math.sin(time * 1.1 + t.userData.phase) * 0.012; });
+    ENV.clouds.forEach(c => { c.position.x += c.userData.speed * dt; if (c.position.x > 90) c.position.x = -90; });
+  }
+};
+let trailTick = 0;
+
+// ---------- UI ----------
+const callEl = document.getElementById('call'), callBig = callEl.querySelector('.big'), callSub = callEl.querySelector('.sub');
+let callTimer = 0;
+function showCall(big, sub, dur = 1.7) { callBig.textContent = big; callSub.textContent = sub || ''; callSub.style.display = sub ? '' : 'none'; callEl.classList.remove('hide'); void callEl.offsetWidth; callEl.classList.add('show'); callTimer = dur; }
+function hideCall() { if (callEl.classList.contains('show')) { callEl.classList.remove('show'); callEl.classList.add('hide'); } callTimer = 0; }
+const promptEl = document.getElementById('prompt');
+function setPrompt(t) { promptEl.textContent = t; promptEl.classList.toggle('on', !!t); }
+const sbEl = document.getElementById('sb');
+function updateScoreboard() {
+  const rows = [player, cpu].map((r, i) => {
+    const sets = game.sets.map(s => `<td class="set">${s[i]}</td>`).join('');
+    const cur = `<td class="set cur">${game.games[i]}</td>`;
+    const srv = `<td class="srv">${game.server === r && game.state !== 'match_over' ? '●' : ''}</td>`;
+    return `<tr>${srv}<td class="name">${r.name}</td>${sets}${cur}<td class="pts">${ptLabel(i)}</td></tr>`;
+  });
+  sbEl.innerHTML = rows.join('');
+}
+
+// ---------- input ----------
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) keys._swing = true; }
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  keys[e.code] = true;
+  if (e.code === 'KeyM') { audio.on = !audio.on; }
+  if (e.code === 'KeyR' && !e.repeat) resetMatch();
+  ensureAudio();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('pointerdown', e => { if (e.target === renderer.domElement) { keys._swing = true; ensureAudio(); } });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+function ensureAudio() { if (!audio.ctx) { try { audio.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume(); }
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+// ---------- camera ----------
+const camPos = new THREE.Vector3(0, 6, 22), camTgt = new THREE.Vector3(0, 1, 0);
+function updateCamera(dt) {
+  const bx = (game.state === 'rally' ? ball.pos.x : 0) * 0.12;
+  const desired = _v1.set(clamp(player.pos.x * 0.6 + bx, -6, 6), 5.0 + player.pos.z * 0.06, player.pos.z + 7.0);
+  const target = _v2.set(clamp(player.pos.x * 0.35 + bx, -4, 4), 1.1, player.pos.z - 9.5);
+  const k = 1 - Math.exp(-5.5 * dt);
+  camPos.lerp(desired, k); camTgt.lerp(target, k);
+  camera.position.copy(camPos);
+  if (fx.shakeT > 0) camera.position.add(_v3.set(gauss(), gauss(), 0).multiplyScalar(0.03 * fx.shakeT));
+  camera.lookAt(camTgt);
+  const fov = 52 + (keys.ShiftLeft && player.vel.length() > 4 ? 3 : 0);
+  if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = damp(camera.fov, fov, 6, dt); camera.updateProjectionMatrix(); }
+}
+
+// ---------- main loop ----------
+function stepFrame(dt) {
+  const t = game.time += dt; game.stateT += dt;
+  // controllers
+  if (AUTO) aiControl(player, dt); else playerControl(dt);
+  aiControl(cpu, dt);
+  // release the toss
+  for (const r of robots) {
+    const s = r.swing;
+    if (s && s.name === 'serve' && !s.tossed && ball.held === r && s.t / s.def.dur >= s.def.toss) {
+      s.tossed = true; ball.held = null;
+      const contact = r.root.localToWorld(CONTACT.serve.clone());
+      const dtC = (s.def.contact - s.def.toss) * s.def.dur;
+      ball.pos.copy(r.handLWorld);
+      ball.vel.copy(contact).sub(ball.pos).divideScalar(dtC); ball.vel.y += 0.5 * G * dtC;
+    }
+  }
+  // animation
+  for (const r of robots) r.update(dt, t, ball.pos);
+  // physics substeps
+  if (ball.held) { ball.pos.copy(ball.held.handLWorld); ball.pos.y += 0.05; ball.vel.set(0, 0, 0); }
+  else {
+    let acc = dt; let sub = 0; const n = Math.max(1, Math.round(dt / PHYS_DT));
+    const h = dt / n;
+    for (let i = 0; i < n; i++) {
+      const prevZ = ball.pos.z;
+      const ev = integrate(ball.pos, ball.vel, h, prevZ);
+      if (ev) handleBallEvent(ev, ball.pos.x, ball.pos.z);
+      const f = (i + 1) / n;
+      for (const r of robots) {
+        const head = _v1.copy(r.prevHead).lerp(r.racketHeadWorld, f);
+        const d = ball.pos.distanceTo(head);
+        if (r.inHitWindow()) {
+          const R = r.swing.name === 'serve' ? 0.5 : (r === player && !AUTO ? 0.5 : 0.55);
+          if (d < R) onHit(r, head);
+        } else if (t - r.lastHitTime > 0.3 && d < 0.2 + BALL_R && (game.state === 'rally' || game.state === 'serving')) {
+          const nrm = _v2.copy(ball.pos).sub(head).normalize();
+          ball.vel.reflect(nrm).multiplyScalar(0.35); ball.pos.copy(head).addScaledVector(nrm, 0.2 + BALL_R + 0.01);
+          r.lastHitTime = t; game.lastHitter = r; game.bounces = 0; if (game.state === 'serving') { game.serveInPlay = true; game.state = 'rally'; }
+          fx.hit(head, false);
+        }
+      }
+    }
+    if (Math.abs(ball.pos.x) > 24 || Math.abs(ball.pos.z) > 30) { if (game.state === 'rally' || game.state === 'serving') { const h = game.lastHitter || game.server; const serve = game.serveInPlay && game.rally === 0; if (serve) endWithFault(other(h), 'FAULT'); else pointOver(other(h), 'OUT', `Point · ${other(h).name === 'YOU' ? 'You' : 'CPU'}`); } }
+  }
+  // state timers
+  if (game.state === 'point_over' && game.stateT > 1.75) resolvePointOver();
+  else if (game.state === 'between' && game.stateT > 1.6) beginPoint();
+  if (game.state === 'serving' && !game.serveInPlay && !game.server.swing && !ball.held && game.stateT > 2.5 && ball.pos.y < 0.2) endWithFault(other(game.server), 'FAULT');
+  if (callTimer > 0) { callTimer -= dt; if (callTimer <= 0) hideCall(); }
+  // visuals
+  ballMesh.position.copy(ball.pos);
+  ball.spin.x += ball.vel.z * dt * 6; ball.spin.y += ball.vel.x * dt * 6; ballMesh.rotation.set(ball.spin.x, ball.spin.y, 0);
+  blob.position.set(ball.pos.x, 0.03, ball.pos.z); const hgt = clamp(ball.pos.y / 4, 0, 1); blob.scale.setScalar(1 + hgt * 1.8); blob.material.opacity = 0.3 * (1 - hgt * 0.7);
+  trailTick += dt; if (!ball.held && ball.vel.length() > 4 && trailTick > 0.03) { trailTick = 0; const tt = trail.reduce((a, b) => a.age > b.age ? a : b); tt.age = 0; tt.p.copy(ball.pos); }
+  const inFlight = !ball.held && (game.state === 'rally' || game.state === 'serving') && ball.vel.lengthSq() > 0.5;
+  if (inFlight) {
+    const pr = predict(ball.pos, ball.vel, 3, true);
+    if (pr.bounce && !pr.net) {
+      ring.visible = true; ring.position.x = pr.bounce.x; ring.position.z = pr.bounce.z;
+      const pulse = 1 + Math.sin(t * 9) * 0.06; ring.scale.setScalar(pulse);
+      const h = game.lastHitter || game.server, serve = game.serveInPlay && game.rally === 0 || game.state === 'serving';
+      let ok;
+      if (Math.sign(pr.bounce.z) === h.side) ok = false;
+      else if (serve) { const g = serveGeometry(); ok = Math.sign(pr.bounce.x) === g.boxSign && Math.abs(pr.bounce.x) <= COURT.halfW && Math.abs(pr.bounce.z) <= COURT.service; }
+      else ok = Math.abs(pr.bounce.x) <= COURT.halfW && Math.abs(pr.bounce.z) <= COURT.halfL;
+      ringM.color.setHex(ok ? 0xfff3a0 : 0xff6b6b);
+    } else ring.visible = false;
+  } else ring.visible = false;
+  fx.update(dt, t);
+  updateCamera(dt);
+}
+let last = performance.now(), fpsAcc = 0, fpsN = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (window.__rt && window.__rt.paused) { renderer.render(scene, camera); return; }
+  stepFrame(dt);
+  renderer.render(scene, camera);
+  fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { document.getElementById('fpsv').textContent = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
+}
+updateScoreboard(); beginPoint();
+for (const r of robots) { r.pos.copy(r.spot); r.update(1 / 60, 0, ball.pos); }
+if (AUTO) setPrompt('');
+window.__rt = { game, ball, player, cpu, stepFrame, CONTACT, camera, THREE, awardPoint, ptLabel, beginPoint, other, SWINGS, pickPlayerSwing: () => pickPlayerSwing(), swing: (n) => player.startSwing(n), serve: () => startServe(player), render: () => renderer.render(scene, camera), renderer };
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

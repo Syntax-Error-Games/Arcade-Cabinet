@@ -577,8 +577,14 @@
         id:'racing', title:'RACING', tagline:'WHEELS & SPEED',
         accent:0xff2bd6, x:-1.15, z:-5.2, rotY:0,
         games:[
-          { title:"My New Racer", file:"games/MyNewRacer.html" },
-        ]
+        { title: "Mario Kart", file: "https://ubghyper.github.io/GameList.github.io/MarioKart/" },
+        { title: "Polytrack", file: "https://ubghyper.github.io/GameList.github.io/Polytrack-New/" },
+        { title: "Drive Mad", file: "https://ubghyper.github.io/GameList.github.io/Drive-Mad/" },
+        { title: "Drift Boss", file: "https://ubghyper.github.io/GameList.github.io/Drift-Boss/" },
+        { title: "MotoX3M", file: "https://ubghyper.github.io/GameList.github.io/Moto3XM/" },
+        { title: "Jelly Drift", file: "https://ubghyper.github.io/GameList.github.io/Jelly-Drift/" },
+        { title: "Mario Kart Snow", file: "games/mario-kart-snow/index.html" }
+      ]
       },
 
   To add a game, drop one line into the `games` list of whichever
@@ -795,15 +801,34 @@
   // =====================================================================
   const CABINETS = [
     {
+      id:'arcade', title:'ARCADE', tagline:'PIXEL PERFECT CLASSICS',
+      accent:0xffe600, x:-3.45, z:3.8, rotY:0, where:'FRONT LEFT',
+      games:[
+        { title: "Asteroids", file: "games/asteroids/index.html" },
+        { title: "Breakout", file: "games/breakout/index.html" },
+        { title: "Centipede", file: "games/centipede/index.html" },
+        { title: "Computer Space", file: "games/computer-space/index.html" },
+        { title: "Defender", file: "games/defender/index.html" },
+        { title: "Galaxian", file: "games/galaxian/index.html" },
+        { title: "Gun Fight", file: "games/gun-fight/index.html" },
+        { title: "Lunar Lander", file: "games/lunar-lander/index.html" },
+        { title: "Missile Command", file: "games/missile-command/index.html" },
+        { title: "Pac-Man", file: "games/pac-man/index.html" },
+        { title: "Pong", file: "games/pong/index.html" },
+        { title: "Space Invaders", file: "games/space-invaders/index.html" }
+      ]
+    },
+
+    {
       id:'action', title:'ACTION', tagline:'RUN AND GUN',
       accent:0xff5a1f, x:-3.45, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
-        { title: "Ultrakill",         file: "https://ubghyper.github.io/GameList.github.io/Ultrakill/" },
-        { title: "Jetpack Joyride",   file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
-        { title: "Neon Chamber",      file: "games/NeonChamber.html" },
-        { title: "Shooter Game",      file: "games/ShooterGame.html" },
-        { title: "Tomb of the Mask",  file: "https://ubghyper.github.io/GameList.github.io/Tomb-of-the-Mask/" },
-        { title: "Stickman Hook",     file: "https://ubghyper.github.io/GameList.github.io/Stickman-Hook/" },
+        { title: "Ultrakill", file: "https://ubghyper.github.io/GameList.github.io/Ultrakill/" },
+        { title: "Jetpack Joyride", file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
+        { title: "Neon Chamber", file: "games/NeonChamber.html" },
+        { title: "Shooter Game", file: "games/ShooterGame.html" },
+        { title: "Tomb of the Mask", file: "https://ubghyper.github.io/GameList.github.io/Tomb-of-the-Mask/" },
+        { title: "Stickman Hook", file: "https://ubghyper.github.io/GameList.github.io/Stickman-Hook/" }
       ]
     },
     {
@@ -822,21 +847,27 @@
       id:'adventure', title:'ADVENTURE', tagline:'JUMP AND EXPLORE',
       accent:0x39ff14, x:1.15, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
-        { title: "Hollow Knight",     file: "https://ubghyper.github.io/GameList.github.io/hollowknight/" },
-        { title: "Pokemon Clone",     file: "https://syntax-error-games.github.io/2026Q1_Fakemon/" },
-        { title: "Level Devil",       file: "https://ubghyper.github.io/GameList.github.io/Level-Devil/" },
-        { title: "Platformer",        file: "games/Platformer.html" },
+        { title: "Hollow Knight", file: "https://ubghyper.github.io/GameList.github.io/hollowknight/" },
+        { title: "Pokemon Clone", file: "https://syntax-error-games.github.io/2026Q1_Fakemon/" },
+        { title: "Level Devil", file: "https://ubghyper.github.io/GameList.github.io/Level-Devil/" },
+        { title: "Platformer", file: "games/Platformer.html" },
+        { title: "Crossy Farm", file: "games/crossy-farm-car/index.html" },
+        { title: "Flappy Bird", file: "games/flappy-bird/index.html" },
+        { title: "Mario 1-1", file: "games/mario-1-1/index.html" },
+        { title: "Subway Runner", file: "games/subway-runner/index.html" }
       ]
     },
     {
       id:'sandbox', title:'SANDBOX', tagline:'BUILD ANYTHING',
       accent:0x22e0ff, x:3.45, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
-        { title: "Minecraft",         file: "https://ubghyper.github.io/GameList.github.io/Eaglercraft/" },
-        { title: "Terraria",          file: "https://ubghyper.github.io/GameList.github.io/Terraria/" },
-        { title: "Sandvoxels",        file: "https://freeonlinewebtools.github.io/UnblockedGamesUltra.github.io/" },
-        { title: "Townscaper",        file: "https://ubghyper.github.io/GameList.github.io/Townscaper/" },
+        { title: "Minecraft", file: "https://ubghyper.github.io/GameList.github.io/Eaglercraft/" },
+        { title: "Terraria", file: "https://ubghyper.github.io/GameList.github.io/Terraria/" },
+        { title: "Sandvoxels", file: "https://freeonlinewebtools.github.io/UnblockedGamesUltra.github.io/" },
+        { title: "Townscaper", file: "https://ubghyper.github.io/GameList.github.io/Townscaper/" },
         { title: "Gravity Simulator", file: "games/GravitySim.html" },
+        { title: "Terraria Sandbox", file: "games/terraria-sandbox/index.html" },
+        { title: "Voxel GTA City", file: "games/voxel-gta-city/index.html" }
       ]
     },
     // The next four machines are ordered to walk the room's perimeter —
@@ -850,31 +881,32 @@
       id:'toybox', title:'TOY BOX', tagline:'ODDS AND ENDS',
       accent:0xb060e0, x:5.3, z:-2.4, rotY:-Math.PI/2, where:'RIGHT WALL',
       games:[
-        { title: "Clicker Game",      file: "games/ClickerGame.html" },
-        { title: "Name Generator",    file: "games/NameGenerator.html" },
-        { title: "Die Roller",        file: "games/DiceRoller.html" },
+        { title: "Clicker Game", file: "games/ClickerGame.html" },
+        { title: "Name Generator", file: "games/NameGenerator.html" },
+        { title: "Die Roller", file: "games/DiceRoller.html" },
         { title: "Open in About Blank", file: "games/AboutBlank.html" },
+        { title: "Robot Tennis", file: "games/robot-tennis/index.html" }
       ]
     },
     {
       id:'portals', title:'PORTALS', tagline:'LINKS OUT',
       accent:0x00e5a0, x:5.3, z:0.2, rotY:-Math.PI/2, where:'RIGHT WALL',
       games:[
-        { title: "Good Games",        file: "https://ubghyper.github.io/index.html" },
-        { title: "Quenq",             file: "https://quenq.com" },
-        { title: "VIP Site",          file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
-        { title: "Credits",           file: "games/Credits.html", pinBottom: true },
+        { title: "Good Games", file: "https://ubghyper.github.io/index.html" },
+        { title: "Quenq", file: "https://quenq.com" },
+        { title: "VIP Site", file: "https://sites.google.com/stu.sandi.net/vip/home?pli=1&authuser=5" },
+        { title: "Credits", file: "games/Credits.html" }
       ]
     },
     {
       id:'creative', title:'CREATIVE', tagline:'MAKE SOMETHING',
       accent:0xffe600, x:-5.3, z:0.2, rotY:Math.PI/2, where:'LEFT WALL',
       games:[
-        { title: "MS Paint",          file: "games/Paint.html" },
-        { title: "Piano",             file: "games/Piano.html" },
-        { title: "Music Player",      file: "games/MusicPlayer.html" },
-        { title: "Windows 95",        file: "games/Win95.html" },
-        { title: "Terminal",          file: "games/Terminal.html" },
+        { title: "MS Paint", file: "games/Paint.html" },
+        { title: "Piano", file: "games/Piano.html" },
+        { title: "Music Player", file: "games/MusicPlayer.html" },
+        { title: "Windows 95", file: "games/Win95.html" },
+        { title: "Terminal", file: "games/Terminal.html" }
       ]
     },
     {
@@ -882,9 +914,9 @@
       accent:0xff1744, x:-5.3, z:-2.4, rotY:Math.PI/2, where:'LEFT WALL',
       games:[
         { title: "Buckshot Roulette", file: "https://ubghyper.github.io/GameList.github.io/Buckshot-Roulete/" },
-        { title: "MiSide",            file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
-        { title: "R.E.P.O.",          file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
-        { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" },
+        { title: "MiSide", file: "https://ubghyper.github.io/GameList.github.io/Unity-Web-Player-MiSide/" },
+        { title: "R.E.P.O.", file: "https://ubghyper.github.io/GameList.github.io/Repo/" },
+        { title: "Five Nights at Epst", file: "https://ubghyper.github.io/GameList.github.io/FNAE/" }
       ]
     },
   ];
