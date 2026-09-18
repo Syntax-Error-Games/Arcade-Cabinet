@@ -457,7 +457,11 @@
     display:flex;align-items:center;gap:11px;
     background:#140a24;border:1px solid #3a2860;border-left:4px solid var(--row-accent,#888);
     border-radius:5px;padding:11px 13px;
+    cursor:pointer; transition:background .15s, transform .12s, border-color .15s;
   }
+  .map-row:hover{ background:#1c1030; transform:translateX(3px); border-color:var(--row-accent,#888); }
+  .map-row:active{ transform:translateX(1px) scale(.99); }
+  .map-row:focus-visible{ outline:2px solid var(--row-accent,#eae6ff); outline-offset:2px; }
   .map-row .map-name{font:.45rem 'Press Start 2P',monospace;color:var(--row-accent,#eae6ff);flex:1;}
   .map-row .map-count{font:10px monospace;color:#8a7fb0;flex-shrink:0;}
   .map-row .map-where{font:10px monospace;color:#6f668c;flex-shrink:0;min-width:74px;text-align:right;}
@@ -682,7 +686,7 @@
 <div id="map-overlay">
   <div class="panel">
     <h2>ARCADE FLOOR</h2>
-    <div class="sub">EIGHT CABINETS &bull; ONE GENRE EACH<br>WALK UP TO ONE TO PLAY ITS LINEUP</div>
+    <div class="sub" id="map-sub">TAP A CABINET TO WARP TO IT</div>
     <div id="map-list"></div>
     <button id="map-close-btn">CLOSE</button>
   </div>
@@ -798,11 +802,17 @@
   //   x / z  = where the cabinet stands on the floor
   //   rotY   = which way it faces (0 = toward you, +PI/2 = toward +x)
   //   accent = its trim, marquee and CRT text color
+  //
+  // The five machines below share the back wall (z=-5.2) and are spaced
+  // evenly along it; the remaining four line the left/right walls. Cycling
+  // (nav buttons / arrow keys / joystick swipe) follows this array order,
+  // walking the room's perimeter in one direction — see the note further
+  // down where the wall cabinets begin.
   // =====================================================================
   const CABINETS = [
     {
       id:'arcade', title:'ARCADE', tagline:'PIXEL PERFECT CLASSICS',
-      accent:0xffe600, x:-3.45, z:3.8, rotY:0, where:'FRONT LEFT',
+      accent:0xffe600, x:-4.6, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
         { title: "Asteroids", file: "games/asteroids/index.html" },
         { title: "Breakout", file: "games/breakout/index.html" },
@@ -818,10 +828,9 @@
         { title: "Space Invaders", file: "games/space-invaders/index.html" }
       ]
     },
-
     {
       id:'action', title:'ACTION', tagline:'RUN AND GUN',
-      accent:0xff5a1f, x:-3.45, z:-5.2, rotY:0, where:'BACK WALL',
+      accent:0xff5a1f, x:-2.3, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
         { title: "Ultrakill", file: "https://ubghyper.github.io/GameList.github.io/Ultrakill/" },
         { title: "Jetpack Joyride", file: "https://emulatoros.github.io/gfile/jetpackjoyride/" },
@@ -833,7 +842,7 @@
     },
     {
       id:'racing', title:'RACING', tagline:'WHEELS AND SPEED',
-      accent:0xff2bd6, x:-1.15, z:-5.2, rotY:0, where:'BACK WALL',
+      accent:0xff2bd6, x:0, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
         { title: "Mario Kart",        file: "https://ubghyper.github.io/GameList.github.io/MarioKart/" },
         { title: "Polytrack",         file: "https://ubghyper.github.io/GameList.github.io/Polytrack-New/" },
@@ -845,7 +854,7 @@
     },
     {
       id:'adventure', title:'ADVENTURE', tagline:'JUMP AND EXPLORE',
-      accent:0x39ff14, x:1.15, z:-5.2, rotY:0, where:'BACK WALL',
+      accent:0x39ff14, x:2.3, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
         { title: "Hollow Knight", file: "https://ubghyper.github.io/GameList.github.io/hollowknight/" },
         { title: "Pokemon Clone", file: "https://syntax-error-games.github.io/2026Q1_Fakemon/" },
@@ -859,7 +868,7 @@
     },
     {
       id:'sandbox', title:'SANDBOX', tagline:'BUILD ANYTHING',
-      accent:0x22e0ff, x:3.45, z:-5.2, rotY:0, where:'BACK WALL',
+      accent:0x22e0ff, x:4.6, z:-5.2, rotY:0, where:'BACK WALL',
       games:[
         { title: "Minecraft", file: "https://ubghyper.github.io/GameList.github.io/Eaglercraft/" },
         { title: "Terraria", file: "https://ubghyper.github.io/GameList.github.io/Terraria/" },
@@ -870,13 +879,11 @@
         { title: "Voxel GTA City", file: "games/voxel-gta-city/index.html" }
       ]
     },
-    // The next four machines are ordered to walk the room's perimeter —
+    // The next four machines continue the loop around the room's perimeter —
     // right wall back-to-front, then a single hop across the open front of
     // the room, then left wall front-to-back — rather than jumping corner to
     // corner. Cycling with the nav buttons / arrow keys / joystick swipe
-    // follows this exact array order, so this is also what fixes the
-    // zig-zag switching used to do (it used to visit both walls in the
-    // wrong sequence, crossing the whole floor three times instead of once).
+    // follows this exact array order.
     {
       id:'toybox', title:'TOY BOX', tagline:'ODDS AND ENDS',
       accent:0xb060e0, x:5.3, z:-2.4, rotY:-Math.PI/2, where:'RIGHT WALL',
@@ -1110,6 +1117,8 @@
     const PATTERNS = {
       room:      { m:[N.A3,null,N.C4,N.E4, N.D4,null,N.C4,N.A3, N.G3,null,N.A3,N.C4, N.B3,N.A3,null,null],
                    b:[N.A2,null,null,null, N.F3,null,null,null, N.G3,null,null,null, N.A2,null,null,null] },
+      arcade:    { m:[N.C4,N.E4,N.G4,N.E4, N.C4,null,N.G3,null, N.D4,N.F4,N.A4,N.F4, N.D4,null,N.G3,null],
+                   b:[N.C3,null,N.G3,null, N.C3,null,N.G3,null, N.D3,null,N.A3,null, N.D3,null,N.G3,null] },
       action:    { m:[N.E4,N.E4,N.G4,N.A4, N.G4,N.E4,null,N.D4, N.E4,N.G4,N.B4,N.A4, N.G4,null,N.E4,null],
                    b:[N.A2,N.A2,null,N.A2, N.G3,null,null,null, N.A2,N.A2,null,N.A2, N.E3,null,N.G3,null] },
       racing:    { m:[N.D4,N.F4,N.A4,N.G4, N.F4,N.D4,N.F4,null, N.C4,N.E4,N.G4,N.F4, N.E4,N.C4,null,null],
@@ -1345,7 +1354,7 @@
     strip.position.set(x, 2.6, z);
     scene.add(strip);
   }
-  [-4.7, -2.3, 2.3, 4.7].forEach((x, i) => addStrip(x, -7.35, i));
+  [-5.75, -2.875, 0, 2.875, 5.75].forEach((x, i) => addStrip(x, -7.35, i));
   [-5.0, -1.0, 3.0, 6.4].forEach((z, i) => { addStrip(-6.35, z, i); addStrip(6.35, z, i + 1); });
 
   // =====================================================================
@@ -1886,19 +1895,34 @@
   });
 
   // ---------------------------------------------------------------------
-  // Floor map: which cabinet holds what, and where it stands.
+  // Floor map: which cabinet holds what, and where it stands. Every row
+  // is clickable/tappable and warps you straight there via travelToCabinet
+  // (defined further down, after the room/arcade view functions it needs).
   // ---------------------------------------------------------------------
   const mapOverlay = document.getElementById('map-overlay');
   const mapList = document.getElementById('map-list');
+  const mapSub = document.getElementById('map-sub');
   function renderFloorMap(){
+    mapSub.textContent = cabinets.length + ' CABINETS \u2022 TAP ONE TO WARP THERE';
     mapList.innerHTML = '';
     cabinets.forEach(cab => {
       const row = document.createElement('div');
       row.className = 'map-row';
+      row.setAttribute('role', 'button');
+      row.tabIndex = 0;
       row.style.setProperty('--row-accent', hexStr(cab.accent));
       row.innerHTML = `<span class="map-name">${cab.title}</span>` +
                       `<span class="map-count">${cab.games.length} games</span>` +
                       `<span class="map-where">${cab.def.where}</span>`;
+      const go = () => {
+        mapOverlay.style.display = 'none';
+        AudioEngine.click();
+        travelToCabinet(cab);
+      };
+      row.addEventListener('click', go);
+      row.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+      });
       mapList.appendChild(row);
     });
   }
@@ -2435,13 +2459,15 @@
   }
 
   // =====================================================================
-  // Cabinet switching — a Splatoon-shop-style swoop between machines
-  // instead of an instant cut. The camera pulls back off the current
-  // screen, arcs up over the room on a bezier curve, and dives into the
-  // next cabinet's screen, with a quick FOV punch and a screen-space
-  // flash/pulse timed to the launch. Triggered by the on-screen nav
-  // buttons, the left/right arrow keys, or a left/right swipe on the
-  // mobile movement pad while sitting at a cabinet.
+  // Cabinet switching / fast travel — a Splatoon-shop-style swoop between
+  // machines instead of an instant cut. The camera pulls back off wherever
+  // it currently is, arcs up over the room on a bezier curve, and dives
+  // into the target cabinet's screen, with a quick FOV punch and a
+  // screen-space flash/pulse timed to the launch. `travelToCabinet` is the
+  // single entry point: it works whether you're standing in the room,
+  // already sitting at a different cabinet, or warping in from the floor
+  // map, and `switchCabinet` (prev/next buttons, arrow keys, joystick
+  // swipe) is just travelToCabinet aimed at a neighbour in CABINETS order.
   // =====================================================================
   const cabPrevBtn = document.getElementById('cab-prev-btn');
   const cabNextBtn = document.getElementById('cab-next-btn');
@@ -2455,7 +2481,7 @@
     if (cabinets.length < 2) return;
     const i = cabinets.indexOf(activeCab);
     const toCab = cabinets[(i + dir + cabinets.length) % cabinets.length];
-    cabinetSwoopTo(toCab);
+    travelToCabinet(toCab);
   }
 
   function triggerSwitchFlash(accent){
@@ -2466,34 +2492,65 @@
     switchPulseEl.classList.add('play');
   }
 
-  function cabinetSwoopTo(toCab){
-    const fromCab = activeCab;
+  // Fly from wherever the camera currently is to `toCab`'s screen. Works
+  // from all three starting contexts:
+  //  - standing in the room (walked up & clicked/Entered, or warped from the
+  //    floor map while not yet sitting anywhere): hides the player, disables
+  //    orbit zoom, and remembers the room camera so leaving arcade later
+  //    returns you to it — the same bookkeeping enterArcadeView used to do.
+  //  - already sitting at a different cabinet (neighbour swap or a map warp
+  //    to a non-adjacent machine): none of the room bookkeeping re-runs,
+  //    since preArcadeCameraPos/Target were already captured the first time
+  //    you sat down and must keep pointing at the room, not the cabinet
+  //    you're leaving.
+  //  - a game is open, or another travel/camera animation is already
+  //    mid-flight: refused outright, same guard switchCabinet always had.
+  function travelToCabinet(cab){
+    if (!cab || gameOpen || cameraAnimating) return;
+    if (phase === PHASE_ARCADE && activeCab === cab) return; // already there
+
+    const cameFromRoom = (phase === PHASE_ROOM);
+    // anchor for the arc's midpoint: the cabinet you're leaving, or (when
+    // coming straight from the room) wherever the player is actually standing
+    const fromAnchor = activeCab ? activeCab.group.position : player.position;
+
     const startPos = camera.position.clone();
     const startTarget = controls.target.clone();
 
-    toCab.screenMesh.getWorldPosition(_worldPos);
-    toCab.screenMesh.getWorldQuaternion(_worldQuat);
+    cab.screenMesh.getWorldPosition(_worldPos);
+    cab.screenMesh.getWorldQuaternion(_worldQuat);
     const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(_worldQuat);
     const endPos = _worldPos.clone().addScaledVector(forward, 1.65).add(new THREE.Vector3(0, -0.18, 0));
     const endTarget = _worldPos.clone();
 
     // one elevated waypoint, roughly above the midpoint between the two
-    // machines, is enough to turn a straight cut into a proper aerial swoop
-    const mid = fromCab.group.position.clone().lerp(toCab.group.position, 0.5);
-    const viaPos = mid.clone().add(new THREE.Vector3(0, 3.1, 1.6));
+    // machines (or the player and the machine), is enough to turn a
+    // straight cut into a proper aerial swoop
+    const mid = fromAnchor.clone().lerp(cab.group.position, 0.5);
+    const viaPos = mid.clone().add(new THREE.Vector3(0, 3.2, 1.7));
     const viaTarget = mid.clone().add(new THREE.Vector3(0, 1.0, 0));
 
-    activeCab = toCab;
-    AudioEngine.setMood(toCab.id);
+    if (cameFromRoom) {
+      preArcadeCameraPos = startPos.clone();
+      preArcadeCameraTarget = startTarget.clone();
+      player.visible = false;
+      controls.enableZoom = false;
+    }
+    phase = PHASE_ARCADE;
+    activeCab = cab;
+    powerOnArcade();
+    roomPrompt.style.display = 'none';
+    floorGuide.style.display = 'none';
+    AudioEngine.setMood(cab.id);
     AudioEngine.dash();
     document.getElementById('crosshair-hint').innerHTML = arcadeHintText();
-    triggerSwitchFlash(toCab.accent);
-    saveSession({phase:PHASE_ARCADE, cabinetId:toCab.id});
+    triggerSwitchFlash(cab.accent);
+    saveSession({phase:PHASE_ARCADE, cabinetId:cab.id});
 
     cameraAnimating = true;
     controls.enabled = false;
     const baseFov = camera.fov;
-    const duration = 780;
+    const duration = cameFromRoom ? 900 : 780;
     const startTime = performance.now();
 
     function step(now){
@@ -2736,7 +2793,7 @@
       setPointerFromEvent(e.clientX, e.clientY);
       // clicking any part of a nearby cabinet sits you down at THAT machine
       const hit = raycaster.intersectObjects(cabinetGroups, true)[0];
-      if (hit && hit.object.userData.cabRef === nearCab) enterArcadeView(nearCab);
+      if (hit && hit.object.userData.cabRef === nearCab) travelToCabinet(nearCab);
     }
   });
   renderer.domElement.addEventListener('pointercancel', e => { releaseJoystick(e); dragStartPos = null; });
@@ -2778,7 +2835,7 @@
         e.preventDefault();
       }
       if (k === 'Enter' && nearCab) {
-        enterArcadeView(nearCab);
+        travelToCabinet(nearCab);
         e.preventDefault();
       }
       return;
