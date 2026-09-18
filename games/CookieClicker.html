@@ -1,171 +1,223 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
-<head>
-<script type="text/javascript">
-    window.cookieconsent_options = {"message":"Unsurprisingly, this website uses cookies for ads and traffic analysis.","dismiss":"Got it!","learnMore":"Learn more","link":"//orteil.dashnet.org/cookieconsentpolicy.html","target":"_blank","theme":"//orteil.dashnet.org/cookieconsent.css","domain":"dashnet.org"};
-</script>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Cookie Clicker</title>
+    <link rel="shortcut icon" href="assets/images/cookie.png" type="image/png">
+    <link href="style.css" rel="stylesheet" type="text/css" />
+    
 
-<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/1.0.9/cookieconsent.min.js"></script>
 
-<title>Cookie Clicker</title>
-<!--
-Code and graphics copyright Orteil, 2013-2020
-Feel free to alter this code to your liking, but please do not re-host it, do not profit from it and do not present it as your own.
--->
+    <!-- Holidays -->
+  
 
-<meta name="viewport" content="width=900, initial-scale=1">
-<link rel="shortcut icon" href="img/favicon.ico" />
-<!--<link href="https://fonts.googleapis.com/css?family=Kavoon&subset=latin,latin-ext" rel="stylesheet" type="text/css">-->
-<link href='https://fonts.googleapis.com/css?family=Merriweather:900&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
-<script src="base64.js"></script>
-<script src="main.js?v=2.089"></script>
-<link href="style.css?v=2.053" rel="stylesheet" type="text/css">
-<!--[if IE]>
-<style type="text/css">
-	#ifIE9{display:block;}
-</style>
-<![endif]-->
+    <script src="https://replit.com/public/js/repl-auth-v2.js"></script><br><br>
+    <button onclick="LoginWithReplit()" id="upgradebtn"> Login or sign up for more features (coming soon) </button>
+    <!-- Thanksgiving:
+    <a href="assets/other/thanksgiving/thanksgiving.html" id="thanks">Thanksgiving Event</a> -->
+    <!-- Christmas:
+    <a href="christmas.html" id="christmas">Christmas Event</a>
+    <br/> -->
+    <p id="versionControl">Cookie Version: 2.4.6</p>
+   
+  <br/>
+    <h1> </h1>
+    
+    <!-- Quests were removed due to bug! -->
+    <a href="https://cookieboard.applecoders.repl.co/" target="_blank"><button id="savebtn">See the top scores!</button></a>
+    <br/>
+ <br>
+ <div id="codes">
+      <input type="password" id="bakery" placeholder="Enter Code Here!">
+      <button onclick="verifyLogin()" id="saveBakery22">Enter</button>
+    </div>
+   
+<button type="button" class="collapsible">Upgrades</button>
+ 
 
-<!--[if lt IE9]><script src="excanvas.compiled.js"></script><![endif]-->
-</head>
-<body>
 
-<div id="wrapper">
-
-	<div id="topBar">
-		<div><b>Cookie Clicker</b>&trade; &copy; <a href="//orteil.dashnet.org" target="_blank" id="topbarOrteil">Orteil</a>, 2020 - <a href="//dashnet.org" target="_blank" id="topbarDashnet">DashNet</a></div>
-		<div><a href="https://twitter.com/orteil42" target="_blank" id="topbarTwitter">twitter</a></div>
-		<div><a href="https://orteil42.tumblr.com" target="_blank" id="topbarTumblr">tumblr</a></div>
-		<div style="position:relative;"><div style="width:22px;height:32px;background:url(img/discord.png);position:absolute;left:0px;top:0px;pointer-events:none;"></div><a href="https://discordapp.com/invite/cookie" target="_blank" style="padding-left:16px;" id="topbarDiscord">Discord</a></div>
-		<div style="position:relative;"><div style="width:25px;height:32px;background:url(img/weeHoodie.png);position:absolute;left:-2px;top:0px;pointer-events:none;"></div><a class="blueLink" href="http://www.redbubble.com/people/dashnet" target="_blank" style="padding-left:12px;" id="topbarMerch">Merch!</a></div>
-		<div style="position:relative;"><div style="width:22px;height:32px;background:url(img/patreon.png);position:absolute;left:0px;top:0px;pointer-events:none;"></div><a class="orangeLink" href="https://www.patreon.com/dashnet" target="_blank" style="padding-left:16px;" id="topbarPatreon">Patreon</a></div>
-		<div style="position:relative;display:none;font-weight:bold;" id="heralds"><div style="position:absolute;top:-4px;width:31px;height:39px;background:url(img/heraldFlag.png);left:50%;margin-left:-15px;pointer-events:none;"></div><div id="heraldsAmount" style="position:relative;z-index:10;text-shadow:0px 1px 0px #000,0px 0px 6px #ff00e4;color:#fff;">-</div></div>
-		<div><a class="lightblueLink" style="font-weight:bold;" href="https://play.google.com/store/apps/details?id=org.dashnet.cookieclicker" target="_blank" id="topbarMobileCC">Cookie Clicker for Android</a></div>
-		<div><a href="//orteil.dashnet.org/randomgen/" target="_blank" id="topbarRandomgen">RandomGen</a></div>
-		<div><a href="//orteil.dashnet.org/igm/" target="_blank" id="topbarIGM">Idle Game Maker</a></div>
-		<div id="links" class="hoverer">
-			Other versions
-			<div class="hoverable">
-			<a href="../" target="_blank" id="linkVersionLive">Live version</a>
-			<a href="beta" target="_blank" id="linkVersionBeta">Try the beta!</a>
-			<a href="//orteil.dashnet.org/cookieclicker/v10466" target="_blank" id="linkVersionOld">v. 1.0466</a>
-			<a href="//orteil.dashnet.org/experiments/cookie/" target="_blank">Classic</a>
-			</div>
-		</div>
-	</div>
-
-	<div id="game">
-		<div id="javascriptError">
-			<div id="loader">
-				<div class="spinnyBig"></div>
-				<div class="spinnySmall"></div>
-				<div id="loading" class="title">Loading...</div>
-				<div id="failedToLoad" class="title">This is taking longer than expected.<br>
-				<div style="font-size:65%;line-height:120%;">Slow connection? If not, please make sure your javascript is enabled, then refresh.<br>
-				If problems persist, this might be on our side - wait a few minutes, then hit ctrl+f5!</div></div>
-				<div id="ifIE9" class="title" style="font-size:100%;line-height:120%;">Your browser may not be recent enough to run Cookie Clicker.<br>You might want to update, or switch to a more modern browser such as Chrome or Firefox.</div>
-				<!--<div class="title">Oops, looks like we've got a problem.</div>
-				<div>Please bear with us while we fix it.<br>Your save is safe, don't worry!</div>-->
-			</div>
-		</div>
-
-		<canvas id="backgroundCanvas"></canvas>
-		
-		<div id="goldenCookie" class="goldenCookie"></div>
-		<div id="seasonPopup" class="seasonPopup"></div>
-		<div id="shimmers"></div>
-		<div id="alert"></div>
-		<div id="particles"></div>
-		<div id="sparkles" class="sparkles"></div>
-		<div id="notes"></div>
-		<div id="darken"></div>
-		<div id="toggleBox" class="framed prompt"></div>
-		<div id="promptAnchor"><div id="prompt" class="framed"><div id="promptContent"></div><div class="close" onclick="PlaySound('snd/tick.mp3');Game.ClosePrompt();">x</div></div></div>
-		<div id="versionNumber" class="title"></div>
-		<div id="ascend">
-			<div id="ascendBG"></div>
-			<div id="ascendZoomable"><div id="ascendContent"><div id="ascendUpgrades" style="position:absolute;"></div></div></div>
-			<div id="ascendOverlay"></div>
-		</div>
-		
-		<div id="debug"><div id="devConsole" class="framed"></div><div id="debugLog"></div></div>
-		
-		<div id="sectionLeft" class="inset">
-			<canvas id="backgroundLeftCanvas" style="z-index:5;"></canvas>
-			<div class="blackFiller"></div>
-			<div class="blackGradient"></div>
-			<div id="sectionLeftInfo"></div>
-			<div id="cookies" class="title"></div>
-			<div id="bakeryNameAnchor"><div id="bakeryName" class="title"></div></div>
-			<div id="specialPopup" class="framed prompt offScreen"></div>
-			<div id="buffs" class="crateBox"></div>
-			<div id="cookieAnchor">
-				<div id="bigCookie"></div>
-				<div id="cookieNumbers"></div>
-			</div>
-			<div id="sectionLeftExtra"></div>
-		</div>
-
-		<div class="separatorLeft"></div>
-		<div class="separatorRight"></div>
-
-		<div id="sectionMiddle" class="inset">
-			<div id="comments" class="inset title">
-				<div id="prefsButton" class="button">Options</div>
-				<div id="statsButton" class="button">Stats</div>
-				<div id="logButton" class="button"><div id="checkForUpdate">New update!</div>Info</div>
-				<div id="legacyButton" class="button">Legacy<div id="ascendMeterContainer" class="smallFramed meterContainer"><div id="ascendMeter" class="meter filling"></div></div><div class="roundedPanel" id="ascendNumber"></div><div id="ascendTooltip" class="framed"></div></div>
-				<div id="commentsTextBelow" class="commentsText"></div>
-				<div id="commentsText" class="commentsText"></div>
-				<div class="separatorBottom"></div>
-			</div>
-			<div id="centerArea">
-				<div id="buildingsTitle" class="inset title zoneTitle">Buildings</div>
-				<div id="buildingsMaster"></div>
-				<div id="rows"></div>
-				<div id="menu"></div>
-				<!--
-				<div id="donateBox">
-					<form target="_blank" action="https://www.paypal.com/cgi-bin/webscr" method="post" id="donate" style="margin:0px 16px;">
-					<input type="hidden" name="cmd" value="_s-xclick">
-					<input type="hidden" name="hosted_button_id" value="BBN2WL3TC6QH4">
-					<input type="image" src="https://www.paypalobjects.com/en_GB/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="PayPal — The safer, easier way to pay online.">
-					<img alt="" border="0" src="https://www.paypalobjects.com/nl_NL/i/scr/pixel.gif" width="1" height="1">
-					</form>
-					<small>Help us keep developing the game!</small>
-				</div>
-				-->
-			</div>
-		</div>
-
-		<div id="sectionRight" class="inset">
-			<div id="store">
-				<div id="storeTitle" class="inset title zoneTitle">Store</div>
-				<div id="toggleUpgrades" class="storeSection upgradeBox"></div>
-				<div id="techUpgrades" class="storeSection upgradeBox"></div>
-				<div id="vaultUpgrades" class="storeSection upgradeBox"></div>
-				<div id="upgrades" class="storeSection upgradeBox"></div>
-				<div id="products" class="storeSection"></div>
-			</div>
-		</div>
-		
-		<div id="focusButtons">
-			<div id="focusLeft" class="title">Cookie</div>
-			<div id="focusMiddle" class="title" style="font-size:80%;padding-top:18px;padding-bottom:14px;">Buildings</div>
-			<div id="focusRight" class="title">Store</div>
-			<div id="focusMenu" class="title">Menu</div>
-		</div>
-		<div id="compactOverlay" class="title">
-			<div id="compactCommentsText" class="commentsText"></div>
-			<div id="compactCookies"></div>
-			<div class="separatorBottom"></div>
-		</div>
-		
-		<div id="tooltipAnchor"><div id="tooltip" class="framed" onMouseOut="Game.tooltip.hide();"></div></div>
-
-	</div>
-
+<div class="content">
+  
+  <br><br></br></br>
+ <p>  </p><a href="https://cookie-clicker-pro.applecoders.repl.co/">
+  <button class="button-64" role="button"><span class="text">Go Back To Old Cookie Clicker</span></button></a>
+  <br>
+   
+    <br/>
+    <!--<button id="grandmalol" onclick="grandma()">Hire a Grandma (costs 100 Cookies)</button>-->
+    <br/>
+    <button id="chef" onclick="chef()">Hire a Chef (costs 200 Cookies)</button>
+    <br/>
+    <button id="factory" onclick="factory()">Create a Factory (costs 1,000 cookies)</button>
+    <br/>
+    <button id="HighSpeedProcessor" onclick="processor()">Buy a High-Speed Processor (costs 1,500 Cookies)</button>
+    <br/>
+    <button id="CookieHacker" onclick="hacker()">Hire a Cookie Hacker (costs 2,000 Cookies)</button>
+    <br/>
+    <button id="robot" onclick="robot()">Buy a Ultimate Cookie Robot (costs 5,000 Cookies)</button>
+    <br/>
+    <button id="robot2" onclick="robot2()">Buy a Supreme Cookie Robot (costs 10,000 Cookies)</button>
+    <br/>
+    <button id="thanos" onclick="thanosgo()">Hire thanos's fingers (costs 15,000 cookies)</button>
+    <br/>
+    
+    <button onclick="mysterymode()" id="mystery">Buy a OMEGA COOKIE ROBOT (costs 100,000 Cookies)</button>
+    <br/>
+    <button onclick="legendminer()" id="legendbtn">Hire Legendary Cookie Miners (costs 1,000,000 Cookies)</button>
+    <br/>
+    <button onclick="bitminer()" id="bitbtn">Buy BitCookie Software (costs 10,000,000 Cookies)</button>
+    <br/>
+    <button onclick="malware()" id="malwarebtn">Buy Cookie Malware (costs 100,000,000)</button>
+    <br/>
+    <button onclick="lasercutter()" id="laserbtn">Buy Cookie Laser Cookie Cutter (costs 1,000,000,000 Cookies)</button>
+    <br>
+    <button onclick="legendcutter()" id="legendcookiecutterbtn">Buy LEGENDARY Cookie Cutter (costs 50,000,000,000 Cookies)</button>
+    <br/>
+    <button onclick="godtlaser()" id="godtlaserbtn">Buy GOD TIER COOKIE LASER CUTTER (costs 150,000,000,000 Cookies)</button> <button onclick="darkmode()" id="dark">🌙</button><br>
+    <button onclick="fullscreenMode();" id="yellowtheme">Fullscreen Mode</button><br><br><br><br><br><br><br><br>
+ <div id="chat">
+    <h3></h3></div>
 </div>
 
-</body>
+</div>
+   
+<button type="button" class="collapsiblee" disabled>Pets (coming soon)</button>
+ 
+
+
+<div class="content">
+  
+  
+ <p>  </p><a href="https://cookie-clicker-pro.applecoders.repl.co/">
+  <button class="button-64" role="button"><span class="text">Go Back To Old Cookie Clicker</span></button></a>
+    <button id="upgradebtn" onclick="upgradefunc()">Upgrade Clicks (costs 50 Cookies)</button>
+    <br/>
+    <button id="grandmalol" onclick="grandma()">Hire a Grandma (costs 100 Cookies)</button>
+    <br/>
+    <button id="chef" onclick="chef()">Hire a Chef (costs 200 Cookies)</button>
+    <br/>
+    <button id="factory" onclick="factory()">Create a Factory (costs 1,000 cookies)</button>
+    <br/>
+    <button id="HighSpeedProcessor" onclick="processor()">Buy a High-Speed Processor (costs 1,500 Cookies)</button>
+    <br/>
+    <button id="CookieHacker" onclick="hacker()">Hire a Cookie Hacker (costs 2,000 Cookies)</button>
+    <br/>
+    <button id="robot" onclick="robot()">Buy a Ultimate Cookie Robot (costs 5,000 Cookies)</button>
+    <br/>
+    <button id="robot2" onclick="robot2()">Buy a Supreme Cookie Robot (costs 10,000 Cookies)</button>
+    <br/>
+    <button id="thanos" onclick="thanosgo()">Hire thanos's fingers (costs 15,000 cookies)</button>
+    <br/>
+    
+    <button onclick="mysterymode()" id="mystery">Buy a OMEGA COOKIE ROBOT (costs 100,000 Cookies)</button>
+    <br/>
+    <button onclick="legendminer()" id="legendbtn">Hire Legendary Cookie Miners (costs 1,000,000 Cookies)</button>
+    <br/>
+    <button onclick="bitminer()" id="bitbtn">Buy BitCookie Software (costs 10,000,000 Cookies)</button>
+    <br/>
+    <button onclick="malware()" id="malwarebtn">Buy Cookie Malware (costs 100,000,000)</button>
+    <br/>
+    <button onclick="lasercutter()" id="laserbtn">Buy Cookie Laser Cookie Cutter (costs 1,000,000,000 Cookies)</button>
+    <br>
+    <button onclick="legendcutter()" id="legendcookiecutterbtn">Buy LEGENDARY Cookie Cutter (costs 50,000,000,000 Cookies)</button>
+    <br/>
+    <button onclick="godtlaser()" id="godtlaserbtn">Buy GOD TIER COOKIE LASER CUTTER (costs 150,000,000,000 Cookies)</button>
+   <button onclick="darkmode()" id="dark">🌙</button><br>
+    <button onclick="fullscreenMode();" id="yellowtheme">Fullscreen Mode</button>
+ <div id="chat">
+    <h3></h3></div>
+</div>
+
+</div>
+    
+    <input type="text" id="bakery1" placeholder="Bakery Name Here">
+    <button id="saveBakery" onclick='saveName()'>Save</button>
+    <br>
+    <h2 id='bakeryName' style='font-family: Comic Sans MS;'>User's Bakery!</h2>
+    <br/>
+    <h3 id="codeText"></h3>
+    <div id="upgrades">
+      
+    </div>
+    
+  </head>
+  <body id="body">
+    <h1 id="cookies1">This  Website had to be shut down for good.</h1>
+    <img src="assets/images/cookie.png" height="250px" width="250px" id="cookie" onclick="addcookie()"/>
+    
+    
+   
+    <br/>
+    
+    <br/>
+   
+    <br/>
+    <p id="versionControl">Cookie Clicker made by AppleCoders</p>
+    <br>
+    <button id='resetbtn' onclick='resetstats()'>Reset</button>
+    <br>
+    <button id="devopen" onclick="opendev()">Open Dev Tools</button>
+   
+    <img id="GoldCookie" onclick="goldclick()" src="assets/images/GoldCookie.png"/>
+    <div id="dev">
+    <article id="backgroundArticle">
+      <button class="buttonsRed" onclick="closedev()">Close</button>
+      <h2 id="newCode"> </h2>
+      <h1 id="header">CC Developer Tools</h1>
+      <button class="buttons" onclick="x10()">x10</button>
+      <button class="buttons" onclick="x100()">x100</button>
+      <button class="buttons" onclick="x1000()">x1000</button>
+      <button class="buttons" onclick="x10000()">x10000</button>
+      <button class="buttons" onclick="x100000()">x100000</button>
+      <br/>
+      <br/>
+      <button class="buttonsRed" onclick="wipedev()">Wipe</button>
+      <button class="buttonsRed" onclick="ruinfun()">Ruin the Fun</button>
+      <br/>
+      <br/>
+      <button class="buttons" onclick="goldcookiess()">Spawn Golden Cookie</button>
+      <!--100 lines!!!!-->
+      <button class="buttonsSpecial" onclick="newestCode()">See Newest Code</button>
+      <button class="buttons" onclick="buyeveryupgrade()">Buy Every Upgrade (x100)</button>
+      
+      <br/>
+      <br/>
+      <h2 id="giverText">Cookie Giver</h2>
+      <input type="text" id="cookiegiver" placeholder="Amount of Cookies Here!"/>
+      <button class="buttons" onclick="giveCookiesdev()">Give Cookies</button>
+    </article>
+
+    </div>
+  
+    <br/><br/>
+    <a href="https://applecoders.repl.co">
+<button id="apple">AppleCoders 🍎</button>
+<style>#apple {
+   border-radius: 5px;
+  height:25px;
+  opacity: 0.7;
+    background-color: red;
+  border: none;
+  margin: 10px;
+  color: white;
+  box-shadow: 0 4px 8px 0 rgba(999, 0, 0, 0.7), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+  cursor: pointer;
+   transition: all 200ms linear;
+   position: fixed;
+    cursor: pointer;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1000;
+  }
+
+  #apple:hover{
+    opacity:1;
+   
+   
+  }
+</style>
+</a>
+    <script src="script.js"></script>
+  </body>
 </html>
