@@ -1,27 +1,17 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Redirecting...</title>
-</head>
-<body>
-    <script>
-        // Open the target URL in a new about:blank window
-        // The 'replace' makes it navigate the blank tab to your URL
-        var newTab = window.open('about:blank');
-        if (newTab) {
-            newTab.location.replace('https://syntax-error-games.github.io/Arcade-Fabinet/');
-            
-            // Attempt to close this tab (only works if this page was opened via JS)
-            // If user navigated here directly, this will fail silently
-            window.close();
-            
-            // Fallback: clear this page since we can't close it
-            document.body.innerHTML = '';
-            document.title = '';
-        } else {
-            // Popup blocked - fallback to normal redirect
-            window.location.href = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
-        }
-    </script>
-</body>
-</html>
+<script>
+var win = window.open();
+if (!win) {
+    alert('Popups are blocked. Please allow popups for this site.');
+} else {
+    win.document.title = 'New Tab';
+    win.document.body.style.margin = '0';
+    win.document.body.style.height = '100vh';
+    var iframe = win.document.createElement('iframe');
+    iframe.style.border = 'none';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.margin = '0';
+    iframe.src = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
+    win.document.body.appendChild(iframe);
+}
+</script>
