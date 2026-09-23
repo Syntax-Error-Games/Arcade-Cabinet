@@ -1,136 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blank</title>
-
-    <!-- Anti-Framing / Frame-Busting Protection -->
-    <style id="antiClickjack">
-        /* Hide page if loaded inside an iframe */
-        body { display: none !important; }
-    </style>
-    <script>
-        // Check if the current window is inside an iframe
-        if (window.top === window.self) {
-            // Not in an iframe: show the page
-            document.documentElement.style.display = 'block';
-            document.addEventListener('DOMContentLoaded', () => {
-                const antiClickjack = document.getElementById('antiClickjack');
-                if (antiClickjack) antiClickjack.parentNode.removeChild(antiClickjack);
-            });
-        } else {
-            // Inside an iframe: break out
-            window.top.location = window.self.location;
-        }
-    </script>
-
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background: #1a1a2e;
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-        }
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            background: #16213e;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-        .button-group {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        button {
-            padding: 18px 32px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-        }
-        .btn-blank {
-            background: linear-gradient(135deg, #e94560, #ff6b6b);
-        }
-        .btn-blob {
-            background: linear-gradient(135deg, #0f3460, #533483);
-        }
-        button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(233, 69, 96, 0.5);
-        }
-        .btn-blob:hover {
-            box-shadow: 0 0 25px rgba(83, 52, 131, 0.6);
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h2>Click Below</h2>
-        <div class="button-group">
-            <button class="btn-blank" onclick="openInBlank()">Open in About:Blank</button>
-        </div>
-    </div>
-
-    <script>
-        const targetUrl = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
-
-        function getPageContent() {
-            return `<!DOCTYPE html>
 <html>
 <head>
-    <title>Home</title>
-    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #000; }
-        iframe { border: none; width: 100%; height: 100%; }
-    </style>
+    <title>Redirecting...</title>
 </head>
 <body>
-    <iframe src="${targetUrl}" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock"></iframe>
     <script>
-        window.addEventListener('keydown', function(e) {
-            if (e.key.toLowerCase() === 'q') {
-                window.location.replace('https://classroom.google.com');
-            }
-        });
-    <\/script>
-</body>
-</html>`;
+        // Open the target URL in a new about:blank window
+        // The 'replace' makes it navigate the blank tab to your URL
+        var newTab = window.open('about:blank');
+        if (newTab) {
+            newTab.location.replace('https://syntax-error-games.github.io/Arcade-Fabinet/');
+            
+            // Attempt to close this tab (only works if this page was opened via JS)
+            // If user navigated here directly, this will fail silently
+            window.close();
+            
+            // Fallback: clear this page since we can't close it
+            document.body.innerHTML = '';
+            document.title = '';
+        } else {
+            // Popup blocked - fallback to normal redirect
+            window.location.href = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
         }
-
-        // 1. Open in about:blank
-        function openInBlank() {
-            const newWin = window.open('about:blank', '_blank');
-            if (newWin) {
-                newWin.document.open();
-                newWin.document.write(getPageContent());
-                newWin.document.close();
-            } else {
-                alert('Popup blocked! Please allow popups for this site.');
-            }
-        }
-
     </script>
 </body>
 </html>
