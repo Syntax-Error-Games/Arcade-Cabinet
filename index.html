@@ -1,7 +1,14 @@
 <head>
     <title>New Tab</title>
 </head>
+<body>
+    
+    <h1>If the About:Blank tab didn't open then unplock popups and reload the tab.</h1>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+</body>
+
 <script>
+    
 var win = window.open();
 if (!win) {
     alert('Popups are blocked. Please allow popups for this site.');
@@ -17,5 +24,5 @@ if (!win) {
     iframe.src = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
     win.document.body.appendChild(iframe);
 }
+    
 </script>
-<h1>If the About:Blank tab didn't open then unplock popups and reload the tab.</h1>
