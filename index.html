@@ -1,28 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>New Tab</title>
+    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 </head>
 <body>
-    
-    <h1>If the About:Blank tab didn't open then unplock popups and reload the tab.</h1>
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
-</body>
+    <h1>If the About:Blank tab didn't open, then unblock popups and reload the tab.</h1>
 
-<script>
-    
-var win = window.open();
-if (!win) {
-    alert('Popups are blocked. Please allow popups for this site.');
-} else {
-    win.document.title = 'New Tab';
-    win.document.body.style.margin = '0';
-    win.document.body.style.height = '100vh';
-    var iframe = win.document.createElement('iframe');
-    iframe.style.border = 'none';
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.margin = '0';
-    iframe.src = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
-    win.document.body.appendChild(iframe);
-}
-    
-</script>
+    <script>
+    var win = window.open();
+    if (!win) {
+        alert('Popups are blocked. Please allow popups for this site.');
+    } else {
+        // Resolve the icon path to a full URL so it works from about:blank
+        var iconUrl = new URL('assets/favicon.ico', window.location.href).href;
+
+        win.document.title = 'New Tab';
+
+        var link = win.document.createElement('link');
+        link.rel = 'icon';
+        link.type = 'image/x-icon';
+        link.href = iconUrl;
+        win.document.head.appendChild(link);
+
+        win.document.body.style.margin = '0';
+        win.document.body.style.height = '100vh';
+
+        var iframe = win.document.createElement('iframe');
+        iframe.style.border = 'none';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.margin = '0';
+        iframe.src = 'https://syntax-error-games.github.io/Arcade-Fabinet/';
+        win.document.body.appendChild(iframe);
+    }
+    </script>
+</body>
+</html>
